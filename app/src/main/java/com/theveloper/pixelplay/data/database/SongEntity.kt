@@ -253,6 +253,14 @@ data class SongSummary(
     @ColumnInfo(name = "file_path") val filePath: String = ""
 )
 
+/** Lightweight projection for the in-memory, diacritic-insensitive song search. */
+data class SongSearchRow(
+    val id: Long,
+    val title: String,
+    @ColumnInfo(name = "artist_name") val artistName: String,
+    @ColumnInfo(name = "parent_directory_path") val parentDirectoryPath: String
+)
+
 // Sobrecarga o alternativa si los paths no están disponibles o no son necesarios al convertir de Modelo a Entidad
 // (menos probable que se use si la entidad siempre requiere los paths)
 fun Song.toEntityWithoutPaths(): SongEntity {

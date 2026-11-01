@@ -53,6 +53,7 @@ import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.ui.theme.GenreThemeUtils
 import com.theveloper.pixelplay.utils.DirectoryFilterUtils
 import com.theveloper.pixelplay.utils.LogUtils
+import com.theveloper.pixelplay.utils.SearchTextNormalizer
 import com.theveloper.pixelplay.utils.StorageType
 import com.theveloper.pixelplay.utils.StorageUtils
 import com.theveloper.pixelplay.utils.toHexString
@@ -68,6 +69,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -105,12 +107,40 @@ class MusicRepositoryImpl @Inject constructor(
     companion object {
         /** Maximum number of search results to load at once to avoid memory issues with large libraries. */
         private const val SEARCH_RESULTS_LIMIT = 100
+        /** How long the folded search index stays in memory after the last search collector leaves. */
+        private const val SEARCH_INDEX_KEEP_ALIVE_MS = 60_000L
         private const val UNKNOWN_GENRE_NAME = "Unknown"
         private const val UNKNOWN_GENRE_ID = "unknown"
     }
 
+    /** A song's search text, already folded by [SearchTextNormalizer]. */
+    private data class FoldedSongRow(
+        val id: Long,
+        val title: String,
+        val titleAndArtist: String,
+        val parentDirectoryPath: String
+    )
+
     private val directoryScanMutex = Mutex()
     private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Folding every title once and reusing it keeps each keystroke cheap. Only the searchable
+    // columns are compared, so liking a song or a play count change does not refold the library.
+    private val foldedSongSearchIndex: Flow<List<FoldedSongRow>> = musicDao.observeSongSearchRows()
+        .distinctUntilChanged()
+        .map { rows ->
+            rows.map { row ->
+                val title = SearchTextNormalizer.fold(row.title)
+                FoldedSongRow(
+                    id = row.id,
+                    title = title,
+                    titleAndArtist = "$title ${SearchTextNormalizer.fold(row.artistName)}",
+                    parentDirectoryPath = row.parentDirectoryPath
+                )
+            }
+        }
+        .flowOn(Dispatchers.Default)
+        .shareIn(repositoryScope, SharingStarted.WhileSubscribed(SEARCH_INDEX_KEEP_ALIVE_MS), replay = 1)
     private val defaultLibraryPagingConfig = PagingConfig(
         pageSize = 50,
         enablePlaceholders = true,
@@ -562,8 +592,12 @@ class MusicRepositoryImpl @Inject constructor(
 
     // --- Métodos de Búsqueda ---
 
+    // Search folds both sides with SearchTextNormalizer, so "hakan hellstrom" finds
+    // "Håkan Hellström" and "dont" finds "Don't". Every word must match, in any order.
     override fun searchSongs(query: String, titleOnly: Boolean): Flow<List<Song>> {
-        if (query.isBlank()) return flowOf(emptyList())
+        val tokens = SearchTextNormalizer.tokens(query)
+        if (tokens.isEmpty()) return flowOf(emptyList())
+        val foldedQuery = tokens.joinToString(" ")
         return combine(
             userPreferencesRepository.allowedDirectoriesFlow,
             userPreferencesRepository.blockedDirectoriesFlow
@@ -571,43 +605,102 @@ class MusicRepositoryImpl @Inject constructor(
             allowedDirs to blockedDirs
         }.flatMapLatest { (allowedDirs, blockedDirs) ->
             flow {
-                val (allowedParentDirs, applyDirectoryFilter) =
-                    computeAllowedDirs(allowedDirs, blockedDirs)
-                emit(
-                    musicDao.searchSongsLimited(
-                        query = query,
-                        allowedParentDirs = allowedParentDirs,
-                        applyDirectoryFilter = applyDirectoryFilter,
-                        limit = SEARCH_RESULTS_LIMIT,
-                        titleOnly = titleOnly
-                    )
-                )
-            }.flatMapLatest { it }
+                emit(computeAllowedDirs(allowedDirs, blockedDirs))
+            }.flatMapLatest { (allowedParentDirs, applyDirectoryFilter) ->
+                val allowedDirSet = allowedParentDirs.toHashSet()
+                foldedSongSearchIndex
+                    .map { index ->
+                        rankSongSearchMatches(index, tokens, foldedQuery, titleOnly) { row ->
+                            !applyDirectoryFilter || row.id < 0 || row.parentDirectoryPath in allowedDirSet
+                        }
+                    }
+                    .distinctUntilChanged()
+                    .flatMapLatest { rankedIds ->
+                        if (rankedIds.isEmpty()) {
+                            flowOf(emptyList())
+                        } else {
+                            // Directory filtering already happened above.
+                            musicDao.getSongsByIds(rankedIds, emptyList(), false).map { entities ->
+                                val entitiesById = entities.associateBy { it.id }
+                                rankedIds.mapNotNull { entitiesById[it] }
+                            }
+                        }
+                    }
+            }
         }.map { entities ->
             entities.map { it.toSong() }
         }.flowOn(Dispatchers.IO)
     }
 
+    private fun rankSongSearchMatches(
+        index: List<FoldedSongRow>,
+        tokens: List<String>,
+        foldedQuery: String,
+        titleOnly: Boolean,
+        isAllowed: (FoldedSongRow) -> Boolean
+    ): List<Long> {
+        val matches = index.filter { row ->
+            isAllowed(row) &&
+                SearchTextNormalizer.containsAll(if (titleOnly) row.title else row.titleAndArtist, tokens)
+        }
+        return matches
+            .sortedWith(
+                compareBy<FoldedSongRow> { row ->
+                    when {
+                        row.title == foldedQuery -> 0
+                        row.title.startsWith(foldedQuery) -> 1
+                        SearchTextNormalizer.containsAll(row.title, tokens) -> 2
+                        else -> 3
+                    }
+                }.thenBy { it.title }
+            )
+            .take(SEARCH_RESULTS_LIMIT)
+            .map { it.id }
+    }
 
     override fun searchAlbums(query: String, minTracks: Int): Flow<List<Album>> {
-        if (query.isBlank()) return flowOf(emptyList())
-        return musicDao.searchAlbums(query, emptyList(), false, minTracks).map { entities ->
-            entities.map { it.toAlbum() }
-        }.flowOn(Dispatchers.IO)
+        val tokens = SearchTextNormalizer.tokens(query)
+        if (tokens.isEmpty()) return flowOf(emptyList())
+        val foldedQuery = tokens.joinToString(" ")
+        return musicDao.observeAlbumsForSearch(emptyList(), false, minTracks).map { entities ->
+            entities
+                .mapNotNull { album ->
+                    val title = SearchTextNormalizer.fold(album.title)
+                    val searchText = "$title ${SearchTextNormalizer.fold(album.artistName)}"
+                    if (SearchTextNormalizer.containsAll(searchText, tokens)) album to title else null
+                }
+                .sortedBy { (_, title) -> if (title.startsWith(foldedQuery)) 0 else 1 }
+                .map { (album, _) -> album.toAlbum() }
+        }.flowOn(Dispatchers.Default)
     }
 
     override fun searchArtists(query: String): Flow<List<Artist>> {
-        if (query.isBlank()) return flowOf(emptyList())
-        return musicDao.searchArtists(query, emptyList(), false).map { entities ->
-            entities.map { it.toArtist() }
-        }.flowOn(Dispatchers.IO)
+        val tokens = SearchTextNormalizer.tokens(query)
+        if (tokens.isEmpty()) return flowOf(emptyList())
+        val foldedQuery = tokens.joinToString(" ")
+        return musicDao.observeArtistsForSearch(emptyList(), false).map { entities ->
+            entities
+                .mapNotNull { artist ->
+                    val name = SearchTextNormalizer.fold(artist.name)
+                    if (SearchTextNormalizer.containsAll(name, tokens)) artist to name else null
+                }
+                .sortedBy { (_, name) ->
+                    when {
+                        name == foldedQuery -> 0
+                        name.startsWith(foldedQuery) -> 1
+                        else -> 2
+                    }
+                }
+                .map { (artist, _) -> artist.toArtist() }
+        }.flowOn(Dispatchers.Default)
     }
 
     override suspend fun searchPlaylists(query: String): List<Playlist> {
-        if (query.isBlank()) return emptyList()
+        val tokens = SearchTextNormalizer.tokens(query)
+        if (tokens.isEmpty()) return emptyList()
         return playlistPreferencesRepository.userPlaylistsFlow.first()
             .filter { playlist ->
-                playlist.name.contains(query, ignoreCase = true)
+                SearchTextNormalizer.containsAll(SearchTextNormalizer.fold(playlist.name), tokens)
             }
     }
 

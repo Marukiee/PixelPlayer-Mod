@@ -504,6 +504,10 @@ interface MusicDao {
         applyDirectoryFilter: Boolean
     ): Flow<List<SongEntity>>
 
+    /** Every song's searchable text, for the in-memory diacritic-insensitive search index. */
+    @Query("SELECT id, title, artist_name, parent_directory_path FROM songs")
+    fun observeSongSearchRows(): Flow<List<SongSearchRow>>
+
     fun searchSongs(
         query: String,
         allowedParentDirs: List<String>,
@@ -1387,6 +1391,39 @@ interface MusicDao {
         minTracks: Int
     ): Flow<List<AlbumEntity>>
 
+    /** All albums for [searchAlbums]-style results; the text matching happens in Kotlin. */
+    @Query("""
+        SELECT
+            albums.id AS id,
+            albums.title AS title,
+            albums.artist_name AS artist_name,
+            albums.artist_id AS artist_id,
+            albums.album_artist AS album_artist,
+            albums.album_art_uri_string AS album_art_uri_string,
+            COUNT(songs.id) AS song_count,
+            albums.date_added AS date_added,
+            albums.year AS year
+        FROM songs
+        INNER JOIN albums ON albums.id = songs.album_id
+        WHERE (:applyDirectoryFilter = 0 OR songs.id < 0 OR songs.parent_directory_path IN (:allowedParentDirs))
+        GROUP BY
+            albums.id,
+            albums.title,
+            albums.artist_name,
+            albums.artist_id,
+            albums.album_artist,
+            albums.album_art_uri_string,
+            albums.date_added,
+            albums.year
+        HAVING COUNT(songs.id) >= :minTracks
+        ORDER BY albums.title ASC
+    """)
+    fun observeAlbumsForSearch(
+        allowedParentDirs: List<String>,
+        applyDirectoryFilter: Boolean,
+        minTracks: Int
+    ): Flow<List<AlbumEntity>>
+
     // --- Artist Queries ---
     @Query("""
         SELECT DISTINCT artists.* FROM artists
@@ -1516,6 +1553,22 @@ interface MusicDao {
     """)
     fun searchArtists(
         query: String,
+        allowedParentDirs: List<String>,
+        applyDirectoryFilter: Boolean
+    ): Flow<List<ArtistEntity>>
+
+    /** All artists for [searchArtists]-style results; the text matching happens in Kotlin. */
+    @Query("""
+        SELECT artists.id, artists.name, artists.image_url, artists.custom_image_uri,
+               COUNT(DISTINCT songs.id) AS track_count
+        FROM songs
+        INNER JOIN song_artist_cross_ref ON song_artist_cross_ref.song_id = songs.id
+        INNER JOIN artists ON artists.id = song_artist_cross_ref.artist_id
+        WHERE (:applyDirectoryFilter = 0 OR songs.id < 0 OR songs.parent_directory_path IN (:allowedParentDirs))
+        GROUP BY artists.id
+        ORDER BY artists.name ASC
+    """)
+    fun observeArtistsForSearch(
         allowedParentDirs: List<String>,
         applyDirectoryFilter: Boolean
     ): Flow<List<ArtistEntity>>

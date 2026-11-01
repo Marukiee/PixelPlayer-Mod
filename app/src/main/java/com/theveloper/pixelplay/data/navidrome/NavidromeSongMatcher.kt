@@ -1,7 +1,7 @@
 package com.theveloper.pixelplay.data.navidrome
 
 import com.theveloper.pixelplay.data.network.navidrome.NavidromeApiService
-import java.text.Normalizer
+import com.theveloper.pixelplay.utils.SearchTextNormalizer
 
 /**
  * Matches a local song to its counterpart on a Navidrome/Subsonic server by metadata, so we can
@@ -57,9 +57,8 @@ object NavidromeSongMatcher {
     /** Lowercase, strip accents, drop bracketed/`feat.` suffixes and punctuation, collapse spaces. */
     fun normalize(value: String?): String {
         if (value.isNullOrBlank()) return ""
-        var s = Normalizer.normalize(value, Normalizer.Form.NFD)
-            .replace(Regex("\\p{Mn}+"), "")
-            .lowercase()
+        // Shared with search so letters like ø and æ fold too instead of being dropped below.
+        var s = SearchTextNormalizer.stripDiacritics(value)
         s = s.replace(Regex("[\\(\\[\\{].*?[\\)\\]\\}]"), " ")
         s = s.replace(Regex("\\b(feat|ft|featuring)\\b.*"), " ")
         s = s.replace(Regex("[^a-z0-9\\s]"), " ").replace(Regex("\\s+"), " ").trim()
