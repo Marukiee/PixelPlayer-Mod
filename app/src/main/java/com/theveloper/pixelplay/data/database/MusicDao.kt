@@ -603,7 +603,7 @@ interface MusicDao {
         SELECT """ + SONG_LIST_PROJECTION + """
         FROM songs
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
-        ORDER BY title COLLATE NOCASE ASC, artist_name COLLATE NOCASE ASC, id ASC
+        ORDER BY title COLLATE LOCALIZED ASC, artist_name COLLATE LOCALIZED ASC, id ASC
         LIMIT 1
     """)
     suspend fun getFirstPlayableSong(
@@ -631,7 +631,7 @@ interface MusicDao {
             AND (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
             GROUP BY album_art_uri_string
         )
-        ORDER BY title COLLATE NOCASE ASC, artist_name COLLATE NOCASE ASC, id ASC
+        ORDER BY title COLLATE LOCALIZED ASC, artist_name COLLATE LOCALIZED ASC, id ASC
     """)
     fun getDistinctAlbumArtSongs(
         allowedParentDirs: List<String>,
@@ -689,17 +689,17 @@ interface MusicDao {
         )
         ORDER BY
             CASE WHEN :sortOrder = 'song_default_order' THEN track_number END ASC,
-            CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'song_artist' THEN artist_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_artist_desc' THEN artist_name END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'song_album' THEN album_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_album_desc' THEN album_name END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_artist' THEN artist_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_artist_desc' THEN artist_name END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_album' THEN album_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_album_desc' THEN album_name END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'song_date_added' THEN date_added END DESC,
             CASE WHEN :sortOrder = 'song_date_added_asc' THEN date_added END ASC,
             CASE WHEN :sortOrder = 'song_duration' THEN duration END DESC,
             CASE WHEN :sortOrder = 'song_duration_asc' THEN duration END ASC,
-            title COLLATE NOCASE ASC,
+            title COLLATE LOCALIZED ASC,
             id ASC
     """)
     suspend fun getSongIdsSorted(
@@ -725,15 +725,15 @@ interface MusicDao {
             )
         )
         ORDER BY
-            CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'liked_artist' THEN songs.artist_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_artist_desc' THEN songs.artist_name END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'liked_album' THEN songs.album_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_album_desc' THEN songs.album_name END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'liked_artist' THEN songs.artist_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_artist_desc' THEN songs.artist_name END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'liked_album' THEN songs.album_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_album_desc' THEN songs.album_name END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'liked_date_liked' THEN favorites.timestamp END DESC,
             CASE WHEN :sortOrder = 'liked_date_liked_asc' THEN favorites.timestamp END ASC,
-            songs.title COLLATE NOCASE ASC,
+            songs.title COLLATE LOCALIZED ASC,
             songs.id ASC
     """)
     suspend fun getFavoriteSongIdsSorted(
@@ -764,19 +764,19 @@ interface MusicDao {
         )
         ORDER BY
             CASE WHEN :sortOrder = 'song_default_order' THEN track_number END ASC,
-            CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'song_artist' THEN artist_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_artist_desc' THEN artist_name END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'song_album' THEN album_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_album_desc' THEN album_name END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_artist' THEN artist_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_artist_desc' THEN artist_name END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_album' THEN album_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_album_desc' THEN album_name END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'song_date_added' THEN date_added END DESC,
             CASE WHEN :sortOrder = 'song_date_added_asc' THEN date_added END ASC,
             CASE WHEN :sortOrder = 'song_duration' THEN duration END DESC,
             CASE WHEN :sortOrder = 'song_duration_asc' THEN duration END ASC,
 
             -- Secondary sort falls back to title for consistency (case-insensitive)
-            title COLLATE NOCASE ASC,
+            title COLLATE LOCALIZED ASC,
             id ASC
     """)
     fun getSongsPaginated(
@@ -803,17 +803,17 @@ interface MusicDao {
         )
         ORDER BY
             CASE WHEN :sortOrder = 'song_default_order' THEN track_number END ASC,
-            CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'song_artist' THEN artist_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_artist_desc' THEN artist_name END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'song_album' THEN album_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'song_album_desc' THEN album_name END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_artist' THEN artist_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_artist_desc' THEN artist_name END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_album' THEN album_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_album_desc' THEN album_name END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'song_date_added' THEN date_added END DESC,
             CASE WHEN :sortOrder = 'song_date_added_asc' THEN date_added END ASC,
             CASE WHEN :sortOrder = 'song_duration' THEN duration END DESC,
             CASE WHEN :sortOrder = 'song_duration_asc' THEN duration END ASC,
-            title COLLATE NOCASE ASC,
+            title COLLATE LOCALIZED ASC,
             id ASC
         LIMIT :limit OFFSET :offset
     """)
@@ -847,15 +847,15 @@ interface MusicDao {
             )
         )
         ORDER BY
-            CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'liked_artist' THEN songs.artist_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_artist_desc' THEN songs.artist_name END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'liked_album' THEN songs.album_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_album_desc' THEN songs.album_name END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'liked_artist' THEN songs.artist_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_artist_desc' THEN songs.artist_name END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'liked_album' THEN songs.album_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_album_desc' THEN songs.album_name END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'liked_date_liked' THEN favorites.timestamp END DESC,
             CASE WHEN :sortOrder = 'liked_date_liked_asc' THEN favorites.timestamp END ASC,
-            songs.title COLLATE NOCASE ASC,
+            songs.title COLLATE LOCALIZED ASC,
             songs.id ASC
     """)
     fun getFavoriteSongsPaginated(
@@ -883,7 +883,7 @@ interface MusicDao {
                 AND songs.source_type != 0
             )
         )
-        ORDER BY songs.title COLLATE NOCASE ASC
+        ORDER BY songs.title COLLATE LOCALIZED ASC
     """)
     suspend fun getFavoriteSongsList(
         allowedParentDirs: List<String>,
@@ -908,15 +908,15 @@ interface MusicDao {
             )
         )
         ORDER BY
-            CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'liked_artist' THEN songs.artist_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_artist_desc' THEN songs.artist_name END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'liked_album' THEN songs.album_name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'liked_album_desc' THEN songs.album_name END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'liked_artist' THEN songs.artist_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_artist_desc' THEN songs.artist_name END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'liked_album' THEN songs.album_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'liked_album_desc' THEN songs.album_name END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'liked_date_liked' THEN favorites.timestamp END DESC,
             CASE WHEN :sortOrder = 'liked_date_liked_asc' THEN favorites.timestamp END ASC,
-            songs.title COLLATE NOCASE ASC,
+            songs.title COLLATE LOCALIZED ASC,
             songs.id ASC
         LIMIT :limit OFFSET :offset
     """)
@@ -1166,17 +1166,17 @@ interface MusicDao {
             albums.year
         HAVING COUNT(songs.id) >= :minTracks
         ORDER BY
-            CASE WHEN :sortOrder = 'album_title_az' THEN albums.title END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'album_title_za' THEN albums.title END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'album_artist' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'album_artist_desc' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'album_title_az' THEN albums.title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'album_title_za' THEN albums.title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'album_artist' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'album_artist_desc' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'album_release_year' THEN albums.year END DESC,
             CASE WHEN :sortOrder = 'album_release_year_asc' THEN albums.year END ASC,
             CASE WHEN :sortOrder = 'album_date_added' THEN albums.date_added END DESC,
             CASE WHEN :sortOrder = 'album_size_asc' THEN song_count END ASC,
             CASE WHEN :sortOrder = 'album_size_desc' THEN song_count END DESC,
-            albums.title COLLATE NOCASE ASC,
-            albums.artist_name COLLATE NOCASE ASC,
+            albums.title COLLATE LOCALIZED ASC,
+            albums.artist_name COLLATE LOCALIZED ASC,
             albums.id ASC
     """)
     fun getAlbumsPaginated(
@@ -1223,17 +1223,17 @@ interface MusicDao {
             albums.year
         HAVING COUNT(songs.id) >= :minTracks
         ORDER BY
-            CASE WHEN :sortOrder = 'album_title_az' THEN albums.title END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'album_title_za' THEN albums.title END COLLATE NOCASE DESC,
-            CASE WHEN :sortOrder = 'album_artist' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'album_artist_desc' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'album_title_az' THEN albums.title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'album_title_za' THEN albums.title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'album_artist' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'album_artist_desc' THEN COALESCE(NULLIF(TRIM(albums.album_artist), ''), albums.artist_name) END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'album_release_year' THEN albums.year END DESC,
             CASE WHEN :sortOrder = 'album_release_year_asc' THEN albums.year END ASC,
             CASE WHEN :sortOrder = 'album_date_added' THEN albums.date_added END DESC,
             CASE WHEN :sortOrder = 'album_size_asc' THEN song_count END ASC,
             CASE WHEN :sortOrder = 'album_size_desc' THEN song_count END DESC,
-            albums.title COLLATE NOCASE ASC,
-            albums.artist_name COLLATE NOCASE ASC,
+            albums.title COLLATE LOCALIZED ASC,
+            albums.artist_name COLLATE LOCALIZED ASC,
             albums.id ASC
         LIMIT :limit OFFSET :offset
     """)
@@ -1419,11 +1419,11 @@ interface MusicDao {
         )
         GROUP BY artists.id
         ORDER BY
-            CASE WHEN :sortOrder = 'artist_name_az' THEN artists.name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'artist_name_za' THEN artists.name END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'artist_name_az' THEN artists.name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'artist_name_za' THEN artists.name END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'artist_num_songs_desc' THEN track_count END DESC,
             CASE WHEN :sortOrder = 'artist_num_songs_asc' THEN track_count END ASC,
-            artists.name COLLATE NOCASE ASC,
+            artists.name COLLATE LOCALIZED ASC,
             artists.id ASC
     """)
     fun getArtistsPaginated(
@@ -1453,11 +1453,11 @@ interface MusicDao {
         )
         GROUP BY artists.id
         ORDER BY
-            CASE WHEN :sortOrder = 'artist_name_az' THEN artists.name END COLLATE NOCASE ASC,
-            CASE WHEN :sortOrder = 'artist_name_za' THEN artists.name END COLLATE NOCASE DESC,
+            CASE WHEN :sortOrder = 'artist_name_az' THEN artists.name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'artist_name_za' THEN artists.name END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'artist_num_songs_desc' THEN track_count END DESC,
             CASE WHEN :sortOrder = 'artist_num_songs_asc' THEN track_count END ASC,
-            artists.name COLLATE NOCASE ASC,
+            artists.name COLLATE LOCALIZED ASC,
             artists.id ASC
         LIMIT :limit OFFSET :offset
     """)
