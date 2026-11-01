@@ -283,7 +283,7 @@ class SyncManager @Inject constructor(
     fun fullSync() {
         Log.i(TAG, "Full sync requested - Scheduling full sync worker")
         enqueueSyncWork(
-            request = SyncWorker.fullSyncWork(),
+            request = SyncWorker.fullSyncWork(true),
             policy = ExistingWorkPolicy.REPLACE
         )
     }

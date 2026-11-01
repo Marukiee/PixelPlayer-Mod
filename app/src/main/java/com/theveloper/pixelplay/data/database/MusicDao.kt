@@ -678,44 +678,8 @@ interface MusicDao {
     ): Flow<List<FolderSongRow>>
 
     @Query("""
-        SELECT id FROM songs
-        WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
-        AND (
-            :filterMode = 0
-            OR (
-                :filterMode = 1
-                AND source_type = 0
-            )
-            OR (
-                :filterMode = 2
-                AND source_type != 0
-            )
-        )
-        ORDER BY
-            CASE WHEN :sortOrder = 'song_default_order' THEN track_number END ASC,
-            CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE LOCALIZED ASC,
-            CASE WHEN :sortOrder = 'song_title_za' THEN title END COLLATE LOCALIZED DESC,
-            CASE WHEN :sortOrder = 'song_artist' THEN artist_name END COLLATE LOCALIZED ASC,
-            CASE WHEN :sortOrder = 'song_artist_desc' THEN artist_name END COLLATE LOCALIZED DESC,
-            CASE WHEN :sortOrder = 'song_album' THEN album_name END COLLATE LOCALIZED ASC,
-            CASE WHEN :sortOrder = 'song_album_desc' THEN album_name END COLLATE LOCALIZED DESC,
-            CASE WHEN :sortOrder = 'song_date_added' THEN date_added END DESC,
-            CASE WHEN :sortOrder = 'song_date_added_asc' THEN date_added END ASC,
-            CASE WHEN :sortOrder = 'song_duration' THEN duration END DESC,
-            CASE WHEN :sortOrder = 'song_duration_asc' THEN duration END ASC,
-            title COLLATE LOCALIZED ASC,
-            id ASC
-    """)
-    suspend fun getSongIdsSorted(
-        allowedParentDirs: List<String>,
-        applyDirectoryFilter: Boolean,
-        sortOrder: String,
-        filterMode: Int
-    ): List<Long>
-
-    @Query("""
         SELECT songs.id FROM songs
-        INNER JOIN favorites ON songs.id = favorites.songId AND favorites.isFavorite = 1
+        LEFT JOIN song_engagements ON CAST(songs.id AS TEXT) = song_engagements.song_id
         WHERE (:applyDirectoryFilter = 0 OR songs.id < 0 OR songs.parent_directory_path IN (:allowedParentDirs))
         AND (
             :filterMode = 0
@@ -729,6 +693,48 @@ interface MusicDao {
             )
         )
         ORDER BY
+            CASE WHEN :sortOrder = 'song_default_order' THEN songs.track_number END ASC,
+            CASE WHEN :sortOrder = 'song_title_az' THEN songs.title END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_title_za' THEN songs.title END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_artist' THEN songs.artist_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_artist_desc' THEN songs.artist_name END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_album' THEN songs.album_name END COLLATE LOCALIZED ASC,
+            CASE WHEN :sortOrder = 'song_album_desc' THEN songs.album_name END COLLATE LOCALIZED DESC,
+            CASE WHEN :sortOrder = 'song_date_added' THEN songs.date_added END DESC,
+            CASE WHEN :sortOrder = 'song_date_added_asc' THEN songs.date_added END ASC,
+            CASE WHEN :sortOrder = 'song_duration' THEN songs.duration END DESC,
+            CASE WHEN :sortOrder = 'song_duration_asc' THEN songs.duration END ASC,
+            CASE WHEN :sortOrder = 'song_listening_time' THEN COALESCE(song_engagements.total_play_duration_ms, 0) END DESC,
+            CASE WHEN :sortOrder = 'song_listening_time_asc' THEN COALESCE(song_engagements.total_play_duration_ms, 0) END ASC,
+            songs.title COLLATE LOCALIZED ASC,
+            songs.id ASC
+    """)
+    suspend fun getSongIdsSorted(
+        allowedParentDirs: List<String>,
+        applyDirectoryFilter: Boolean,
+        sortOrder: String,
+        filterMode: Int
+    ): List<Long>
+
+    @Query("""
+        SELECT songs.id FROM songs
+        INNER JOIN favorites ON songs.id = favorites.songId AND favorites.isFavorite = 1
+        LEFT JOIN song_engagements ON CAST(songs.id AS TEXT) = song_engagements.song_id
+        WHERE (:applyDirectoryFilter = 0 OR songs.id < 0 OR songs.parent_directory_path IN (:allowedParentDirs))
+        AND (
+            :filterMode = 0
+            OR (
+                :filterMode = 1
+                AND songs.source_type = 0
+            )
+            OR (
+                :filterMode = 2
+                AND songs.source_type != 0
+            )
+        )
+        ORDER BY
+            CASE WHEN :sortOrder = 'liked_play_time' THEN COALESCE(song_engagements.total_play_duration_ms, 0) END DESC,
+            CASE WHEN :sortOrder = 'liked_play_time_asc' THEN COALESCE(song_engagements.total_play_duration_ms, 0) END ASC,
             CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE LOCALIZED ASC,
             CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE LOCALIZED DESC,
             CASE WHEN :sortOrder = 'liked_artist' THEN songs.artist_name END COLLATE LOCALIZED ASC,
@@ -753,7 +759,8 @@ interface MusicDao {
      * Room auto-generates the PagingSource implementation.
      */
     @Query("""
-        SELECT * FROM songs
+        SELECT songs.* FROM songs
+        LEFT JOIN song_engagements ON CAST(songs.id AS TEXT) = song_engagements.song_id
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
         AND (
             :filterMode = 0
@@ -778,6 +785,8 @@ interface MusicDao {
             CASE WHEN :sortOrder = 'song_date_added_asc' THEN date_added END ASC,
             CASE WHEN :sortOrder = 'song_duration' THEN duration END DESC,
             CASE WHEN :sortOrder = 'song_duration_asc' THEN duration END ASC,
+            CASE WHEN :sortOrder = 'song_listening_time' THEN COALESCE(song_engagements.total_play_duration_ms, 0) END DESC,
+            CASE WHEN :sortOrder = 'song_listening_time_asc' THEN COALESCE(song_engagements.total_play_duration_ms, 0) END ASC,
 
             -- Secondary sort falls back to title for consistency (case-insensitive)
             title COLLATE LOCALIZED ASC,
@@ -793,6 +802,7 @@ interface MusicDao {
     @Query("""
         SELECT """ + SONG_LIST_PROJECTION + """
         FROM songs
+        LEFT JOIN song_engagements ON CAST(songs.id AS TEXT) = song_engagements.song_id
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
         AND (
             :filterMode = 0
@@ -817,6 +827,8 @@ interface MusicDao {
             CASE WHEN :sortOrder = 'song_date_added_asc' THEN date_added END ASC,
             CASE WHEN :sortOrder = 'song_duration' THEN duration END DESC,
             CASE WHEN :sortOrder = 'song_duration_asc' THEN duration END ASC,
+            CASE WHEN :sortOrder = 'song_listening_time' THEN COALESCE(song_engagements.total_play_duration_ms, 0) END DESC,
+            CASE WHEN :sortOrder = 'song_listening_time_asc' THEN COALESCE(song_engagements.total_play_duration_ms, 0) END ASC,
             title COLLATE LOCALIZED ASC,
             id ASC
         LIMIT :limit OFFSET :offset
