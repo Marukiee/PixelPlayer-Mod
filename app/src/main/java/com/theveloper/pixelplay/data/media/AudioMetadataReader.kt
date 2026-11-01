@@ -91,7 +91,7 @@ object AudioMetadataReader {
                     ?: propertyMap["ALBUM ARTIST"]?.firstOrNull()?.takeIf { it.isNotBlank() }
                     ?: propertyMap["BAND"]?.firstOrNull()?.takeIf { it.isNotBlank() }
                 val album = propertyMap["ALBUM"]?.firstOrNull()?.takeIf { it.isNotBlank() }
-                val genre = propertyMap["GENRE"]?.firstOrNull()?.takeIf { it.isNotBlank() }
+                val genre = joinGenres(propertyMap["GENRE"]?.toList())
                 val composer = propertyMap["COMPOSER"]?.firstOrNull()?.takeIf { it.isNotBlank() }
                     ?: propertyMap["TCOM"]?.firstOrNull()?.takeIf { it.isNotBlank() }
                 val lyrics = propertyMap["LYRICS"]?.firstOrNull()?.takeIf { it.isNotBlank() }
@@ -192,7 +192,7 @@ object AudioMetadataReader {
                 ?.filter { it.isNotBlank() } ?: emptyList()
             val albumArtist = tag?.getFirst(FieldKey.ALBUM_ARTIST)?.takeIf { it.isNotBlank() }
             val album = tag?.getFirst(FieldKey.ALBUM)?.takeIf { it.isNotBlank() }
-            val genre = tag?.getFirst(FieldKey.GENRE)?.takeIf { it.isNotBlank() }
+            val genre = joinGenres(runCatching { tag?.getAll(FieldKey.GENRE) }.getOrNull())
             val composer = tag?.getFirst(FieldKey.COMPOSER)?.takeIf { it.isNotBlank() }
             val lyrics = tag?.getFirst(FieldKey.LYRICS)?.takeIf { it.isNotBlank() }
             val trackNumber = tag?.getFirst(FieldKey.TRACK)?.takeIf { it.isNotBlank() }
@@ -245,6 +245,18 @@ object AudioMetadataReader {
             null
         }
     }
+
+    /**
+     * Joins separate GENRE fields (e.g. Vorbis "Swedish Pop" + "Pop") into "Swedish Pop, Pop".
+     * The genre list and genre screen already split on commas, so the song shows up under each.
+     */
+    private fun joinGenres(values: List<String>?): String? =
+        values.orEmpty()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .joinToString(", ")
+            .takeIf { it.isNotEmpty() }
 
     private fun extractReplayGainDb(
         propertyMap: Map<String, Array<String>>,
