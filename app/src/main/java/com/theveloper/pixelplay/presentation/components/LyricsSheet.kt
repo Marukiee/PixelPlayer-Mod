@@ -504,6 +504,7 @@ fun LyricsSheet(
     )
     
     val scaledTextStyle = lyricsTextStyle.copy(
+        fontFamily = GoogleSansRounded,
         fontSize = lyricsTextStyle.fontSize * fontScale,
         lineHeight = lyricsTextStyle.lineHeight * fontScale
     )
@@ -838,7 +839,7 @@ fun LyricsSheet(
                                 ) { _, line ->
                                     PlainLyricsLine(
                                         line = line,
-                                        style = lyricsTextStyle,
+                                        style = lyricsTextStyle.copy(fontFamily = GoogleSansRounded),
                                         lyricsAlignment = lyricsAlignment,
                                         showTranslation = if (hasTranslatedLyrics) showLyricsTranslation else true,
                                         showRomanization = if (hasRomanizedLyrics) showLyricsRomanization else true,

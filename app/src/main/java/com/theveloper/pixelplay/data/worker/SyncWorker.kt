@@ -953,6 +953,7 @@ constructor(
         // Phase 2: Identify changed songs and merge with existing data in chunks
         val artistDelimiters = userPreferencesRepository.artistDelimitersFlow.first()
         val artistWordDelimiters = userPreferencesRepository.artistWordDelimitersFlow.first()
+        val readAllArtists = userPreferencesRepository.readAllArtistsFromTagsFlow.first()
         val rawSongCount = rawDataList.size
         val songsToProcess = if (isRebuild) {
              rawDataList.toList()
@@ -1011,7 +1012,8 @@ constructor(
                                     raw = raw,
                                     genreMap = genreMap,
                                     deepScan = deepScan,
-                                    forceAlbumArtRefresh = deepScan || localSong != null
+                                    forceAlbumArtRefresh = deepScan || localSong != null,
+                                    readAllArtists = readAllArtists
                                 )
 
                             val song = if (localSong != null) {
@@ -1074,7 +1076,8 @@ constructor(
             raw: RawSongData,
             genreMap: Map<Long, String>,
             deepScan: Boolean,
-            forceAlbumArtRefresh: Boolean
+            forceAlbumArtRefresh: Boolean,
+            readAllArtists: Boolean
     ): SongEntity {
         val parentDir = java.io.File(raw.filePath).parent ?: ""
         val contentUriString =
@@ -1104,6 +1107,7 @@ constructor(
 
         val shouldAugmentMetadata =
                 deepScan ||
+                        readAllArtists ||
                         raw.filePath.endsWith(".wav", true) ||
                         raw.filePath.endsWith(".opus", true) ||
                         raw.filePath.endsWith(".ogg", true) ||
@@ -1123,6 +1127,12 @@ constructor(
                     AudioMetadataReader.read(file, readArtwork = false)?.let { meta ->
                         if (!meta.title.isNullOrBlank()) title = meta.title
                         if (!meta.artist.isNullOrBlank()) artist = meta.artist
+                        // Multiple separate ARTIST tag values (e.g. two Vorbis fields) that
+                        // MediaStore collapses to one. Join with ";" so the multi-artist splitter
+                        // recovers every credited artist.
+                        if (readAllArtists && meta.artists.size > 1) {
+                            artist = meta.artists.joinToString(";")
+                        }
                         if (!meta.album.isNullOrBlank()) album = meta.album
                         albumArtist = resolveAlbumArtist(
                             rawAlbumArtist = albumArtist,

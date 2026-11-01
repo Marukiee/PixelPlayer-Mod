@@ -20,10 +20,13 @@ import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.repository.MusicRepository
 import com.theveloper.pixelplay.data.service.player.DualPlayerEngine
 import com.theveloper.pixelplay.utils.MediaItemBuilder
+import com.theveloper.pixelplay.utils.isUserQueueItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ViewModelScoped
 import javax.inject.Inject
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -191,7 +194,12 @@ class MediaControllerSyncStateHolder @Inject constructor(
                 )
                 if (lastQueueSignature != emptySignature) {
                     lastQueueSignature = emptySignature
-                    cb.updateUiState { it.copy(currentPlaybackQueue = persistentListOf()) }
+                    cb.updateUiState {
+                        it.copy(
+                            currentPlaybackQueue = persistentListOf(),
+                            userQueueSongIds = persistentSetOf()
+                        )
+                    }
                 }
                 return@launch
             }
@@ -226,10 +234,22 @@ class MediaControllerSyncStateHolder @Inject constructor(
                 }
             }
 
+            val userQueueIds = withContext(Dispatchers.Default) {
+                mediaItems.asSequence()
+                    .filter { it.isUserQueueItem() }
+                    .map { it.mediaId }
+                    .toPersistentSet()
+            }
+
             if (requestId != lastQueueUpdateRequestId) return@launch
 
             lastQueueSignature = signature
-            cb.updateUiState { it.copy(currentPlaybackQueue = queue.toPlaybackQueue()) }
+            cb.updateUiState {
+                it.copy(
+                    currentPlaybackQueue = queue.toPlaybackQueue(),
+                    userQueueSongIds = userQueueIds
+                )
+            }
             if (queue.isNotEmpty()) {
                 cb.showSheet()
             }

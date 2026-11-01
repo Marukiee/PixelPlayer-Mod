@@ -11,12 +11,16 @@ import com.theveloper.pixelplay.data.model.SortOption
 import com.theveloper.pixelplay.data.model.SearchFilterType
 import com.theveloper.pixelplay.data.model.SearchHistoryItem
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 
 @Immutable
 data class PlayerUiState(
     // val allSongs: ImmutableList<Song> = persistentListOf(), // REMOVED
     val currentPlaybackQueue: ImmutableList<Song> = persistentListOf(),
+    /** Media ids of songs the user manually enqueued — used to badge them in the queue UI. */
+    val userQueueSongIds: ImmutableSet<String> = persistentSetOf(),
     val currentQueueSourceName: String = "All Songs",
     // val albums: ImmutableList<Album> = persistentListOf(), // REMOVED
     // val artists: ImmutableList<Artist> = persistentListOf(), // REMOVED

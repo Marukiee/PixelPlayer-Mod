@@ -117,6 +117,8 @@ import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
 import com.theveloper.pixelplay.presentation.components.PlaylistBottomSheet
 import com.theveloper.pixelplay.presentation.components.QueuePlaylistSongItem
+import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToActionRow
+import com.theveloper.pixelplay.data.preferences.SwipeAction
 import com.theveloper.pixelplay.presentation.components.SongPickerBottomSheet
 import com.theveloper.pixelplay.presentation.components.ExpressiveScrollBar
 import com.theveloper.pixelplay.ui.theme.LocalShowScrollbar
@@ -722,6 +724,20 @@ fun PlaylistDetailScreen(
                                         label = "scale"
                                     )
 
+                                    val swipeLeft by playerViewModel.swipeLeftAction.collectAsStateWithLifecycle()
+                                    val swipeRight by playerViewModel.swipeRightAction.collectAsStateWithLifecycle()
+                                    val swipeEnabled = !isReorderModeEnabled && !isRemoveModeEnabled
+                                    SwipeToActionRow(
+                                        swipeLeftAction = if (swipeEnabled) swipeLeft else SwipeAction.NONE,
+                                        swipeRightAction = if (swipeEnabled) swipeRight else SwipeAction.NONE,
+                                        onAction = { action ->
+                                            when (action) {
+                                                SwipeAction.ADD_TO_QUEUE -> playerViewModel.addSongToQueue(song)
+                                                SwipeAction.PLAY_NEXT -> playerViewModel.addSongNextToQueue(song)
+                                                SwipeAction.NONE -> {}
+                                            }
+                                        }
+                                    ) {
                                     QueuePlaylistSongItem(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -784,6 +800,7 @@ fun PlaylistDetailScreen(
                                             }
                                         }
                                     )
+                                    }
                                 }
                             }
                         }

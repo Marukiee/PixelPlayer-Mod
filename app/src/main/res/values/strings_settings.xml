@@ -302,6 +302,33 @@
     <string name="settings_haptics_section">Haptics</string>
     <string name="settings_haptic_feedback_title">Haptic feedback</string>
     <string name="settings_haptic_feedback_subtitle">Enable vibration feedback across the app.</string>
+    <string name="settings_swipe_gestures_section">List swipe gestures</string>
+    <string name="settings_swipe_left_title">Swipe left</string>
+    <string name="settings_swipe_right_title">Swipe right</string>
+    <string name="settings_swipe_actions_subtitle">Swipe a song in the Library and Search lists to run this action.</string>
+    <string name="swipe_action_none">Nothing</string>
+    <string name="swipe_action_add_to_queue">Add to queue</string>
+    <string name="swipe_action_play_next">Play next</string>
+    <string name="settings_queue_swipe_gestures_section">Queue swipe gestures</string>
+    <string name="queue_swipe_action_remove">Remove from queue</string>
+    <string name="settings_read_all_artists_title">Read all artists from tags</string>
+    <string name="settings_read_all_artists_subtitle">Scan each file for multiple artist tags (e.g. two ARTIST fields in FLAC) that MediaStore hides. Slower sync. Do a full rescan after changing.</string>
+
+    <!-- Navidrome favorites sync -->
+    <string name="settings_navidrome_favorites_section">Navidrome favorites</string>
+    <string name="settings_navidrome_show_in_library_title">Show Navidrome songs in library</string>
+    <string name="settings_navidrome_show_in_library_subtitle">Off = use Navidrome only for streaming, not mixed into your library. Turn off if you already have the same tracks locally. Applies on next Navidrome sync.</string>
+    <string name="settings_navidrome_fav_sync_interval_title">Sync favorites to Navidrome</string>
+    <string name="settings_navidrome_fav_sync_interval_subtitle">Push your likes to Navidrome as starred songs. Navidrome stores stars in its own database, not in the file tags, so this sync is required — Syncthing won\'t carry them over.</string>
+    <string name="settings_navidrome_fav_sync_off">Off</string>
+    <string name="settings_navidrome_fav_sync_6h">Every 6 hours</string>
+    <string name="settings_navidrome_fav_sync_12h">Every 12 hours</string>
+    <string name="settings_navidrome_fav_sync_24h">Every 24 hours</string>
+    <string name="settings_navidrome_fav_sync_now">Sync favorites now</string>
+    <string name="settings_navidrome_fav_check_title">Check likes on Navidrome</string>
+    <string name="settings_navidrome_fav_check_dialog_title">Starred on Navidrome</string>
+    <string name="settings_navidrome_fav_check_empty">No starred songs on the server yet.</string>
+    <string name="settings_navidrome_fav_check_count">%1$d starred song(s)</string>
 
     <!-- AI Integration category -->
     <string name="settings_ai_provider_section">AI Provider</string>

@@ -178,6 +178,11 @@ fun EnhancedSongListItem(
     )
     val showSelectionDecoration = selectionVisualProgress > 0.001f
 
+    SongSwipeContainer(
+        config = LocalSongSwipeConfig.current,
+        song = song,
+        disabled = isSelectionMode || isLoading
+    ) {
     if (isLoading) {
         // Shimmer Placeholder Layout
         Surface(
@@ -395,5 +400,6 @@ fun EnhancedSongListItem(
                 }
             }
         }
+    }
     }
 }

@@ -52,6 +52,8 @@ import com.theveloper.pixelplay.data.provider.SharedArtworkContentProvider
 import com.theveloper.pixelplay.data.preferences.CarouselStyle
 import com.theveloper.pixelplay.data.preferences.LibraryNavigationMode
 import com.theveloper.pixelplay.data.preferences.NavBarStyle
+import com.theveloper.pixelplay.data.preferences.SwipeAction
+import com.theveloper.pixelplay.data.preferences.QueueSwipeAction
 import com.theveloper.pixelplay.data.preferences.FullPlayerLoadingTweaks
 import com.theveloper.pixelplay.data.preferences.AiPreferencesRepository
 import com.theveloper.pixelplay.data.preferences.AlbumArtPaletteStyle
@@ -76,8 +78,10 @@ import com.theveloper.pixelplay.utils.StorageUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.channels.BufferOverflow
@@ -233,6 +237,16 @@ class PlayerViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
             initialValue = persistentListOf()
+        )
+
+    /** Media ids of songs the user manually enqueued — badged as "up next" in the queue UI. */
+    val userQueueSongIdsFlow: StateFlow<ImmutableSet<String>> = _playerUiState
+        .map { it.userQueueSongIds }
+        .distinctUntilChanged()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = persistentSetOf()
         )
 
     private val _showNoInternetDialog = MutableSharedFlow<Unit>(
@@ -475,6 +489,34 @@ class PlayerViewModel @Inject constructor(
             initialValue = false
         )
 
+    val swipeLeftAction: StateFlow<SwipeAction> = userPreferencesRepository.swipeLeftActionFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SwipeAction.DEFAULT
+        )
+
+    val swipeRightAction: StateFlow<SwipeAction> = userPreferencesRepository.swipeRightActionFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SwipeAction.DEFAULT
+        )
+
+    val queueSwipeLeftAction: StateFlow<QueueSwipeAction> = userPreferencesRepository.queueSwipeLeftActionFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = QueueSwipeAction.DEFAULT
+        )
+
+    val queueSwipeRightAction: StateFlow<QueueSwipeAction> = userPreferencesRepository.queueSwipeRightActionFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = QueueSwipeAction.DEFAULT
+        )
+
     val libraryNavigationMode: StateFlow<String> = userPreferencesRepository.libraryNavigationModeFlow
         .stateIn(
             scope = viewModelScope,
@@ -650,6 +692,13 @@ class PlayerViewModel @Inject constructor(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val toastEvents = _toastEvents.asSharedFlow()
+
+    /** Emitted when the user adds a song to the queue, so the UI can show a styled confirmation. */
+    private val _queueAddedEvents = MutableSharedFlow<QueueAddEvent>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val queueAddedEvents = _queueAddedEvents.asSharedFlow()
 
     // MediaStore write-permission request (needed for metadata editing without MANAGE_EXTERNAL_STORAGE).
     // Owned by MetadataEditStateHolder (the only producer/consumer); re-exposed here for the UI.
@@ -2328,9 +2377,15 @@ class PlayerViewModel @Inject constructor(
         return uri.takeIf { it.scheme == "file" }?.path?.takeIf { it.isNotBlank() }
     }
 
-    fun addSongToQueue(song: Song) = playbackDispatchStateHolder.addSongToQueue(song)
+    fun addSongToQueue(song: Song) {
+        playbackDispatchStateHolder.addSongToQueue(song)
+        _queueAddedEvents.tryEmit(QueueAddEvent(song, playNext = false))
+    }
 
-    fun addSongNextToQueue(song: Song) = playbackDispatchStateHolder.addSongNextToQueue(song)
+    fun addSongNextToQueue(song: Song) {
+        playbackDispatchStateHolder.addSongNextToQueue(song)
+        _queueAddedEvents.tryEmit(QueueAddEvent(song, playNext = true))
+    }
 
     // =====================================================
     // Multi-Selection Batch Operations — delegated to

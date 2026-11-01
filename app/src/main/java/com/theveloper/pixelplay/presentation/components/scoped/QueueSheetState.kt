@@ -10,9 +10,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.theveloper.pixelplay.presentation.utils.LocalAppHapticsConfig
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerSheetState
 import kotlinx.coroutines.CoroutineScope
 import androidx.compose.material3.MotionScheme
@@ -56,19 +58,19 @@ internal fun rememberQueueSheetState(
             if (queueSheetHeightPx == 0f) 0f else queueSheetHeightPx + basePadding
         }
     }
-    val minQueueDragThresholdPx = remember(density) { with(density) { 14.dp.toPx() } }
-    val maxQueueDragThresholdPx = remember(density) { with(density) { 56.dp.toPx() } }
+    val minQueueDragThresholdPx = remember(density) { with(density) { 56.dp.toPx() } }
+    val maxQueueDragThresholdPx = remember(density) { with(density) { 150.dp.toPx() } }
     val queueDragThresholdPx by remember(
         queueHiddenOffsetPx,
         minQueueDragThresholdPx,
         maxQueueDragThresholdPx
     ) {
         derivedStateOf {
-            (queueHiddenOffsetPx * 0.05f).coerceIn(minQueueDragThresholdPx, maxQueueDragThresholdPx)
+            (queueHiddenOffsetPx * 0.18f).coerceIn(minQueueDragThresholdPx, maxQueueDragThresholdPx)
         }
     }
     val queueMinFlingTravelPx by remember(density) {
-        derivedStateOf { with(density) { 12.dp.toPx() } }
+        derivedStateOf { with(density) { 36.dp.toPx() } }
     }
 
     val queueHiddenOffsetPxState = rememberUpdatedState(queueHiddenOffsetPx)
@@ -76,10 +78,18 @@ internal fun rememberQueueSheetState(
     val queueMinFlingTravelPxState = rememberUpdatedState(queueMinFlingTravelPx)
     val queueDragThresholdPxState = rememberUpdatedState(queueDragThresholdPx)
     val showQueueSheetState = rememberUpdatedState(showQueueSheet)
+    val hapticView = LocalView.current
+    val hapticsConfig = LocalAppHapticsConfig.current
+    val hapticMinStepPx = with(density) { 5.dp.toPx() }
+    val hapticMaxStepPx = with(density) { 26.dp.toPx() }
+    val closeHaptics = remember(hapticView, hapticsConfig, hapticMinStepPx, hapticMaxStepPx) {
+        DragCloseHaptics(hapticView, hapticsConfig, hapticMinStepPx, hapticMaxStepPx)
+    }
     val queueSheetController = remember(
         scope,
         queueSheetOffset,
-        queueAnimationSpec
+        queueAnimationSpec,
+        closeHaptics
     ) {
         QueueSheetController(
             scope = scope,
@@ -91,7 +101,8 @@ internal fun rememberQueueSheetState(
             showQueueSheetProvider = { showQueueSheetState.value },
             onShowQueueSheetChange = { showQueueSheet = it },
             onIsCollapsingChange = { isCollapsing = it },
-            animationSpec = queueAnimationSpec
+            animationSpec = queueAnimationSpec,
+            closeHaptics = closeHaptics
         )
     }
 

@@ -59,6 +59,7 @@ class NavidromeRepository @Inject constructor(
     private val dao: NavidromeDao,
     private val musicDao: MusicDao,
     private val playlistPreferencesRepository: PlaylistPreferencesRepository,
+    private val userPreferencesRepository: com.theveloper.pixelplay.data.preferences.UserPreferencesRepository,
     @ApplicationContext private val context: Context
 ) {
     companion object {
@@ -69,6 +70,9 @@ class NavidromeRepository @Inject constructor(
         private const val KEY_USERNAME = "username"
         private const val KEY_PASSWORD = "password"
         private const val KEY_LAST_FULL_SYNC = "last_full_sync"
+        private const val KEY_FAV_SYNC_STARRED = "fav_sync_starred"
+        private const val KEY_FAV_SYNC_TOTAL = "fav_sync_total"
+        private const val KEY_FAV_SYNC_TIME = "fav_sync_time"
 
         // ID offsets for unified library (following Netease: 3-5, QQ: 6-8)
         // Using negative offsets to prevent collisions with MediaStore IDs
@@ -150,6 +154,42 @@ class NavidromeRepository @Inject constructor(
     var lastFullSyncTime: Long
         get() = prefs.getLong(KEY_LAST_FULL_SYNC, 0L)
         set(value) = prefs.edit { putLong(KEY_LAST_FULL_SYNC, value) }
+
+    /** Records the outcome of the last favorites->Navidrome sync so the UI can show it. */
+    fun setLastFavoritesSyncSummary(starred: Int, total: Int) {
+        prefs.edit {
+            putInt(KEY_FAV_SYNC_STARRED, starred)
+                .putInt(KEY_FAV_SYNC_TOTAL, total)
+                .putLong(KEY_FAV_SYNC_TIME, System.currentTimeMillis())
+        }
+    }
+
+    /** (starred, total, epochMillis) of the last favorites sync, or null if it never ran. */
+    val lastFavoritesSyncSummary: Triple<Int, Int, Long>?
+        get() {
+            val time = prefs.getLong(KEY_FAV_SYNC_TIME, 0L)
+            if (time <= 0L) return null
+            return Triple(
+                prefs.getInt(KEY_FAV_SYNC_STARRED, 0),
+                prefs.getInt(KEY_FAV_SYNC_TOTAL, 0),
+                time
+            )
+        }
+
+    /**
+     * Fetches the songs currently starred on the server, as "Title — Artist" strings, so the user
+     * can verify that PixelPlayer's favorites reached Navidrome. Ordered by title.
+     */
+    suspend fun getStarredSongSummaries(): Result<List<String>> = withContext(Dispatchers.IO) {
+        if (!isLoggedIn) return@withContext Result.failure(IllegalStateException("Not logged in to Navidrome"))
+        api.getStarredSongs().map { songs ->
+            songs.map { song ->
+                val title = song.optString("title").ifBlank { "?" }
+                val artist = song.optString("artist").ifBlank { "?" }
+                "$title — $artist"
+            }.sorted()
+        }
+    }
 
     /**
      * Login to Navidrome server with credentials.
@@ -699,6 +739,15 @@ class NavidromeRepository @Inject constructor(
      * Sync Navidrome songs to the unified music library.
      */
     suspend fun syncUnifiedLibrarySongsFromNavidrome() {
+        // When the user only wants Navidrome for streaming/Sonos (not in the library), keep the
+        // unified library free of Navidrome tracks — clear any previously merged ones and stop.
+        if (!userPreferencesRepository.navidromeShowInLibraryFlow.first()) {
+            if (musicDao.getAllNavidromeSongIds().isNotEmpty()) {
+                musicDao.clearAllNavidromeSongs()
+            }
+            return
+        }
+
         val navidromeSongs = dao.getAllNavidromeSongsList()
         val existingUnifiedIds = musicDao.getAllNavidromeSongIds()
 

@@ -75,6 +75,7 @@ internal fun UnifiedPlayerQueueLayer(
     onSongInfoClick: (Song) -> Unit,
     onPlaySong: (Song, Int) -> Unit,
     onRemoveSong: (String) -> Unit,
+    onAddSongToQueueEnd: (Song) -> Unit = {},
     onReorder: (Int, Int) -> Unit,
     onToggleRepeat: () -> Unit,
     onToggleShuffle: () -> Unit,
@@ -145,6 +146,7 @@ internal fun UnifiedPlayerQueueLayer(
                     onSongInfoClick = onSongInfoClick,
                     onPlaySong = onPlaySong,
                     onRemoveSong = onRemoveSong,
+                    onAddSongToQueueEnd = onAddSongToQueueEnd,
                     onReorder = onReorder,
                     repeatMode = infrequentPlayerState.repeatMode,
                     isShuffleOn = infrequentPlayerState.isShuffleEnabled,
@@ -363,6 +365,10 @@ internal fun UnifiedPlayerQueueAndSongInfoHost(
             val onRemoveQueueSong = remember(playerViewModel) {
                 { id: String -> playerViewModel.removeSongFromQueue(id) }
             }
+            // Re-add (move) a queue song to the end of the manual user-queue block.
+            val onAddQueueSongToEnd = remember(playerViewModel) {
+                { song: Song -> playerViewModel.addSongToQueue(song) }
+            }
             val onReorderQueue = remember(playerViewModel) {
                 { from: Int, to: Int -> playerViewModel.reorderQueueItem(from, to) }
             }
@@ -422,6 +428,7 @@ internal fun UnifiedPlayerQueueAndSongInfoHost(
                 onSongInfoClick = onQueueSongInfoClick,
                 onPlaySong = onPlayQueueSong,
                 onRemoveSong = onRemoveQueueSong,
+                onAddSongToQueueEnd = onAddQueueSongToEnd,
                 onReorder = onReorderQueue,
                 onToggleRepeat = onToggleRepeat,
                 onToggleShuffle = onToggleShuffle,

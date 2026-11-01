@@ -14,6 +14,8 @@ import com.theveloper.pixelplay.data.backup.model.RestoreResult
 import com.theveloper.pixelplay.data.backup.model.ValidationError
 import com.theveloper.pixelplay.data.preferences.AppThemeMode
 import com.theveloper.pixelplay.data.preferences.CarouselStyle
+import com.theveloper.pixelplay.data.preferences.SwipeAction
+import com.theveloper.pixelplay.data.preferences.QueueSwipeAction
 import com.theveloper.pixelplay.data.preferences.LibraryNavigationMode
 import com.theveloper.pixelplay.data.preferences.ThemePreference
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
@@ -190,6 +192,7 @@ class SettingsViewModel @Inject constructor(
     private val lyricsRepository: LyricsRepository,
     private val musicRepository: MusicRepository,
     private val backupManager: BackupManager,
+    private val navidromeRepository: com.theveloper.pixelplay.data.navidrome.NavidromeRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -1338,6 +1341,98 @@ class SettingsViewModel @Inject constructor(
 
     val tapBackgroundClosesPlayer: StateFlow<Boolean> = userPreferencesRepository.tapBackgroundClosesPlayerFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val swipeLeftAction: StateFlow<SwipeAction> = userPreferencesRepository.swipeLeftActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SwipeAction.DEFAULT)
+
+    val swipeRightAction: StateFlow<SwipeAction> = userPreferencesRepository.swipeRightActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SwipeAction.DEFAULT)
+
+    fun setSwipeLeftAction(action: SwipeAction) {
+        viewModelScope.launch { userPreferencesRepository.setSwipeLeftAction(action) }
+    }
+
+    fun setSwipeRightAction(action: SwipeAction) {
+        viewModelScope.launch { userPreferencesRepository.setSwipeRightAction(action) }
+    }
+
+    val queueSwipeLeftAction: StateFlow<QueueSwipeAction> = userPreferencesRepository.queueSwipeLeftActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), QueueSwipeAction.DEFAULT)
+
+    val queueSwipeRightAction: StateFlow<QueueSwipeAction> = userPreferencesRepository.queueSwipeRightActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), QueueSwipeAction.DEFAULT)
+
+    fun setQueueSwipeLeftAction(action: QueueSwipeAction) {
+        viewModelScope.launch { userPreferencesRepository.setQueueSwipeLeftAction(action) }
+    }
+
+    fun setQueueSwipeRightAction(action: QueueSwipeAction) {
+        viewModelScope.launch { userPreferencesRepository.setQueueSwipeRightAction(action) }
+    }
+
+    val readAllArtistsFromTags: StateFlow<Boolean> = userPreferencesRepository.readAllArtistsFromTagsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setReadAllArtistsFromTags(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.setReadAllArtistsFromTags(enabled) }
+    }
+
+    /** How often (hours) to push favorites to Navidrome; 0 = off. */
+    val navidromeFavoritesSyncIntervalHours: StateFlow<Int> =
+        userPreferencesRepository.navidromeFavoritesSyncIntervalHoursFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 24)
+
+    fun setNavidromeFavoritesSyncIntervalHours(hours: Int) {
+        viewModelScope.launch { userPreferencesRepository.setNavidromeFavoritesSyncIntervalHours(hours) }
+    }
+
+    fun syncFavoritesToNavidromeNow() {
+        syncManager.syncFavoritesToNavidromeNow()
+    }
+
+    /** Whether Navidrome songs show up in the local library (off = streaming/Sonos only). */
+    val navidromeShowInLibrary: StateFlow<Boolean> =
+        userPreferencesRepository.navidromeShowInLibraryFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setNavidromeShowInLibrary(show: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.setNavidromeShowInLibrary(show) }
+    }
+
+    // ── Navidrome starred-songs checker (verify favorites reached the server) ──
+    /** Non-null while the checker dialog is open: the "Title — Artist" list (may be empty). */
+    private val _navidromeStarred = MutableStateFlow<List<String>?>(null)
+    val navidromeStarred: StateFlow<List<String>?> = _navidromeStarred.asStateFlow()
+    private val _navidromeStarredLoading = MutableStateFlow(false)
+    val navidromeStarredLoading: StateFlow<Boolean> = _navidromeStarredLoading.asStateFlow()
+    private val _navidromeStarredError = MutableStateFlow<String?>(null)
+    val navidromeStarredError: StateFlow<String?> = _navidromeStarredError.asStateFlow()
+    /** Last sync outcome as "starred X of Y favorites", or null if never synced. */
+    private val _navidromeSyncSummary = MutableStateFlow<String?>(null)
+    val navidromeSyncSummary: StateFlow<String?> = _navidromeSyncSummary.asStateFlow()
+
+    fun loadNavidromeStarred() {
+        _navidromeStarred.value = emptyList() // opens the dialog immediately
+        _navidromeStarredError.value = null
+        _navidromeStarredLoading.value = true
+        _navidromeSyncSummary.value = navidromeRepository.lastFavoritesSyncSummary?.let { (starred, total, _) ->
+            "Last sync: starred $starred of $total favorites"
+        }
+        viewModelScope.launch {
+            val result = navidromeRepository.getStarredSongSummaries()
+            _navidromeStarredLoading.value = false
+            result.fold(
+                onSuccess = { _navidromeStarred.value = it },
+                onFailure = { _navidromeStarredError.value = it.message ?: "Failed to load" }
+            )
+        }
+    }
+
+    fun dismissNavidromeStarred() {
+        _navidromeStarred.value = null
+        _navidromeStarredError.value = null
+        _navidromeStarredLoading.value = false
+    }
 
     fun setAlbumArtQuality(quality: AlbumArtQuality) {
         viewModelScope.launch {

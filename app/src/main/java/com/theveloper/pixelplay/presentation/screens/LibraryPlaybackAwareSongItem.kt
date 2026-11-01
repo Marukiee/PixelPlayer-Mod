@@ -10,7 +10,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import com.theveloper.pixelplay.data.model.Song
+import com.theveloper.pixelplay.data.preferences.SwipeAction
 import com.theveloper.pixelplay.presentation.components.subcomps.EnhancedSongListItem
+import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToActionRow
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -46,6 +48,7 @@ internal fun LibraryPlaybackAwareSongItem(
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = LibrarySongPlaybackUiState())
 
+    // Swipe-to-queue is applied centrally via LocalSongSwipeConfig inside EnhancedSongListItem.
     EnhancedSongListItem(
         song = song,
         isPlaying = playbackUiState.isPlaying,

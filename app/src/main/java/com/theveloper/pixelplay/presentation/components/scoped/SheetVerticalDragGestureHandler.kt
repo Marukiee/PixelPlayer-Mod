@@ -42,7 +42,8 @@ internal class SheetVerticalDragGestureHandler(
         initialVelocity: Float
     ) -> Unit,
     private val onExpandSheetState: () -> Unit,
-    private val onCollapseSheetState: () -> Unit
+    private val onCollapseSheetState: () -> Unit,
+    private val closeHaptics: DragCloseHaptics? = null
 ) {
     private var initialFractionOnDragStart = 0f
     private var initialYOnDragStart = 0f
@@ -60,6 +61,7 @@ internal class SheetVerticalDragGestureHandler(
         initialFractionOnDragStart = playerContentExpansionFraction.value
         initialYOnDragStart = currentSheetTranslationY.value
         accumulatedDragYSinceStart = 0f
+        closeHaptics?.reset()
     }
 
     fun onVerticalDrag(
@@ -68,9 +70,27 @@ internal class SheetVerticalDragGestureHandler(
         dragAmount: Float
     ) {
         accumulatedDragYSinceStart += dragAmount
+        val closingFromExpanded =
+            currentSheetStateProvider() == PlayerSheetState.EXPANDED && accumulatedDragYSinceStart > 0f
+        // Progressive close haptics while dragging an expanded sheet downward.
+        closeHaptics?.let { h ->
+            if (closingFromExpanded) {
+                val thresholdPx = with(densityProvider()) { CLOSE_THRESHOLD_DP.dp.toPx() }
+                h.onDrag(accumulatedDragYSinceStart, thresholdPx)
+            }
+        }
+        // Elastic resistance: the sheet follows the finger less the further you pull it down, so it
+        // feels like stretching something loose (then the release spring pops it). Decision + haptics
+        // still use the raw accumulated distance, so only the visual is rubber-banded.
+        val visualDrag = if (closingFromExpanded) {
+            val rubberPx = with(densityProvider()) { RUBBER_BAND_DP.dp.toPx() }
+            dragAmount / (1f + accumulatedDragYSinceStart / rubberPx)
+        } else {
+            dragAmount
+        }
         val dragFrame = computeSheetVerticalDragFrame(
             currentTranslationY = currentSheetTranslationY.value,
-            dragAmount = dragAmount,
+            dragAmount = visualDrag,
             expandedY = expandedYProvider(),
             collapsedY = collapsedYProvider(),
             miniHeightPx = miniHeightPxProvider(),
@@ -95,9 +115,10 @@ internal class SheetVerticalDragGestureHandler(
 
         val verticalVelocity = velocityTracker.calculateVelocity().y
         val currentFraction = playerContentExpansionFraction.value
-        val minDragThresholdPx = with(densityProvider()) { 5.dp.toPx() }
-        val velocityThreshold = 150f
+        val minDragThresholdPx = with(densityProvider()) { CLOSE_THRESHOLD_DP.dp.toPx() }
+        val velocityThreshold = 900f
 
+        val wasExpanded = currentSheetStateProvider() == PlayerSheetState.EXPANDED
         val targetState = resolveVerticalSheetTargetState(
             currentSheetContentState = currentSheetStateProvider(),
             accumulatedDragY = accumulatedDragYSinceStart,
@@ -106,6 +127,10 @@ internal class SheetVerticalDragGestureHandler(
             velocityThreshold = velocityThreshold,
             currentFraction = currentFraction
         )
+        // Thump when a downward drag actually commits the sheet closed.
+        if (wasExpanded && targetState == PlayerSheetState.COLLAPSED && accumulatedDragYSinceStart > 0f) {
+            closeHaptics?.onCommit()
+        }
 
         scope.launch {
             if (targetState == PlayerSheetState.EXPANDED) {
@@ -145,6 +170,11 @@ internal class SheetVerticalDragGestureHandler(
 
     fun onDragCancel() {
         onDragEnd()
+    }
+
+    private companion object {
+        const val CLOSE_THRESHOLD_DP = 96
+        const val RUBBER_BAND_DP = 180
     }
 }
 

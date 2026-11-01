@@ -555,6 +555,16 @@ class NavidromeApiService @Inject constructor(
     }
 
     /**
+     * Get all starred (favorited) songs on the server (ID3 view: getStarred2).
+     */
+    suspend fun getStarredSongs(): Result<List<JSONObject>> {
+        return requestAndParse("getStarred2").map { response ->
+            val songs = response.optJSONObject("starred2")?.optJSONArray("song")
+            (0 until (songs?.length() ?: 0)).mapNotNull { songs?.optJSONObject(it) }
+        }
+    }
+
+    /**
      * Unstar a song, album, or artist.
      */
     suspend fun unstar(id: String? = null, albumId: String? = null, artistId: String? = null): Result<Boolean> {

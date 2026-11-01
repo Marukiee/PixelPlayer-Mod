@@ -15,9 +15,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.theveloper.pixelplay.presentation.utils.LocalAppHapticsConfig
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerSheetState
 import kotlinx.coroutines.CoroutineScope
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
@@ -84,13 +86,22 @@ internal fun rememberSheetInteractionState(
     val onDraggingChangeState = rememberUpdatedState(onDraggingChange)
     val onDraggingPlayerAreaChangeState = rememberUpdatedState(onDraggingPlayerAreaChange)
 
+    val hapticView = LocalView.current
+    val hapticsConfig = LocalAppHapticsConfig.current
+    val hapticMinStepPx = with(LocalDensity.current) { 5.dp.toPx() }
+    val hapticMaxStepPx = with(LocalDensity.current) { 26.dp.toPx() }
+    val closeHaptics = remember(hapticView, hapticsConfig, hapticMinStepPx, hapticMaxStepPx) {
+        DragCloseHaptics(hapticView, hapticsConfig, hapticMinStepPx, hapticMaxStepPx)
+    }
+
     val sheetVerticalDragGestureHandler = remember(
         scope,
         velocityTracker,
         sheetMotionController,
         playerContentExpansionFraction,
         currentSheetTranslationY,
-        visualOvershootScaleY
+        visualOvershootScaleY,
+        closeHaptics
     ) {
         SheetVerticalDragGestureHandler(
             scope = scope,
@@ -110,7 +121,8 @@ internal fun rememberSheetInteractionState(
                 onAnimateSheetState.value(targetExpanded, animationSpec, initialVelocity)
             },
             onExpandSheetState = { onExpandSheetStateState.value() },
-            onCollapseSheetState = { onCollapseSheetStateState.value() }
+            onCollapseSheetState = { onCollapseSheetStateState.value() },
+            closeHaptics = closeHaptics
         )
     }
 

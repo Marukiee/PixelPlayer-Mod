@@ -147,6 +147,8 @@ import kotlinx.coroutines.withContext
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import timber.log.Timber
 import com.theveloper.pixelplay.presentation.components.subcomps.EnhancedSongListItem
+import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToActionRow
+import com.theveloper.pixelplay.data.preferences.SwipeAction
 import androidx.compose.ui.res.stringResource
 
 private const val MAX_ALBUM_MULTI_SELECTION = 6

@@ -31,6 +31,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -126,6 +127,11 @@ import com.theveloper.pixelplay.presentation.components.PlayStoreAnnouncementDef
 import com.theveloper.pixelplay.presentation.components.PlayStoreAnnouncementDialog
 import com.theveloper.pixelplay.presentation.components.PlayStoreAnnouncementUiModel
 import com.theveloper.pixelplay.presentation.components.UnifiedPlayerSheetV2
+import com.theveloper.pixelplay.presentation.components.QueueAddedPopup
+import com.theveloper.pixelplay.presentation.components.QueueRemovedPopup
+import com.theveloper.pixelplay.presentation.components.subcomps.LocalSongSwipeConfig
+import com.theveloper.pixelplay.presentation.components.subcomps.SongSwipeConfig
+import com.theveloper.pixelplay.data.preferences.SwipeAction
 import com.theveloper.pixelplay.presentation.components.calculatePlayerSheetCollapsedTargetY
 import com.theveloper.pixelplay.presentation.components.resolveNavBarOccupiedHeight
 import com.theveloper.pixelplay.presentation.components.resolveNavBarSurfaceHeight
@@ -772,9 +778,26 @@ class MainActivity : ComponentActivity() {
             userPreferencesRepository.clearDeprecatedPlayerSheetPreference()
         }
 
+        val songSwipeLeft by playerViewModel.swipeLeftAction.collectAsStateWithLifecycle()
+        val songSwipeRight by playerViewModel.swipeRightAction.collectAsStateWithLifecycle()
+        val songSwipeConfig = remember(songSwipeLeft, songSwipeRight, playerViewModel) {
+            SongSwipeConfig(
+                leftAction = songSwipeLeft,
+                rightAction = songSwipeRight,
+                onAction = { action, song ->
+                    when (action) {
+                        SwipeAction.ADD_TO_QUEUE -> playerViewModel.addSongToQueue(song)
+                        SwipeAction.PLAY_NEXT -> playerViewModel.addSongNextToQueue(song)
+                        SwipeAction.NONE -> {}
+                    }
+                }
+            )
+        }
+
         CompositionLocalProvider(
             LocalAppHapticsConfig provides appHapticsConfig,
-            LocalHapticFeedback provides scopedHapticFeedback
+            LocalHapticFeedback provides scopedHapticFeedback,
+            LocalSongSwipeConfig provides songSwipeConfig
         ) {
             AppSidebarDrawer(
                 drawerState = drawerState,
@@ -1047,6 +1070,49 @@ class MainActivity : ComponentActivity() {
                                 durationMillis = dismissUndoBarSlice.durationMillis
                             )
                         }
+
+                        // When the full player/queue is expanded the mini player is hidden,
+                        // so the popup shouldn't reserve its height — otherwise it floats too
+                        // high over the queue list. Sit it near the bottom in that case.
+                        val isPlayerExpandedForPopup by remember {
+                            derivedStateOf { playerViewModel.playerContentExpansionFraction.value > 0.5f }
+                        }
+                        // Hide the "added to queue" popup while the queue remove-undo bar is up so the
+                        // two never show at once (they live at different heights).
+                        val queueUndoBarActive by remember {
+                            playerViewModel.playerUiState
+                                .map { it.showQueueItemUndoBar }
+                                .distinctUntilChanged()
+                        }.collectAsStateWithLifecycle(initialValue = false)
+                        // Animate the anchor so the popup glides between the mini-player and the
+                        // expanded-player positions instead of jumping when the player opens/closes.
+                        val queuePopupBottom by animateDpAsState(
+                            targetValue = if (isPlayerExpandedForPopup) {
+                                // Expanded/queue open: where the queue remove bar used to sit
+                                // (navigation-bar inset + 96dp), not the larger Scaffold inset.
+                                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 96.dp
+                            } else {
+                                // Collapsed: sit just above the mini player.
+                                innerPadding.calculateBottomPadding() +
+                                    MiniPlayerBottomSpacer + MiniPlayerHeight + 24.dp
+                            },
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                            label = "queuePopupBottom"
+                        )
+                        QueueAddedPopup(
+                            playerViewModel = playerViewModel,
+                            suppressed = queueUndoBarActive,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = queuePopupBottom)
+                        )
+                        // Same anchor + styling as the add popup so the two never differ in position.
+                        QueueRemovedPopup(
+                            playerViewModel = playerViewModel,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = queuePopupBottom)
+                        )
 
                         if (showPlayStoreAnnouncement) {
                             PlayStoreAnnouncementDialog(

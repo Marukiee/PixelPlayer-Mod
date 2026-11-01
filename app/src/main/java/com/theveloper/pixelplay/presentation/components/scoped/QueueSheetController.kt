@@ -28,12 +28,14 @@ internal class QueueSheetController(
     private val showQueueSheetProvider: () -> Boolean,
     private val onShowQueueSheetChange: (Boolean) -> Unit,
     private val onIsCollapsingChange: (Boolean) -> Unit,
-    private val animationSpec: androidx.compose.animation.core.AnimationSpec<Float>
+    private val animationSpec: androidx.compose.animation.core.AnimationSpec<Float>,
+    private val closeHaptics: DragCloseHaptics? = null
 ) {
     private var dragOffsetCache: Float? = null
     private var pendingDragTarget: Float? = null
     private var dragSnapJob: Job? = null
     private var isCollapsing = false
+    private var accumulatedDrag = 0f
 
     private fun resetDragPipeline() {
         dragOffsetCache = null
@@ -139,6 +141,8 @@ internal class QueueSheetController(
         if (hiddenOffset == 0f || !allowInteractionProvider()) return
         resetDragPipeline()
         dragOffsetCache = queueSheetOffset.value
+        accumulatedDrag = 0f
+        closeHaptics?.reset()
         onShowQueueSheetChange(true)
         scope.launch { queueSheetOffset.stop() }
     }
@@ -146,11 +150,28 @@ internal class QueueSheetController(
     fun dragBy(dragAmount: Float) {
         val hiddenOffset = hiddenOffsetProvider()
         if (hiddenOffset == 0f || !allowInteractionProvider()) return
+        accumulatedDrag += dragAmount
+
+        val threshold = dragThresholdPxProvider().coerceAtLeast(1f)
+        // Elastic resistance while pulling the sheet down toward closed: it follows the finger less
+        // the further you drag, so it stretches loose then the release spring pops it. Only the
+        // visual offset is rubber-banded; the close decision uses the raw gesture travel.
+        val effectiveDrag = if (dragAmount > 0f && accumulatedDrag > 0f) {
+            val rubberPx = (threshold * 2f).coerceAtLeast(1f)
+            dragAmount / (1f + accumulatedDrag / rubberPx)
+        } else {
+            dragAmount
+        }
         val baseOffset = dragOffsetCache ?: queueSheetOffset.value
-        val newOffset = (baseOffset + dragAmount).coerceIn(0f, hiddenOffset)
+        val newOffset = (baseOffset + effectiveDrag).coerceIn(0f, hiddenOffset)
         dragOffsetCache = newOffset
         pendingDragTarget = newOffset
         launchDragSnapLoopIfNeeded()
+
+        // Escalating "pull-loose-then-pop" haptics as the drag nears the close threshold.
+        closeHaptics?.let { h ->
+            if (accumulatedDrag > 0f) h.onDrag(accumulatedDrag, threshold)
+        }
     }
 
     fun endDrag(totalDrag: Float, velocity: Float) {
@@ -162,7 +183,7 @@ internal class QueueSheetController(
         resetDragPipeline()
 
         val isFastUpward = velocity < -520f
-        val isFastDownward = velocity > 450f
+        val isFastDownward = velocity > 1050f
         val minFlingTravelPx = minFlingTravelPxProvider()
         val hasMeaningfulUpwardTravel = totalDrag < -minFlingTravelPx
         // Quick upward flicks on full player can be short in travel but high in intent.
@@ -186,6 +207,12 @@ internal class QueueSheetController(
             // Tiny residual drag: snap to whichever half the sheet ended in.
             else -> settledOffset < hiddenOffset * 0.5f
         }
+
+        // Thump when a downward drag actually commits the sheet closed.
+        if (!shouldExpand && accumulatedDrag > 0f) {
+            closeHaptics?.onCommit()
+        }
+        accumulatedDrag = 0f
 
         animate(shouldExpand)
     }

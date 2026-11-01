@@ -1729,7 +1729,7 @@ interface MusicDao {
     @Query("SELECT " + SONG_LIST_PROJECTION + " FROM songs")
     suspend fun getAllSongsList(): List<SongEntity>
 
-    @Query("SELECT id, title, artist_name, album_name, duration FROM songs WHERE source_type = 0")
+    @Query("SELECT id, title, artist_name, album_name, duration, file_path FROM songs WHERE source_type = 0")
     suspend fun getAllLocalSongSummaries(): List<SongSummary>
 
     @Query("SELECT album_art_uri_string FROM songs WHERE id=:id")

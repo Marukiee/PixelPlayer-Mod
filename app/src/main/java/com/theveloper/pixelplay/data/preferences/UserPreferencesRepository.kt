@@ -125,6 +125,16 @@ class UserPreferencesRepository @Inject constructor(
         val CAROUSEL_STYLE = stringPreferencesKey("carousel_style")
         val LIBRARY_NAVIGATION_MODE = stringPreferencesKey("library_navigation_mode")
         val LAUNCH_TAB = stringPreferencesKey("launch_tab")
+        val SWIPE_LEFT_ACTION = stringPreferencesKey("swipe_left_action")
+        val SWIPE_RIGHT_ACTION = stringPreferencesKey("swipe_right_action")
+        val QUEUE_SWIPE_LEFT_ACTION = stringPreferencesKey("queue_swipe_left_action")
+        val QUEUE_SWIPE_RIGHT_ACTION = stringPreferencesKey("queue_swipe_right_action")
+        val READ_ALL_ARTISTS_FROM_TAGS = booleanPreferencesKey("read_all_artists_from_tags")
+        // How often to push local favorites to Navidrome as stars, in hours. 0 = off.
+        val NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS = intPreferencesKey("navidrome_favorites_sync_interval_hours")
+        // Whether Navidrome songs appear in the local library. Off = Navidrome used only for
+        // streaming/Sonos (useful when the same tracks already exist locally).
+        val NAVIDROME_SHOW_IN_LIBRARY = booleanPreferencesKey("navidrome_show_in_library")
 
         // Transition
         val GLOBAL_TRANSITION_SETTINGS = stringPreferencesKey("global_transition_settings_json")
@@ -997,6 +1007,57 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
 
     suspend fun setLaunchTab(tab: String) {
         dataStore.edit { it[PreferencesKeys.LAUNCH_TAB] = tab }
+    }
+
+    val swipeLeftActionFlow: Flow<SwipeAction> =
+        pref { SwipeAction.fromKey(it[PreferencesKeys.SWIPE_LEFT_ACTION]) }
+
+    suspend fun setSwipeLeftAction(action: SwipeAction) {
+        dataStore.edit { it[PreferencesKeys.SWIPE_LEFT_ACTION] = action.key }
+    }
+
+    val swipeRightActionFlow: Flow<SwipeAction> =
+        pref { SwipeAction.fromKey(it[PreferencesKeys.SWIPE_RIGHT_ACTION]) }
+
+    suspend fun setSwipeRightAction(action: SwipeAction) {
+        dataStore.edit { it[PreferencesKeys.SWIPE_RIGHT_ACTION] = action.key }
+    }
+
+    val queueSwipeLeftActionFlow: Flow<QueueSwipeAction> =
+        pref { QueueSwipeAction.fromKey(it[PreferencesKeys.QUEUE_SWIPE_LEFT_ACTION]) }
+
+    suspend fun setQueueSwipeLeftAction(action: QueueSwipeAction) {
+        dataStore.edit { it[PreferencesKeys.QUEUE_SWIPE_LEFT_ACTION] = action.key }
+    }
+
+    val queueSwipeRightActionFlow: Flow<QueueSwipeAction> =
+        pref { QueueSwipeAction.fromKey(it[PreferencesKeys.QUEUE_SWIPE_RIGHT_ACTION]) }
+
+    suspend fun setQueueSwipeRightAction(action: QueueSwipeAction) {
+        dataStore.edit { it[PreferencesKeys.QUEUE_SWIPE_RIGHT_ACTION] = action.key }
+    }
+
+    val readAllArtistsFromTagsFlow: Flow<Boolean> =
+        pref { it[PreferencesKeys.READ_ALL_ARTISTS_FROM_TAGS] ?: true }
+
+    suspend fun setReadAllArtistsFromTags(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.READ_ALL_ARTISTS_FROM_TAGS] = enabled }
+    }
+
+    /** How often to push favorites to Navidrome, in hours. 0 = off. Default 24h. */
+    val navidromeFavoritesSyncIntervalHoursFlow: Flow<Int> =
+        pref { it[PreferencesKeys.NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS] ?: 24 }
+
+    suspend fun setNavidromeFavoritesSyncIntervalHours(hours: Int) {
+        dataStore.edit { it[PreferencesKeys.NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS] = hours }
+    }
+
+    /** Whether Navidrome songs are merged into the local library. Default true. */
+    val navidromeShowInLibraryFlow: Flow<Boolean> =
+        pref { it[PreferencesKeys.NAVIDROME_SHOW_IN_LIBRARY] ?: true }
+
+    suspend fun setNavidromeShowInLibrary(show: Boolean) {
+        dataStore.edit { it[PreferencesKeys.NAVIDROME_SHOW_IN_LIBRARY] = show }
     }
 
     val useSmoothCornersFlow: Flow<Boolean> =

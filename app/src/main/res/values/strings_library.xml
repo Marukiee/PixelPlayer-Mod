@@ -137,6 +137,9 @@
     <string name="song_info_cd_share_all_as_zip">Share all as ZIP</string>
     <string name="song_info_error_share_song">Could not share song: %1$s</string>
     <string name="song_info_action_add_to_queue">Add to queue</string>
+    <string name="queue_added_popup_title">Added to queue</string>
+    <string name="queue_added_next_title">Playing next</string>
+    <string name="queue_removed_popup_title">Removed from queue</string>
     <string name="song_info_cd_add_to_queue">Add to queue</string>
     <string name="song_info_action_queue_next">Next</string>
     <string name="song_info_cd_queue_next">Play next in queue</string>

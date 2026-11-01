@@ -105,7 +105,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.derivedStateOf
@@ -222,6 +225,7 @@ fun FullPlayerContent(
     onPrevious: () -> Unit,
     onCollapse: () -> Unit,
     onShowQueueClicked: () -> Unit,
+    onShowSongInfoClicked: () -> Unit,
     onQueueDragStart: () -> Unit,
     onQueueDrag: (Float) -> Unit,
     onQueueRelease: (Float, Float) -> Unit,
@@ -867,7 +871,8 @@ fun FullPlayerContent(
                                 }
                             }
 
-                            // Queue Button
+                            // Song options (3-dot) button — opens the same options/details
+                            // sheet as the library. Queue is reached by swiping up.
                             Box(
                                 modifier = Modifier
                                     .size(height = 42.dp, width = 50.dp)
@@ -881,14 +886,13 @@ fun FullPlayerContent(
                                     )
                                     .background(playerOnAccentColor.copy(alpha = 0.7f))
                                     .clickable {
-                                        showSongInfoBottomSheet = true
-                                        onShowQueueClicked()
+                                        onShowSongInfoClicked()
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    painter = painterResource(R.drawable.rounded_queue_music_24),
-                                    contentDescription = stringResource(R.string.player_cd_open_queue),
+                                    painter = painterResource(R.drawable.rounded_more_vert_24),
+                                    contentDescription = stringResource(R.string.library_selection_more_options),
                                     tint = playerAccentColor
                                 )
                             }
@@ -1232,6 +1236,10 @@ private fun FullPlayerProgressSection(
         song.sampleRate
     }
 
+    // Source of the currently playing song: streamed (Navidrome/remote URL) vs local file.
+    val isRemoteSource = song.navidromeId != null ||
+        song.contentUriString.startsWith("http", ignoreCase = true)
+
     PlayerProgressBarSection(
         songId = song.id,
         currentPositionProvider = currentPositionProvider,
@@ -1240,6 +1248,7 @@ private fun FullPlayerProgressSection(
         audioMimeType = audioMimeType,
         audioBitrate = audioBitrate,
         audioSampleRate = audioSampleRate,
+        isRemoteSource = isRemoteSource,
         showAudioFileInfo = showPlayerFileInfo,
         onSeek = onSeek,
         expansionFractionProvider = expansionFractionProvider,
@@ -1637,6 +1646,7 @@ private fun PlayerProgressBarSection(
     audioMimeType: String?,
     audioBitrate: Int?,
     audioSampleRate: Int?,
+    isRemoteSource: Boolean = false,
     showAudioFileInfo: Boolean,
     onSeek: (Long) -> Unit,
     expansionFractionProvider: () -> Float,
@@ -1843,6 +1853,7 @@ private fun PlayerProgressBarSection(
                 isVisible = isVisible,
                 textColor = timeTextColor,
                 audioMetaLabel = displayAudioMetaLabel,
+                isRemoteSource = isRemoteSource,
                 horizontalTrackInset = progressSectionHorizontalInset
             )
         }
@@ -1902,6 +1913,7 @@ private fun EfficientTimeLabels(
     isVisible: Boolean,
     textColor: Color,
     audioMetaLabel: String?,
+    isRemoteSource: Boolean = false,
     horizontalTrackInset: Dp
 ) {
     val coarsePositionMs by remember(isVisible, positionState) {
@@ -1952,16 +1964,27 @@ private fun EfficientTimeLabels(
                 color = textColor.copy(alpha = 0.14f),
                 contentColor = textColor.copy(alpha = 0.96f)
             ) {
-                Text(
-                    text = audioMetaLabel,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 11.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                )
+                ) {
+                    // Source badge: streamed (Navidrome/web) vs local file.
+                    Icon(
+                        imageVector = if (isRemoteSource) Icons.Rounded.Language else Icons.Rounded.Smartphone,
+                        contentDescription = if (isRemoteSource) "Streaming source" else "Local source",
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = audioMetaLabel,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

@@ -144,6 +144,9 @@ import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.presentation.components.AutoScrollingText
 import com.theveloper.pixelplay.presentation.components.SmartImage
 import com.theveloper.pixelplay.presentation.components.subcomps.PlayingEqIcon
+import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToActionRow
+import com.theveloper.pixelplay.presentation.components.subcomps.SwipeActionSpec
+import com.theveloper.pixelplay.data.preferences.QueueSwipeAction
 import com.theveloper.pixelplay.presentation.components.player.AnimatedPlaybackControls
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerUiState
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
@@ -194,17 +197,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import kotlin.math.abs
 
-private data class QueueUndoBarProjection(
-    val isVisible: Boolean = false,
-    val removedSongTitle: String = ""
-)
-
-private fun PlayerUiState.toQueueUndoBarProjection(): QueueUndoBarProjection =
-    QueueUndoBarProjection(
-        isVisible = showQueueItemUndoBar,
-        removedSongTitle = lastRemovedQueueSong?.title.orEmpty()
-    )
-
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
     ExperimentalMaterial3ExpressiveApi::class
@@ -226,6 +218,7 @@ fun QueueBottomSheet(
     onSongInfoClick: (Song) -> Unit,
     onPlaySong: (Song, Int) -> Unit,
     onRemoveSong: (String) -> Unit,
+    onAddSongToQueueEnd: (Song) -> Unit = {},
     onReorder: (from: Int, to: Int) -> Unit,
     onToggleRepeat: () -> Unit,
     onToggleShuffle: () -> Unit,
@@ -263,6 +256,9 @@ fun QueueBottomSheet(
     // and can be safely captured in onClick lambdas.
     val queueNamedSuffixTemplate = stringResource(R.string.queue_save_playlist_named)
     val queueCurrentLabel = stringResource(R.string.queue_save_playlist_current)
+    val userQueueSongIds by viewModel.userQueueSongIdsFlow.collectAsStateWithLifecycle()
+    val queueSwipeLeft by viewModel.queueSwipeLeftAction.collectAsStateWithLifecycle()
+    val queueSwipeRight by viewModel.queueSwipeRightAction.collectAsStateWithLifecycle()
 
     LaunchedEffect(isVisible) {
         if (!isVisible) {
@@ -871,6 +867,25 @@ fun QueueBottomSheet(
                                         label = "scaleAnimation"
                                     )
 
+                                    // Configurable bidirectional swipe on upcoming queue items.
+                                    val queueLeftSpec = queueSwipeSpec(
+                                        action = if (canReorder) queueSwipeLeft else QueueSwipeAction.NONE,
+                                        onRemove = { onRemoveSong(song.id) },
+                                        onAddToQueueEnd = { onAddSongToQueueEnd(song) }
+                                    )
+                                    val queueRightSpec = queueSwipeSpec(
+                                        action = if (canReorder) queueSwipeRight else QueueSwipeAction.NONE,
+                                        onRemove = { onRemoveSong(song.id) },
+                                        onAddToQueueEnd = { onAddSongToQueueEnd(song) }
+                                    )
+
+                                    SwipeToActionRow(
+                                        leftSpec = queueLeftSpec,
+                                        rightSpec = queueRightSpec,
+                                        // Match the queue card's horizontal inset so the reveal
+                                        // panel lines up with the row instead of the screen edge.
+                                        edgeInset = 12.dp
+                                    ) {
                                     QueuePlaylistSongItem(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -888,10 +903,11 @@ fun QueueBottomSheet(
                                         isReorderModeEnabled = false,
                                         isDragHandleVisible = canReorder,
                                         isRemoveButtonVisible = false,
-                                        enableSwipeToDismiss = canReorder,
+                                        enableSwipeToDismiss = false,
                                         swipeStateIdentity = itemStableKey,
                                         onDismissSong = { onRemoveSong(song.id) },
                                         isFromPlaylist = true,
+                                        isUserQueued = index > currentSongDisplayIndex && song.id in userQueueSongIds,
                                         onMoreOptionsClick = { onSongInfoClick(song) },
                                         dragHandle = {
                                             IconButton(
@@ -926,6 +942,7 @@ fun QueueBottomSheet(
                                             }
                                         }
                                     )
+                                    }
                                 }
                             }
                         }
@@ -1116,58 +1133,8 @@ fun QueueBottomSheet(
                 }
             }
 
-            val queueUndoBarState by remember(viewModel) {
-                viewModel.playerUiState
-                    .map { it.toQueueUndoBarProjection() }
-                    .distinctUntilChanged()
-            }.collectAsStateWithLifecycle(initialValue = QueueUndoBarProjection())
-            AnimatedVisibility(
-                visible = queueUndoBarState.isVisible,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(
-                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 96.dp
-                    )
-                    .zIndex(50f),
-                enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
-                exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = colors.inverseSurface,
-                    tonalElevation = 6.dp,
-                    shadowElevation = 6.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = queueUndoBarState.removedSongTitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colors.inverseOnSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = stringResource(R.string.queue_song_removed),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colors.inverseOnSurface.copy(alpha = 0.7f),
-                        )
-                        TextButton(
-                            onClick = { viewModel.undoRemoveSongFromQueue() }
-                        ) {
-                            Text(
-                                text = stringResource(R.string.common_undo),
-                                color = colors.inversePrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
+            // The queue remove-undo popup is rendered globally (QueueRemovedPopup in MainActivity)
+            // so it shares the exact anchor and styling of the "added to queue" popup.
         }
 
         if (showTimerOptions) {
@@ -1893,7 +1860,8 @@ fun QueuePlaylistSongItem(
     enableSwipeToDismiss: Boolean = false,
     swipeStateIdentity: Long = 0L,
     onDismissSong: () -> Unit = {},
-    isFromPlaylist: Boolean
+    isFromPlaylist: Boolean,
+    isUserQueued: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -2083,6 +2051,18 @@ fun QueuePlaylistSongItem(
                         )
                     }
 
+                    // Spotify-style marker for songs the user manually queued (up next).
+                    if (isUserQueued && !isCurrentSong) {
+                        Icon(
+                            painter = painterResource(R.drawable.rounded_queue_music_24),
+                            contentDescription = stringResource(R.string.song_info_action_add_to_queue),
+                            tint = colors.primary,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .size(18.dp)
+                        )
+                    }
+
                     if (isCurrentSong) {
                         if (isPlaying != null) {
                             PlayingEqIcon(
@@ -2145,5 +2125,33 @@ fun QueuePlaylistSongItem(
                 }
             }
         }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun queueSwipeSpec(
+    action: QueueSwipeAction,
+    onRemove: () -> Unit,
+    onAddToQueueEnd: () -> Unit
+): SwipeActionSpec {
+    return when (action) {
+        QueueSwipeAction.NONE -> SwipeActionSpec.Disabled
+        QueueSwipeAction.REMOVE -> SwipeActionSpec(
+            enabled = true,
+            icon = R.drawable.rounded_close_24,
+            container = MaterialTheme.colorScheme.errorContainer,
+            content = MaterialTheme.colorScheme.onErrorContainer,
+            label = androidx.compose.ui.res.stringResource(R.string.queue_cd_dismiss_song),
+            onFire = onRemove,
+            removesRow = true
+        )
+        QueueSwipeAction.ADD_TO_QUEUE_END -> SwipeActionSpec(
+            enabled = true,
+            icon = R.drawable.rounded_queue_music_24,
+            container = MaterialTheme.colorScheme.primaryContainer,
+            content = MaterialTheme.colorScheme.onPrimaryContainer,
+            label = androidx.compose.ui.res.stringResource(R.string.swipe_action_add_to_queue),
+            onFire = onAddToQueueEnd
+        )
     }
 }

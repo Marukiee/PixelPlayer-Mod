@@ -14,6 +14,8 @@ import java.io.File
 data class AudioMetadata(
     val title: String?,
     val artist: String?,
+    /** All ARTIST tag values (multiple separate fields, e.g. Vorbis), primary first. */
+    val artists: List<String> = emptyList(),
     val albumArtist: String?,
     val album: String?,
     val genre: String?,
@@ -84,6 +86,7 @@ object AudioMetadataReader {
 
                 val title = propertyMap["TITLE"]?.firstOrNull()?.takeIf { it.isNotBlank() }
                 val artist = propertyMap["ARTIST"]?.firstOrNull()?.takeIf { it.isNotBlank() }
+                val artists = propertyMap["ARTIST"]?.mapNotNull { it.takeIf { s -> s.isNotBlank() } } ?: emptyList()
                 val albumArtist = propertyMap["ALBUMARTIST"]?.firstOrNull()?.takeIf { it.isNotBlank() }
                     ?: propertyMap["ALBUM ARTIST"]?.firstOrNull()?.takeIf { it.isNotBlank() }
                     ?: propertyMap["BAND"]?.firstOrNull()?.takeIf { it.isNotBlank() }
@@ -139,6 +142,7 @@ object AudioMetadataReader {
                 AudioMetadata(
                     title = title ?: fallback?.title,
                     artist = artist ?: fallback?.artist,
+                    artists = artists.ifEmpty { fallback?.artists ?: emptyList() },
                     albumArtist = albumArtist ?: fallback?.albumArtist,
                     album = album ?: fallback?.album,
                     genre = genre ?: fallback?.genre,
@@ -184,6 +188,8 @@ object AudioMetadataReader {
 
             val title = tag?.getFirst(FieldKey.TITLE)?.takeIf { it.isNotBlank() }
             val artist = tag?.getFirst(FieldKey.ARTIST)?.takeIf { it.isNotBlank() }
+            val artists = runCatching { tag?.getAll(FieldKey.ARTIST) }.getOrNull()
+                ?.filter { it.isNotBlank() } ?: emptyList()
             val albumArtist = tag?.getFirst(FieldKey.ALBUM_ARTIST)?.takeIf { it.isNotBlank() }
             val album = tag?.getFirst(FieldKey.ALBUM)?.takeIf { it.isNotBlank() }
             val genre = tag?.getFirst(FieldKey.GENRE)?.takeIf { it.isNotBlank() }
@@ -220,6 +226,7 @@ object AudioMetadataReader {
             AudioMetadata(
                 title = title,
                 artist = artist,
+                artists = artists,
                 albumArtist = albumArtist,
                 album = album,
                 genre = genre,

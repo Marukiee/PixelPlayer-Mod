@@ -64,8 +64,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.outlined.ClearAll
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
@@ -76,6 +80,7 @@ import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BlurOff
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -115,6 +120,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import com.theveloper.pixelplay.data.preferences.SwipeAction
+import com.theveloper.pixelplay.data.preferences.QueueSwipeAction
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -505,6 +514,155 @@ fun SettingsCategoryScreen(
                                     checked = uiState.autoScanLrcFiles,
                                     onCheckedChange = { settingsViewModel.setAutoScanLrcFiles(it) },
                                     leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                val readAllArtists by settingsViewModel.readAllArtistsFromTags.collectAsStateWithLifecycle()
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.settings_read_all_artists_title),
+                                    subtitle = stringResource(R.string.settings_read_all_artists_subtitle),
+                                    checked = readAllArtists,
+                                    onCheckedChange = { settingsViewModel.setReadAllArtistsFromTags(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+
+                                val navShowInLibrary by settingsViewModel.navidromeShowInLibrary.collectAsStateWithLifecycle()
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.settings_navidrome_show_in_library_title),
+                                    subtitle = stringResource(R.string.settings_navidrome_show_in_library_subtitle),
+                                    checked = navShowInLibrary,
+                                    onCheckedChange = { settingsViewModel.setNavidromeShowInLibrary(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                val navFavInterval by settingsViewModel.navidromeFavoritesSyncIntervalHours.collectAsStateWithLifecycle()
+                                val navFavContext = LocalContext.current
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_navidrome_fav_sync_interval_title),
+                                    description = stringResource(R.string.settings_navidrome_fav_sync_interval_subtitle),
+                                    options = mapOf(
+                                        "0" to stringResource(R.string.settings_navidrome_fav_sync_off),
+                                        "6" to stringResource(R.string.settings_navidrome_fav_sync_6h),
+                                        "12" to stringResource(R.string.settings_navidrome_fav_sync_12h),
+                                        "24" to stringResource(R.string.settings_navidrome_fav_sync_24h)
+                                    ),
+                                    selectedKey = navFavInterval.toString(),
+                                    onSelectionChanged = { key ->
+                                        settingsViewModel.setNavidromeFavoritesSyncIntervalHours(key.toIntOrNull() ?: 24)
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceContainer,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable {
+                                            settingsViewModel.syncFavoritesToNavidromeNow()
+                                            Toast.makeText(
+                                                navFavContext,
+                                                navFavContext.getString(R.string.settings_navidrome_fav_sync_now),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().padding(16.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(end = 16.dp).size(24.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) { Icon(Icons.Outlined.Sync, null, tint = MaterialTheme.colorScheme.secondary) }
+                                        Text(
+                                            text = stringResource(R.string.settings_navidrome_fav_sync_now),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceContainer,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable { settingsViewModel.loadNavidromeStarred() }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().padding(16.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(end = 16.dp).size(24.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
+                                        Text(
+                                            text = stringResource(R.string.settings_navidrome_fav_check_title),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+
+                            val navStarred by settingsViewModel.navidromeStarred.collectAsStateWithLifecycle()
+                            val navStarredLoading by settingsViewModel.navidromeStarredLoading.collectAsStateWithLifecycle()
+                            val navStarredError by settingsViewModel.navidromeStarredError.collectAsStateWithLifecycle()
+                            val navSyncSummary by settingsViewModel.navidromeSyncSummary.collectAsStateWithLifecycle()
+                            if (navStarred != null) {
+                                AlertDialog(
+                                    onDismissRequest = { settingsViewModel.dismissNavidromeStarred() },
+                                    confirmButton = {
+                                        TextButton(onClick = { settingsViewModel.dismissNavidromeStarred() }) {
+                                            Text(stringResource(android.R.string.ok))
+                                        }
+                                    },
+                                    title = { Text(stringResource(R.string.settings_navidrome_fav_check_dialog_title)) },
+                                    text = {
+                                        val list = navStarred ?: emptyList()
+                                        when {
+                                            navStarredLoading -> Box(
+                                                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) { CircularProgressIndicator() }
+                                            navStarredError != null -> Text(navStarredError ?: "")
+                                            list.isEmpty() -> Column {
+                                                Text(stringResource(R.string.settings_navidrome_fav_check_empty))
+                                                navSyncSummary?.let {
+                                                    Spacer(Modifier.height(8.dp))
+                                                    Text(
+                                                        text = it,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                            else -> Column(
+                                                modifier = Modifier
+                                                    .heightIn(max = 400.dp)
+                                                    .verticalScroll(rememberScrollState())
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.settings_navidrome_fav_check_count, list.size),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.padding(bottom = 2.dp)
+                                                )
+                                                navSyncSummary?.let {
+                                                    Text(
+                                                        text = it,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.padding(bottom = 8.dp)
+                                                    )
+                                                }
+                                                list.forEach { entry ->
+                                                    Text(
+                                                        text = entry,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.padding(vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 )
                             }
 
@@ -900,6 +1058,38 @@ fun SettingsCategoryScreen(
                                     checked = uiState.tapBackgroundClosesPlayer,
                                     onCheckedChange = { settingsViewModel.setTapBackgroundClosesPlayer(it) },
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_touch_app_24), null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                            }
+                            SettingsSubsection(
+                                title = stringResource(R.string.settings_swipe_gestures_section)
+                            ) {
+                                val swipeLeft by settingsViewModel.swipeLeftAction.collectAsStateWithLifecycle()
+                                val swipeRight by settingsViewModel.swipeRightAction.collectAsStateWithLifecycle()
+                                SwipeActionSettingItem(
+                                    title = stringResource(R.string.settings_swipe_left_title),
+                                    selected = swipeLeft,
+                                    onSelect = { settingsViewModel.setSwipeLeftAction(it) }
+                                )
+                                SwipeActionSettingItem(
+                                    title = stringResource(R.string.settings_swipe_right_title),
+                                    selected = swipeRight,
+                                    onSelect = { settingsViewModel.setSwipeRightAction(it) }
+                                )
+                            }
+                            SettingsSubsection(
+                                title = stringResource(R.string.settings_queue_swipe_gestures_section)
+                            ) {
+                                val queueSwipeLeft by settingsViewModel.queueSwipeLeftAction.collectAsStateWithLifecycle()
+                                val queueSwipeRight by settingsViewModel.queueSwipeRightAction.collectAsStateWithLifecycle()
+                                QueueSwipeActionSettingItem(
+                                    title = stringResource(R.string.settings_swipe_left_title),
+                                    selected = queueSwipeLeft,
+                                    onSelect = { settingsViewModel.setQueueSwipeLeftAction(it) }
+                                )
+                                QueueSwipeActionSettingItem(
+                                    title = stringResource(R.string.settings_swipe_right_title),
+                                    selected = queueSwipeRight,
+                                    onSelect = { settingsViewModel.setQueueSwipeRightAction(it) }
                                 )
                             }
                             SettingsSubsection(
@@ -2925,5 +3115,91 @@ private fun SettingsSubsection(
     }
     if (addBottomSpace) {
         Spacer(modifier = Modifier.height(10.dp))
+    }
+}
+
+@Composable
+private fun swipeActionLabel(action: SwipeAction): String = stringResource(
+    when (action) {
+        SwipeAction.NONE -> R.string.swipe_action_none
+        SwipeAction.ADD_TO_QUEUE -> R.string.swipe_action_add_to_queue
+        SwipeAction.PLAY_NEXT -> R.string.swipe_action_play_next
+    }
+)
+
+@Composable
+private fun SwipeActionSettingItem(
+    title: String,
+    selected: SwipeAction,
+    onSelect: (SwipeAction) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        SettingsItem(
+            title = title,
+            subtitle = swipeActionLabel(selected),
+            leadingIcon = {
+                Icon(
+                    painterResource(R.drawable.rounded_touch_app_24),
+                    null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            },
+            onClick = { expanded = true }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            SwipeAction.entries.forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(swipeActionLabel(action)) },
+                    onClick = {
+                        onSelect(action)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun queueSwipeActionLabel(action: QueueSwipeAction): String = stringResource(
+    when (action) {
+        QueueSwipeAction.NONE -> R.string.swipe_action_none
+        QueueSwipeAction.REMOVE -> R.string.queue_swipe_action_remove
+        QueueSwipeAction.ADD_TO_QUEUE_END -> R.string.swipe_action_add_to_queue
+    }
+)
+
+@Composable
+private fun QueueSwipeActionSettingItem(
+    title: String,
+    selected: QueueSwipeAction,
+    onSelect: (QueueSwipeAction) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        SettingsItem(
+            title = title,
+            subtitle = queueSwipeActionLabel(selected),
+            leadingIcon = {
+                Icon(
+                    painterResource(R.drawable.rounded_touch_app_24),
+                    null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            },
+            onClick = { expanded = true }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            QueueSwipeAction.entries.forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(queueSwipeActionLabel(action)) },
+                    onClick = {
+                        onSelect(action)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }

@@ -96,6 +96,7 @@ class SyncManager @Inject constructor(
         observeStorageChanges()
         observeAppForeground()
         schedulePeriodicMaintenance()
+        scheduleNavidromeFavoritesSync()
     }
 
     /**
@@ -108,6 +109,43 @@ class SyncManager @Inject constructor(
             SyncWorker.PERIODIC_MAINTENANCE_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             SyncWorker.periodicMaintenanceWork()
+        )
+    }
+
+    /**
+     * Schedules the periodic push of local favorites to the user's Navidrome server (star sync),
+     * honouring the user's chosen interval (0 = off). Reschedules whenever the preference changes.
+     * The worker itself no-ops when Navidrome isn't configured, so scheduling it is always safe.
+     */
+    private fun scheduleNavidromeFavoritesSync() {
+        sharingScope.launch {
+            userPreferencesRepository.navidromeFavoritesSyncIntervalHoursFlow
+                .distinctUntilChanged()
+                .collect { hours ->
+                    if (hours <= 0) {
+                        workManager.cancelUniqueWork(NavidromeFavoritesSyncWorker.PERIODIC_WORK_NAME)
+                    } else {
+                        // UPDATE applies a new interval without dropping the existing schedule.
+                        workManager.enqueueUniquePeriodicWork(
+                            NavidromeFavoritesSyncWorker.PERIODIC_WORK_NAME,
+                            ExistingPeriodicWorkPolicy.UPDATE,
+                            NavidromeFavoritesSyncWorker.periodicWork(hours.toLong())
+                        )
+                    }
+                }
+        }
+    }
+
+    /**
+     * Manually pushes favorites to Navidrome now (e.g. from a settings action), outside the
+     * daily cadence. Deduplicated by unique work name so rapid taps collapse to one run.
+     */
+    fun syncFavoritesToNavidromeNow() {
+        // REPLACE so every manual tap actually re-runs (KEEP would no-op if a run just finished).
+        workManager.enqueueUniqueWork(
+            NavidromeFavoritesSyncWorker.ONE_TIME_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            NavidromeFavoritesSyncWorker.oneTimeWork()
         )
     }
 

@@ -18,8 +18,10 @@ import com.theveloper.pixelplay.data.repository.MusicRepository
 import com.theveloper.pixelplay.data.service.player.DualPlayerEngine
 import com.theveloper.pixelplay.data.worker.SyncManager
 import com.theveloper.pixelplay.utils.AppShortcutManager
+import com.theveloper.pixelplay.utils.KEY_USER_QUEUE_ITEM
 import com.theveloper.pixelplay.utils.MediaItemBuilder
 import com.theveloper.pixelplay.utils.QueueUtils
+import com.theveloper.pixelplay.utils.isUserQueueItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ViewModelScoped
 import javax.inject.Inject
@@ -867,6 +869,10 @@ class PlaybackDispatchStateHolder @Inject constructor(
             val startMediaItem = buildResolvedPlaybackMediaItem(effectiveStartSong)
 
             val playSongsAction = {
+                // Snapshot the user's manual queue before the timeline is wiped, so it survives
+                // starting a new context (Spotify-style priority queue).
+                val preservedUserQueue = captureUpcomingUserQueueItems(effectiveStartSong.id)
+
                 // Use Direct Engine Access to avoid TransactionTooLargeException on Binder
                 dualPlayerEngine.cancelNext()
                 val enginePlayer = dualPlayerEngine.masterPlayer
@@ -890,8 +896,13 @@ class PlaybackDispatchStateHolder @Inject constructor(
                                 startSongId = effectiveStartSong.id,
                                 preparedSegments = preparedSegments
                             )
+                            // After the context queue is attached, put the preserved manual
+                            // queue back right after the current song so it keeps priority.
+                            reinsertPreservedUserQueue(preservedUserQueue, effectiveStartSong.id)
                         }
                     }
+                } else {
+                    reinsertPreservedUserQueue(preservedUserQueue, effectiveStartSong.id)
                 }
             }
 
@@ -965,17 +976,72 @@ class PlaybackDispatchStateHolder @Inject constructor(
         }
     }
 
+    /**
+     * "Add to queue": append to the END of the contiguous user-queue block that sits
+     * right after the current song. This gives Spotify-style FIFO priority — the first
+     * song the user adds is played first (right after the current one), before the rest
+     * of the surrounding context queue (the auto-added library) resumes.
+     */
     fun addSongToQueue(song: Song) {
         cb.getController()?.let { controller ->
-            val mediaItem = buildPlaybackMediaItem(song)
-            controller.addMediaItem(mediaItem)
+            // Drop any existing upcoming copy so only the freshly-queued one (badged) remains.
+            removeUpcomingOccurrences(controller, song.id)
+            val mediaItem = buildPlaybackMediaItem(song, isUserQueueItem = true)
+            controller.addMediaItem(userQueueBlockEndIndex(controller), mediaItem)
             // Queue UI is synced via onTimelineChanged listener
         }
     }
 
+    /**
+     * Snapshots the manually-queued (flagged) items sitting after the current song, so they can be
+     * carried over when a brand-new context is started — this is what lets the user's queue survive
+     * picking another song, Spotify-style. Must be called on the main thread before the timeline is
+     * replaced. [excludeSongId] drops the song about to become current so it is not re-added.
+     */
+    private fun captureUpcomingUserQueueItems(excludeSongId: String?): List<MediaItem> {
+        val player = dualPlayerEngine.masterPlayer
+        val current = player.currentMediaItemIndex
+        if (current == C.INDEX_UNSET) return emptyList()
+        val result = ArrayList<MediaItem>()
+        for (i in current + 1 until player.mediaItemCount) {
+            val item = player.getMediaItemAt(i)
+            if (item.isUserQueueItem() && item.mediaId != excludeSongId) {
+                result += item
+            }
+        }
+        return result
+    }
+
+    /** Re-inserts preserved user-queue items right after the (new) current song, de-duplicated. */
+    private fun reinsertPreservedUserQueue(items: List<MediaItem>, startSongId: String) {
+        if (items.isEmpty()) return
+        val player = dualPlayerEngine.masterPlayer
+        if (player.currentMediaItem?.mediaId != startSongId) return
+        // Strip any copies the fresh context already queued so each preserved song appears once.
+        items.forEach { removeUpcomingOccurrences(player, it.mediaId) }
+        val insertAt = (player.currentMediaItemIndex + 1).coerceAtMost(player.mediaItemCount)
+        player.addMediaItems(insertAt, items)
+    }
+
+    /** Removes every occurrence of [songId] that sits after the current item (keeps history intact). */
+    private fun removeUpcomingOccurrences(controller: Player, songId: String) {
+        val current = controller.currentMediaItemIndex
+        val start = if (current == C.INDEX_UNSET) 0 else current + 1
+        for (i in controller.mediaItemCount - 1 downTo start) {
+            if (controller.getMediaItemAt(i).mediaId == songId) {
+                controller.removeMediaItem(i)
+            }
+        }
+    }
+
+    /**
+     * "Play next": insert at the FRONT of the user-queue block (right after the current
+     * song), jumping ahead of anything already queued — matching Spotify's "Play next".
+     */
     fun addSongNextToQueue(song: Song) {
         cb.getController()?.let { controller ->
-            val mediaItem = buildPlaybackMediaItem(song)
+            removeUpcomingOccurrences(controller, song.id)
+            val mediaItem = buildPlaybackMediaItem(song, isUserQueueItem = true)
 
             val insertionIndex = if (controller.currentMediaItemIndex != C.INDEX_UNSET) {
                 (controller.currentMediaItemIndex + 1).coerceAtMost(controller.mediaItemCount)
@@ -988,14 +1054,36 @@ class PlaybackDispatchStateHolder @Inject constructor(
         }
     }
 
-    private fun buildPlaybackMediaItem(song: Song, playlistId: String? = null): MediaItem {
+    /**
+     * Index one past the last contiguous user-queued item following the current song.
+     * Scanning stops at the first non-user item, so appending here keeps manual adds in
+     * FIFO order and always ahead of the context queue. Falls back to the queue end when
+     * there is no current item.
+     */
+    private fun userQueueBlockEndIndex(controller: Player): Int {
+        val current = controller.currentMediaItemIndex
+        val count = controller.mediaItemCount
+        if (current == C.INDEX_UNSET) return count
+        var idx = current + 1
+        while (idx < count && controller.getMediaItemAt(idx).isUserQueueItem()) {
+            idx++
+        }
+        return idx
+    }
+
+    private fun buildPlaybackMediaItem(
+        song: Song,
+        playlistId: String? = null,
+        isUserQueueItem: Boolean = false
+    ): MediaItem {
         val baseItem = MediaItemBuilder.build(song)
-        if (playlistId == null) {
+        if (playlistId == null && !isUserQueueItem) {
             return baseItem
         }
 
         val mergedExtras = Bundle(baseItem.mediaMetadata.extras ?: Bundle()).apply {
-            putString("playlistId", playlistId)
+            if (playlistId != null) putString("playlistId", playlistId)
+            if (isUserQueueItem) putBoolean(KEY_USER_QUEUE_ITEM, true)
         }
 
         return baseItem.buildUpon()

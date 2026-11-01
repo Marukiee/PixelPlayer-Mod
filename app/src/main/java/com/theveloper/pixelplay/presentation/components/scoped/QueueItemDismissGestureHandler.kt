@@ -158,16 +158,12 @@ internal class QueueItemDismissGestureHandler(
                     )
                 )
                 onDismiss()
-                // Delay resetting the translation to give the VM time to process the removal.
-                // If the item is removed, this coroutine is cancelled. If not, it slides back.
-                kotlinx.coroutines.delay(1000)
-                offsetAnimatable.animateTo(
-                    targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    )
-                )
+                // Normally the VM removes the row now and this coroutine is cancelled with the
+                // composition, so nothing below runs. Keep the row parked off-screen for a short
+                // grace period; only if it somehow survives do we reset it — instantly (no bouncy
+                // 1s spring-back, which looked like a weird hang-then-bounce).
+                kotlinx.coroutines.delay(150)
+                offsetAnimatable.snapTo(0f)
                 isDismissing = false
                 isInDismissZone = false
             }

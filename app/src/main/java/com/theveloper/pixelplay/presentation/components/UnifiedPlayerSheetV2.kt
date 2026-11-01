@@ -769,6 +769,11 @@ fun UnifiedPlayerSheetV2(
                             currentHorizontalPaddingStartPxProvider = currentHorizontalPaddingStartPxProvider,
                             currentHorizontalPaddingEndPxProvider = currentHorizontalPaddingEndPxProvider,
                             onShowQueueClicked = sheetActionHandlers.openQueueSheet,
+                            onShowSongInfoClicked = {
+                                infrequentPlayerState.currentSong?.let(
+                                    sheetActionHandlers.onSelectedSongForInfoChange
+                                )
+                            },
                             onQueueDragStart = sheetActionHandlers.beginQueueDrag,
                             onQueueDrag = sheetActionHandlers.dragQueueBy,
                             onQueueRelease = sheetActionHandlers.endQueueDrag,
