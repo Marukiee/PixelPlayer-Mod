@@ -5,6 +5,8 @@
 Volgorde gekozen door Mark (2026-11-02):
 
 1. [x] Sonos: afspelen via Navidrome, met groeperen en volume per speaker (0.7.5-mod.9)
+   - [ ] Mark test thuis op zijn echte speakers
+   - [ ] Daarna: animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
 2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
 3. [ ] Spotify: te kopen-lijst
 4. [ ] Spotify: nieuwe releases
