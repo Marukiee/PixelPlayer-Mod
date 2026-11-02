@@ -1,8 +1,10 @@
-- Genre-mix met vlag: rustige kaart in de vlagkleur met de vlag als sticker in de hoek, geen doorzichtig icoon meer
-- Genrepagina's hebben een kop met het instrument van het genre, of de vlag bij Zweedse en andere nationale genres
-- Lange namen in mix-kaarten breken niet meer midden in een woord
+- Your Mix-kaart opent de hele lijst (tik op de kaart)
+- Vlaggen als sticker met witte rand op de genrekleur, ook op de zoekpagina; nu ook Noors, Deens, Fins, IJslands, Nederlands, Duits, Frans, Italiaans, Belgisch en Iers
+- Homepage toont de top 3 genres
+- Artiestnamen onder recente hoezen worden niet meer afgekapt
 
 Ook in deze versie (sinds 0.7.5-mod.1):
+- Genrepagina's met een kop met instrument of vlag
 - Bovenbalk opgeschoond, speelsere vormen, Recently Played met collage
 - Nieuwe homepage met Your Mix-kaart, Mixen voor jou, je artiesten, Herontdekken en statistieken
 - Mini-speler: swipen trekt de speler een stukje mee en hij bounct terug
