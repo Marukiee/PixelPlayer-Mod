@@ -79,7 +79,12 @@ Nu regelen de volumeknoppen de Sonos alleen zolang de app open is (`MainActivity
    - Kan door de media-sessie op "remote" te zetten. Media3 laat dat via `DeviceInfo` met `PLAYBACK_TYPE_REMOTE` en een volume van 0 tot 100, met `setDeviceVolume` en `increaseDeviceVolume` en `decreaseDeviceVolume` doorgestuurd naar `SonosController`.
    - Let op: de sessiespeler wisselt bij crossfade (`publishMediaSessionPlayer`), maar crossfade staat uit zolang Sonos speelt. Een `ForwardingPlayer` om de sessiespeler heen moet dus alleen tijdens Sonos de afstandsbediening tonen.
    - Android stuurt de volumeknoppen dan naar de sessie en toont zijn eigen volumebalk voor afstandsbediening.
-   - **Drip** (eigen dynamic island, repo `Marukiee/Drip`) moet dat volume tonen. Een remote-sessie verandert het mediavolume van de telefoon niet, dus Drip moet het volume van de actieve sessie lezen (`MediaController.getPlaybackInfo()`, type remote) en laten zien. Mark vindt het goed om de Drip-sessie een bericht te sturen als daar iets voor gebouwd moet worden.
+   - **Drip** (eigen dynamic island, repo `Marukiee/Drip`) toont dit vanaf Drip v0.1.17 (gebouwd op 2026-11-02). Afspraken met de Drip-sessie, die PixelPlayer moet nakomen:
+     - Media-sessie op REMOTE met een `VolumeProvider` van type ABSOLUTE, maximum 100, huidige waarde het groepsvolume.
+     - Bij elke volumewijziging (op de Sonos, in de app of via Drip) `setCurrentVolume` aanroepen; dan krijgt Drip `onAudioInfoChanged`.
+     - `onSetVolumeTo` en `onAdjustVolume` van de VolumeProvider gaan naar `SonosController` (groepsvolume) en roepen daarna `setCurrentVolume` aan. Drip stuurt zo de volumebalk op zijn muziek- en volumekaart en de volumeknoppen door terwijl een kaart open is.
+     - Groepsnaam in de extras van de media-sessie onder de sleutel `nl.markmaaktmedia.drip.REMOTE_NAME` (Drip leest ook `remote_name`), bijvoorbeeld "Living room + Kitchen". Bij een wijziging opnieuw zetten; Drip luistert naar `onExtrasChanged`. Zonder naam toont Drip de app-naam. Terugval: Drip leest op Android 11 en hoger ook `PlaybackInfo.getVolumeControlId()` als daar een naam met een spatie in staat.
+     - Na de Sonos-sessie de extras en het remote-type weer weghalen, zodat Drip het gewone mediavolume toont.
 2. **In de app een volumeschuif.** Bij de volumeknoppen in de app verschijnt een Material 3 Expressive volumeschuif met de groepsnaam, die vanzelf weer verdwijnt.
 3. **Ook de andere speakers.** Vanaf die schuif uitklappen naar een schuif per speaker in de groep, zoals op de Sonos-kaart in het verbinden-scherm.
 
