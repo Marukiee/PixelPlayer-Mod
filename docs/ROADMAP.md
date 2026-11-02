@@ -10,6 +10,20 @@ Volgorde gekozen door Mark (2026-11-02):
    - [ ] Volumeschuif in beeld als je in de app op de volumeknoppen drukt
    - [ ] Vanaf die volumeschuif ook het volume van de andere speakers in de groep regelen
    - [ ] Animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
+   - [ ] **Ronde mod.11** (wensen van Mark, 2026-11-02). Wat afgevinkt is, staat in commit `7d8ae11` op `mark-mod`, maar is nog niet gebouwd of getest. Mark heeft gevraagd te wachten tot hij zegt dat ik verder mag.
+     - [x] Overzetten van telefoon naar speaker gaat verder op dezelfde plek, met zo min mogelijk vertraging (vooruit spoelen vóór Play, daarna gelijkzetten zodra de speaker speelt)
+     - [x] Speakers staan al klaar voordat je Connect opent (bewaarde ruimtes plus zoeken op de achtergrond)
+     - [x] Groeperen-paneel schuift weg met animatie bij Klaar
+     - [x] Groepsvolume zoals de Sonos-app: elke speaker houdt zijn aandeel, dus de luide gaat sneller omlaag dan de zachte (50 en 10 naar groep 20 geeft 33 en 7)
+     - [x] Dempknop bij het groepsvolume
+     - [x] Drie puntjes bij een ruimte: hier afspelen, toevoegen aan wat speelt, ruimtes groeperen, groep opheffen, hier stoppen
+     - [x] Indeling: Devices toont alle apparaten plus wifi en Bluetooth; Controls alleen de bediening van het apparaat dat speelt
+     - [x] Devices-paneel scrolt soepeler (de draaiende vorm liet elke rij elk frame opnieuw opbouwen)
+     - [x] Foto's bij Your artists this week in plaats van initialen
+     - [ ] Speaker-pil in de speler mooier: korte naam ("Marks kamer +1"), icoon in een vorm, bewegende balkjes in plaats van het stipje
+     - [ ] Hoesjes in de Sonos-app: hoes via de speaker zelf (`/getaa?s=1&u=<stream-URL>`) met de Navidrome-URL als tweede; alleen te controleren op Marks echte speakers
+     - [x] Hoes in de Drip-pil: lag aan Drip (koos de mediasessie van de Sonos-app). Opgelost aan de Drip-kant, komt in de volgende Drip-release; PixelPlayer hoeft niets
+     - [ ] Bouwen, testen op de emulator (Navidrome plus nep-Sonos), uitbrengen als 0.7.5-mod.11
 2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
 3. [ ] Spotify: te kopen-lijst
 4. [ ] Spotify: nieuwe releases
@@ -74,6 +88,8 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 ### Sonos-volume (wens van Mark, 2026-11-02, nog niet bouwen)
 
 Nu regelen de volumeknoppen de Sonos alleen zolang de app open is (`MainActivity.dispatchKeyEvent` en het verbinden-scherm), en je ziet dan weinig.
+
+Eerst proberen: de Sonos-app meldt zich zelf al als afstandsbediening (mediasessie van `com.sonos.acr2`, type REMOTE). Misschien regelen de volumeknoppen buiten PixelPlayer daardoor al de Sonos, en Drip toont dat volume vanaf zijn volgende release met het label "Sonos". Als dat werkt, is punt 1 hieronder kleiner.
 
 1. **Buiten de app, zichtbaar in Drip.** Volumeknoppen moeten ook met de app op de achtergrond of het scherm uit de Sonos regelen.
    - Kan door de media-sessie op "remote" te zetten. Media3 laat dat via `DeviceInfo` met `PLAYBACK_TYPE_REMOTE` en een volume van 0 tot 100, met `setDeviceVolume` en `increaseDeviceVolume` en `decreaseDeviceVolume` doorgestuurd naar `SonosController`.
