@@ -1,3 +1,6 @@
+- Back-up met likes importeren werkt weer ("Module 'favorites' should be a JSON array")
+
+Ook in deze versie (sinds 0.7.5-mod.1):
 - Zoeken zonder accenten en apostrofs: `hakan hellstrom` vindt Håkan Hellström
 - Zoeken op meerdere woorden werkt weer
 - Swipen op de mini-speler wisselt van nummer
