@@ -386,7 +386,8 @@ class DualPlayerEngine @Inject constructor(
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             if (playWhenReady) {
                 lastPlayWhenReadyAtMs = SystemClock.elapsedRealtime()
-                requestAudioFocus()
+                // Muted for Sonos: other apps may play on the phone without pausing the speakers.
+                if (!SonosAudioGate.isMuted) requestAudioFocus()
                 scheduleAudioOffloadFallbackIfNeeded(playerA)
             } else {
                 cancelAudioOffloadFallback()
@@ -830,6 +831,24 @@ class DualPlayerEngine @Inject constructor(
         }
     }
 
+    /**
+     * Playback moved to Sonos (true) or back to the phone (false). While on Sonos the local
+     * players stay muted followers: no audio focus, no pause on unplugged headphones, no crossfade.
+     */
+    fun setRemoteOutputActive(active: Boolean) {
+        SonosAudioGate.setActive(active)
+        if (!::playerA.isInitialized) return
+        playerA.setHandleAudioBecomingNoisy(!active)
+        playerB?.setHandleAudioBecomingNoisy(!active)
+        if (active) {
+            if (transitionRunning) cancelNext()
+            isFocusLossPause = false
+            abandonAudioFocus()
+        } else if (playerA.playWhenReady) {
+            requestAudioFocus()
+        }
+    }
+
     private fun abandonAudioFocus() {
         audioFocusRequest?.let {
             audioManager.abandonAudioFocusRequest(it)
@@ -1044,16 +1063,18 @@ class DualPlayerEngine @Inject constructor(
                 enableFloatOutput: Boolean,
                 enableAudioOutputPlaybackParams: Boolean
             ): AudioSink {
-                return DefaultAudioSink.Builder(context)
-                    .setEnableFloatOutput(hiFiModeEnabled)
-                    .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                    .setAudioProcessorChain(
-                        DefaultAudioSink.DefaultAudioProcessorChain(
-                            HiResSampleRateCapAudioProcessor(),
-                            SurroundDownmixProcessor()
+                return MutingAudioSink(
+                    DefaultAudioSink.Builder(context)
+                        .setEnableFloatOutput(hiFiModeEnabled)
+                        .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                        .setAudioProcessorChain(
+                            DefaultAudioSink.DefaultAudioProcessorChain(
+                                HiResSampleRateCapAudioProcessor(),
+                                SurroundDownmixProcessor()
+                            )
                         )
-                    )
-                    .build()
+                        .build()
+                )
             }
 
             override fun buildVideoRenderers(
@@ -1143,7 +1164,7 @@ class DualPlayerEngine @Inject constructor(
             trackSelectionParameters = trackSelectionParameters.buildUpon()
                 .setAudioOffloadPreferences(offloadPreferences)
                 .build()
-            setHandleAudioBecomingNoisy(true)
+            setHandleAudioBecomingNoisy(!SonosAudioGate.isMuted)
             setWakeMode(C.WAKE_MODE_LOCAL)
             playWhenReady = false
         }

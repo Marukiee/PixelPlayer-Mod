@@ -261,6 +261,17 @@ data class SongSearchRow(
     @ColumnInfo(name = "parent_directory_path") val parentDirectoryPath: String
 )
 
+/** What Sonos playback needs to find a song on Navidrome. */
+data class SongMatchRow(
+    val id: Long,
+    val title: String,
+    @ColumnInfo(name = "artist_name") val artistName: String,
+    @ColumnInfo(name = "album_name") val albumName: String,
+    val duration: Long,
+    @ColumnInfo(name = "content_uri_string") val contentUriString: String,
+    @ColumnInfo(name = "sample_rate") val sampleRate: Int?
+)
+
 // Sobrecarga o alternativa si los paths no están disponibles o no son necesarios al convertir de Modelo a Entidad
 // (menos probable que se use si la entidad siempre requiere los paths)
 fun Song.toEntityWithoutPaths(): SongEntity {

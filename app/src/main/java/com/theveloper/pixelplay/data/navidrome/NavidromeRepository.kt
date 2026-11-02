@@ -686,8 +686,8 @@ class NavidromeRepository @Inject constructor(
      * @param maxBitRate Maximum bitrate (0 = no limit)
      * @return The streaming URL
      */
-    fun getStreamUrl(songId: String, maxBitRate: Int = 0): String {
-        return api.getStreamUrl(songId, maxBitRate)
+    fun getStreamUrl(songId: String, maxBitRate: Int = 0, format: String? = null): String {
+        return api.getStreamUrl(songId, maxBitRate, format)
     }
 
     /**

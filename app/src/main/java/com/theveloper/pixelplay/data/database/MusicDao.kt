@@ -504,6 +504,12 @@ interface MusicDao {
         applyDirectoryFilter: Boolean
     ): Flow<List<SongEntity>>
 
+    @Query("SELECT id, title, artist_name, album_name, duration, content_uri_string, sample_rate FROM songs WHERE id IN (:songIds)")
+    suspend fun getSongMatchRows(songIds: List<Long>): List<SongMatchRow>
+
+    @Query("SELECT id, title, artist_name, album_name, duration, content_uri_string, sample_rate FROM songs WHERE source_type = 0")
+    suspend fun getLocalSongMatchRows(): List<SongMatchRow>
+
     /** Every song's searchable text, for the in-memory diacritic-insensitive search index. */
     @Query("SELECT id, title, artist_name, parent_directory_path FROM songs")
     fun observeSongSearchRows(): Flow<List<SongSearchRow>>

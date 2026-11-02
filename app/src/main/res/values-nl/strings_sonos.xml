@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sonos_section_title">Sonos</string>
+    <string name="sonos_this_phone">Deze telefoon</string>
+    <string name="sonos_searching">Speakers zoeken…</string>
+    <string name="sonos_none_found">Geen Sonos-speakers gevonden op deze wifi</string>
+    <string name="sonos_connecting">Verbinden…</string>
+    <string name="sonos_playing">Speelt</string>
+    <string name="sonos_paused">Gepauzeerd</string>
+    <string name="sonos_group_button">Groeperen</string>
+    <string name="sonos_group_title">Groeperen met %1$s</string>
+    <string name="sonos_group_done">Klaar</string>
+    <string name="sonos_group_volume">Groep</string>
+    <string name="sonos_volume">Volume</string>
+    <string name="sonos_refresh">Opnieuw zoeken</string>
+    <string name="sonos_tap_hint">Tik op een ruimte om daar te spelen</string>
+    <string name="sonos_playing_on">Speelt op %1$s</string>
+
+    <string name="sonos_msg_skipped">Niet op Navidrome, overgeslagen: %1$s</string>
+    <string name="sonos_msg_stopped">Niet op Navidrome, gestopt bij: %1$s</string>
+    <string name="sonos_msg_failed">Sonos reageerde niet (%1$s)</string>
+    <string name="sonos_msg_taken_over">%1$s speelt nu iets anders</string>
+    <string name="sonos_msg_lost">Verbinding met %1$s kwijt</string>
+    <string name="sonos_problem_not_logged_in">Sonos speelt vanaf je Navidrome-server. Log eerst in bij Navidrome (Instellingen, Navidrome).</string>
+    <string name="sonos_problem_tailscale">Sonos kan je Navidrome-server niet bereiken via Tailscale. Gebruik het adres op je thuisnetwerk in de Navidrome-instellingen.</string>
+    <string name="sonos_problem_no_songs">Geen nummers gevonden op je Navidrome-server.</string>
+
+    <string name="settings_category_sonos_title">Sonos</string>
+    <string name="settings_category_sonos_subtitle">Afspelen op je speakers via Navidrome</string>
+    <string name="settings_sonos_source_title">Navidrome als bron</string>
+    <string name="settings_sonos_source_checking">Bibliotheek nakijken…</string>
+    <string name="settings_sonos_source_count">%1$d van %2$d nummers kunnen op Sonos spelen</string>
+    <string name="settings_sonos_source_server">Server: %1$s</string>
+    <string name="settings_sonos_playback_section">Afspelen</string>
+    <string name="settings_sonos_unavailable_title">Nummers niet op Navidrome</string>
+    <string name="settings_sonos_unavailable_subtitle">Wat er gebeurt met nummers die alleen op je telefoon staan</string>
+    <string name="settings_sonos_unavailable_skip">Overslaan</string>
+    <string name="settings_sonos_unavailable_stop">Stoppen</string>
+    <string name="settings_sonos_volume_keys_title">Volumeknoppen bedienen Sonos</string>
+    <string name="settings_sonos_volume_keys_subtitle">De volumeknoppen van je telefoon regelen het groepsvolume zolang de app open is</string>
+    <string name="settings_sonos_speakers_section">Speakers</string>
+    <string name="settings_sonos_enabled_title">Sonos tonen bij Verbinden</string>
+    <string name="settings_sonos_enabled_subtitle">Speakers op je wifi vanzelf vinden</string>
+</resources>

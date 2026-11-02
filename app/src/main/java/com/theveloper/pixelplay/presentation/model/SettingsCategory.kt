@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.theveloper.pixelplay.R
 
@@ -36,6 +37,12 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_playback_title,
         subtitleRes = R.string.settings_category_playback_subtitle,
         icon = Icons.Rounded.MusicNote // Using MusicNote again or maybe PlayCircle if available
+    ),
+    SONOS(
+        id = "sonos",
+        titleRes = R.string.settings_category_sonos_title,
+        subtitleRes = R.string.settings_category_sonos_subtitle,
+        icon = Icons.Rounded.Speaker
     ),
     BEHAVIOR(
         id = "behavior",

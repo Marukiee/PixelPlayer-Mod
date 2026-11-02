@@ -257,6 +257,9 @@ class UserPreferencesRepository @Inject constructor(
         val PAUSE_ON_VOLUME_ZERO = booleanPreferencesKey("pause_on_volume_zero")
         val SHOW_SCROLLBAR = booleanPreferencesKey("show_scrollbar")
         val SHOW_SONG_QUALITY_BADGE = booleanPreferencesKey("show_song_quality_badge")
+        val SONOS_ENABLED = booleanPreferencesKey("sonos_enabled")
+        val SONOS_SKIP_UNAVAILABLE = booleanPreferencesKey("sonos_skip_unavailable")
+        val SONOS_VOLUME_KEYS = booleanPreferencesKey("sonos_volume_keys")
 
     }
 
@@ -791,6 +794,28 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.SHOW_SONG_QUALITY_BADGE] = enabled
         }
+    }
+
+    val sonosEnabledFlow: Flow<Boolean> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_ENABLED] ?: true }
+
+    suspend fun setSonosEnabled(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SONOS_ENABLED] = enabled }
+    }
+
+    /** True: skip songs that are not on Navidrome while playing on Sonos. False: stop there. */
+    val sonosSkipUnavailableFlow: Flow<Boolean> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_SKIP_UNAVAILABLE] ?: true }
+
+    suspend fun setSonosSkipUnavailable(skip: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SONOS_SKIP_UNAVAILABLE] = skip }
+    }
+
+    val sonosVolumeKeysFlow: Flow<Boolean> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_VOLUME_KEYS] ?: true }
+
+    suspend fun setSonosVolumeKeys(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SONOS_VOLUME_KEYS] = enabled }
     }
 
     // ─── Sort options ─────────────────────────────────────────────────────────

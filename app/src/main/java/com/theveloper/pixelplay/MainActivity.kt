@@ -68,6 +68,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.theveloper.pixelplay.data.sonos.SonosController
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -192,6 +193,9 @@ class MainActivity : ComponentActivity() {
     lateinit var themePreferencesRepository: ThemePreferencesRepository
     @Inject
     lateinit var syncManager: SyncManager
+    @Inject
+    lateinit var sonosController: SonosController
+    private var sonosVolumeKeys = true
     // For handling shortcut navigation - using StateFlow so composables can observe changes
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     private val _pendingShuffleAll = kotlinx.coroutines.flow.MutableStateFlow(false)
@@ -205,9 +209,26 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(AppLocaleManager.wrapContext(newBase))
     }
 
+    // While playing on Sonos the phone itself is muted, so the volume keys go to the speakers.
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val delta = when (event.keyCode) {
+            android.view.KeyEvent.KEYCODE_VOLUME_UP -> 2
+            android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> -2
+            else -> 0
+        }
+        if (delta != 0 && sonosVolumeKeys && sonosController.session.value != null) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) sonosController.adjustGroupVolume(delta)
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         LogUtils.d(this, "onCreate")
+        lifecycleScope.launch {
+            userPreferencesRepository.sonosVolumeKeysFlow.collect { sonosVolumeKeys = it }
+        }
         val splashScreen = installSplashScreen()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(

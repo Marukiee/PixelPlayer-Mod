@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sonos_section_title">Sonos</string>
+    <string name="sonos_this_phone">This phone</string>
+    <string name="sonos_searching">Looking for speakers…</string>
+    <string name="sonos_none_found">No Sonos speakers found on this Wi-Fi</string>
+    <string name="sonos_connecting">Connecting…</string>
+    <string name="sonos_playing">Playing</string>
+    <string name="sonos_paused">Paused</string>
+    <string name="sonos_group_button">Group</string>
+    <string name="sonos_group_title">Group with %1$s</string>
+    <string name="sonos_group_done">Done</string>
+    <string name="sonos_group_volume">Group</string>
+    <string name="sonos_volume">Volume</string>
+    <string name="sonos_refresh">Search again</string>
+    <string name="sonos_tap_hint">Tap a room to play there</string>
+    <string name="sonos_playing_on">Playing on %1$s</string>
+
+    <string name="sonos_msg_skipped">Not on Navidrome, skipped: %1$s</string>
+    <string name="sonos_msg_stopped">Not on Navidrome, stopped at: %1$s</string>
+    <string name="sonos_msg_failed">Sonos did not respond (%1$s)</string>
+    <string name="sonos_msg_taken_over">%1$s is playing something else now</string>
+    <string name="sonos_msg_lost">Lost the connection with %1$s</string>
+    <string name="sonos_problem_not_logged_in">Sonos plays from your Navidrome server. Log in to Navidrome first (Settings, Navidrome).</string>
+    <string name="sonos_problem_tailscale">Sonos can\'t reach your Navidrome server through Tailscale. Use its address on your home network in the Navidrome settings.</string>
+    <string name="sonos_problem_no_songs">No songs found on your Navidrome server.</string>
+
+    <string name="settings_category_sonos_title">Sonos</string>
+    <string name="settings_category_sonos_subtitle">Play on your speakers via Navidrome</string>
+    <string name="settings_sonos_source_title">Navidrome as source</string>
+    <string name="settings_sonos_source_checking">Checking your library…</string>
+    <string name="settings_sonos_source_count">%1$d of %2$d songs can play on Sonos</string>
+    <string name="settings_sonos_source_server">Server: %1$s</string>
+    <string name="settings_sonos_playback_section">Playback</string>
+    <string name="settings_sonos_unavailable_title">Songs not on Navidrome</string>
+    <string name="settings_sonos_unavailable_subtitle">What happens with songs that are only on your phone</string>
+    <string name="settings_sonos_unavailable_skip">Skip</string>
+    <string name="settings_sonos_unavailable_stop">Stop</string>
+    <string name="settings_sonos_volume_keys_title">Volume buttons control Sonos</string>
+    <string name="settings_sonos_volume_keys_subtitle">The phone\'s volume keys change the group volume while the app is open</string>
+    <string name="settings_sonos_speakers_section">Speakers</string>
+    <string name="settings_sonos_enabled_title">Show Sonos in Connect</string>
+    <string name="settings_sonos_enabled_subtitle">Find speakers on your Wi-Fi automatically</string>
+</resources>

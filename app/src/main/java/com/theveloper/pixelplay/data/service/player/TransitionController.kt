@@ -185,10 +185,17 @@ class TransitionController @Inject constructor(
                 }
             }
 
-            combine(settingsFlow, isCrossfadeEnabledFlow) { resolution, isEnabled ->
-                Pair(resolution, isEnabled)
+            // On Sonos the muted phone must change track together with the speakers, so no crossfade.
+            combine(settingsFlow, isCrossfadeEnabledFlow, SonosAudioGate.active) { resolution, isEnabled, onSonos ->
+                Triple(resolution, isEnabled, onSonos)
             }.distinctUntilChanged() // Crucial: prevents restarting the job if the same settings are emitted again
-            .collectLatest { (resolution, isEnabled) ->
+            .collectLatest { (resolution, isEnabled, onSonos) ->
+
+                if (onSonos) {
+                    engine.cancelNext()
+                    engine.setPauseAtEndOfMediaItems(shouldPause = false)
+                    return@collectLatest
+                }
 
                 val settings = resolution.settings
                 Timber.tag("TransitionDebug").d(

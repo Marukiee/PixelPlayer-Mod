@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -135,6 +136,8 @@ import androidx.mediarouter.media.MediaRouter
 import com.theveloper.pixelplay.presentation.screens.TabAnimation
 import com.theveloper.pixelplay.presentation.viewmodel.BluetoothAudioDeviceState
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
+import com.theveloper.pixelplay.presentation.viewmodel.SonosViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.theveloper.pixelplay.ui.theme.GoogleSansRounded
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import android.content.pm.PackageManager
@@ -153,6 +156,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Velocity
 import com.theveloper.pixelplay.utils.shapes.RoundedStarShape
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -194,6 +198,10 @@ fun CastBottomSheet(
             if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
                 add(Manifest.permission.ACCESS_FINE_LOCATION)
             }
+            // Android 17 asks before an app may talk to devices on the local network (Sonos).
+            if (Build.VERSION.SDK_INT >= 37) {
+                add("android.permission.ACCESS_LOCAL_NETWORK")
+            }
         }
     }
     var missingPermissions by remember { mutableStateOf(missingCastPermissions(context, requiredPermissions)) }
@@ -216,6 +224,18 @@ fun CastBottomSheet(
 
     val activeRoute = selectedRoute?.takeUnless { it.isDefault }
     val isRemoteSession = (isRemotePlaybackActive || isCastConnecting) && activeRoute != null
+
+    val sonosViewModel: SonosViewModel = hiltViewModel()
+    val sonosEnabled by sonosViewModel.isEnabled.collectAsStateWithLifecycle()
+    val sonosGroups by sonosViewModel.groups.collectAsStateWithLifecycle()
+    val sonosScanning by sonosViewModel.isScanning.collectAsStateWithLifecycle()
+    val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
+    var showSonosGroupSheet by remember { mutableStateOf(false) }
+    val sheetScope = rememberCoroutineScope()
+
+    LaunchedEffect(sonosEnabled, missingPermissions.isEmpty()) {
+        if (sonosEnabled && missingPermissions.isEmpty()) sonosViewModel.refresh()
+    }
 
     val availableRoutes = if (isWifiEnabled) {
         routes.filterNot { it.isDefault }
@@ -367,6 +387,7 @@ fun CastBottomSheet(
                         }
                     )
                 } else {
+                    val currentSonos = sonosSession
                     CastSheetContent(
                         state = uiState,
                         onSelectDevice = { id ->
@@ -376,7 +397,58 @@ fun CastBottomSheet(
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     context.startActivity(intent)
                                 }
-                                else -> routes.firstOrNull { it.id == id }?.let { playerViewModel.selectRoute(it) }
+                                else -> routes.firstOrNull { it.id == id }?.let { route ->
+                                    if (currentSonos != null) sonosViewModel.switchToPhone()
+                                    playerViewModel.selectRoute(route)
+                                }
+                            }
+                        },
+                        sonosHero = currentSonos?.let { state ->
+                            {
+                                SonosActiveCard(
+                                    state = state,
+                                    onDisconnect = { sonosViewModel.switchToPhone() },
+                                    onOpenGroup = { showSonosGroupSheet = true },
+                                    onGroupVolume = sonosViewModel::setGroupVolume,
+                                    onSpeakerVolume = sonosViewModel::setSpeakerVolume
+                                )
+                            }
+                        },
+                        extraDeviceCount = if (sonosEnabled) 1 + sonosGroups.size else 0,
+                        leadingDeviceItems = {
+                            if (sonosEnabled) {
+                                thisPhoneItem(
+                                    selected = currentSonos == null && !isRemoteSession,
+                                    onSelect = {
+                                        when {
+                                            currentSonos != null -> sonosViewModel.switchToPhone()
+                                            isRemoteSession -> playerViewModel.disconnect()
+                                        }
+                                    }
+                                )
+                            }
+                        },
+                        extraDeviceItems = {
+                            if (sonosEnabled) {
+                                sonosDeviceItems(
+                                    groups = sonosGroups,
+                                    session = currentSonos,
+                                    isScanning = sonosScanning,
+                                    onSelectGroup = { group ->
+                                        if (currentSonos?.group?.coordinatorUuid == group.coordinatorUuid) return@sonosDeviceItems
+                                        if (isRemoteSession) {
+                                            playerViewModel.disconnect()
+                                            sheetScope.launch {
+                                                // Give Cast a moment to hand playback back to the phone.
+                                                delay(1200)
+                                                sonosViewModel.connect(group.id)
+                                            }
+                                        } else {
+                                            sonosViewModel.connect(group.id)
+                                        }
+                                    },
+                                    onRefresh = sonosViewModel::refresh
+                                )
                             }
                         },
                         onDisconnect = {
@@ -403,11 +475,24 @@ fun CastBottomSheet(
                         onRefresh = {
                             playerViewModel.refreshCastRoutes()
                             playerViewModel.refreshLocalConnectionInfo(refreshBluetoothDevices = true)
+                            if (sonosEnabled) sonosViewModel.refresh()
                         },
-                        startWithControls = isRemoteSession
+                        startWithControls = isRemoteSession || currentSonos != null
                     )
                 }
             }
+        }
+        val groupTarget = sonosSession?.group
+        if (showSonosGroupSheet && groupTarget != null) {
+            SonosGroupSheet(
+                group = groupTarget,
+                allSpeakers = sonosGroups.flatMap { it.members }.distinctBy { it.uuid },
+                onDismiss = { showSonosGroupSheet = false },
+                onDone = { members ->
+                    showSonosGroupSheet = false
+                    sonosViewModel.setGroupMembers(groupTarget.id, members)
+                }
+            )
         }
     }
 }
@@ -573,7 +658,11 @@ private fun CastSheetContent(
     onTurnOnWifi: () -> Unit,
     onOpenBluetoothSettings: () -> Unit,
     onRefresh: () -> Unit,
-    startWithControls: Boolean = true
+    startWithControls: Boolean = true,
+    sonosHero: (@Composable () -> Unit)? = null,
+    extraDeviceCount: Int = 0,
+    leadingDeviceItems: LazyListScope.() -> Unit = {},
+    extraDeviceItems: LazyListScope.() -> Unit = {}
 ) {
     val allConnectivityOff = !state.wifiEnabled && !state.isBluetoothEnabled
     val configuration = LocalConfiguration.current
@@ -666,6 +755,7 @@ private fun CastSheetContent(
                         onOpenBluetoothSettings = onOpenBluetoothSettings,
                         onRefresh = onRefresh,
                         bottomSpacing = 20.dp,
+                        heroOverride = sonosHero,
                     )
                     1 -> CastDevicesTabContent(
                         state = state,
@@ -676,6 +766,9 @@ private fun CastSheetContent(
                         onOpenBluetoothSettings = onOpenBluetoothSettings,
                         onRefresh = onRefresh,
                         maxContentHeight = maxPagerHeight,
+                        extraDeviceCount = extraDeviceCount,
+                        leadingDeviceItems = leadingDeviceItems,
+                        extraDeviceItems = extraDeviceItems,
                     )
                 }
             }
@@ -759,6 +852,7 @@ private fun CastControlsTabContent(
     onOpenBluetoothSettings: () -> Unit,
     onRefresh: () -> Unit,
     bottomSpacing: Dp,
+    heroOverride: (@Composable () -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier
@@ -766,11 +860,15 @@ private fun CastControlsTabContent(
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        ActiveDeviceHero(
-            device = state.activeDevice,
-            onDisconnect = onDisconnect,
-            onVolumeChange = onVolumeChange
-        )
+        if (heroOverride != null) {
+            heroOverride()
+        } else {
+            ActiveDeviceHero(
+                device = state.activeDevice,
+                onDisconnect = onDisconnect,
+                onVolumeChange = onVolumeChange
+            )
+        }
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -824,6 +922,9 @@ private fun CastDevicesTabContent(
     onOpenBluetoothSettings: () -> Unit,
     onRefresh: () -> Unit,
     maxContentHeight: Dp,
+    extraDeviceCount: Int = 0,
+    leadingDeviceItems: LazyListScope.() -> Unit = {},
+    extraDeviceItems: LazyListScope.() -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -862,13 +963,17 @@ private fun CastDevicesTabContent(
             }
         }
 
-        if (state.isScanning && state.devices.isEmpty()) {
+        leadingDeviceItems()
+
+        if (state.isScanning && state.devices.isEmpty() && extraDeviceCount == 0) {
             item(key = "scanningPlaceholder") {
                 ScanningPlaceholderList()
             }
         } else if (state.devices.isEmpty()) {
-            item(key = "emptyDevices") {
-                EmptyDeviceState()
+            if (extraDeviceCount == 0) {
+                item(key = "emptyDevices") {
+                    EmptyDeviceState()
+                }
             }
         } else {
             items(state.devices, key = { it.id }) { device ->
@@ -879,6 +984,8 @@ private fun CastDevicesTabContent(
                 )
             }
         }
+
+        extraDeviceItems()
     }
 }
 
@@ -1713,7 +1820,7 @@ private fun buildBluetoothVolumePercent(device: CastDeviceUi): Int {
 }
 
 @Composable
-private fun BadgeChip(
+internal fun BadgeChip(
     text: String,
     icon: Int? = null,
     iconVector: ImageVector? = null,

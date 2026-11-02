@@ -185,6 +185,9 @@ import com.theveloper.pixelplay.presentation.navigation.Screen
 import com.theveloper.pixelplay.presentation.viewmodel.LyricsRefreshProgress
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
 import com.theveloper.pixelplay.presentation.viewmodel.SettingsViewModel
+import com.theveloper.pixelplay.presentation.viewmodel.SonosViewModel
+import com.theveloper.pixelplay.data.sonos.SonosSourceProblem
+import androidx.compose.material3.LinearProgressIndicator
 import com.theveloper.pixelplay.ui.theme.GoogleSansRounded
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -1043,6 +1046,9 @@ fun SettingsCategoryScreen(
                                 )
                             }
 
+                        }
+                        SettingsCategory.SONOS -> {
+                            SonosSettingsBlock()
                         }
                         SettingsCategory.BEHAVIOR -> {
                             SettingsSubsection(
@@ -3097,6 +3103,106 @@ private fun PaletteRegenerateSongSheetContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SonosSettingsBlock() {
+    val sonosViewModel: SonosViewModel = hiltViewModel()
+    val enabled by sonosViewModel.isEnabled.collectAsStateWithLifecycle()
+    val skipUnavailable by sonosViewModel.skipUnavailable.collectAsStateWithLifecycle()
+    val volumeKeys by sonosViewModel.volumeKeys.collectAsStateWithLifecycle()
+    val sourceInfo by sonosViewModel.sourceInfo.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { sonosViewModel.loadSourceInfo() }
+
+    val info = sourceInfo
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(
+                    painterResource(R.drawable.rounded_speaker_24),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                Text(
+                    text = stringResource(R.string.settings_sonos_source_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
+            val body = when {
+                info == null -> stringResource(R.string.settings_sonos_source_checking)
+                info.problem == SonosSourceProblem.NOT_LOGGED_IN -> stringResource(R.string.sonos_problem_not_logged_in)
+                info.problem == SonosSourceProblem.TAILSCALE_ADDRESS -> stringResource(R.string.sonos_problem_tailscale)
+                info.problem == SonosSourceProblem.NO_SONGS || info.total == 0 -> stringResource(R.string.sonos_problem_no_songs)
+                else -> stringResource(R.string.settings_sonos_source_count, info.playable, info.total)
+            }
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            if (info != null && info.problem == null && info.total > 0) {
+                LinearProgressIndicator(
+                    progress = { info.playable.toFloat() / info.total },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    trackColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.15f),
+                    drawStopIndicator = {}
+                )
+            }
+            info?.server?.let {
+                Text(
+                    text = stringResource(R.string.settings_sonos_source_server, it),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f)
+                )
+            }
+        }
+    }
+
+    SettingsSubsection(title = stringResource(R.string.settings_sonos_playback_section)) {
+        ThemeSelectorItem(
+            label = stringResource(R.string.settings_sonos_unavailable_title),
+            description = stringResource(R.string.settings_sonos_unavailable_subtitle),
+            options = mapOf(
+                "skip" to stringResource(R.string.settings_sonos_unavailable_skip),
+                "stop" to stringResource(R.string.settings_sonos_unavailable_stop)
+            ),
+            selectedKey = if (skipUnavailable) "skip" else "stop",
+            onSelectionChanged = { sonosViewModel.setSkipUnavailable(it == "skip") },
+            leadingIcon = { Icon(painterResource(R.drawable.rounded_skip_next_24), null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+        SwitchSettingItem(
+            title = stringResource(R.string.settings_sonos_volume_keys_title),
+            subtitle = stringResource(R.string.settings_sonos_volume_keys_subtitle),
+            checked = volumeKeys,
+            onCheckedChange = { sonosViewModel.setVolumeKeys(it) },
+            leadingIcon = { Icon(painterResource(R.drawable.rounded_volume_up_24), null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+    }
+
+    SettingsSubsection(title = stringResource(R.string.settings_sonos_speakers_section)) {
+        SwitchSettingItem(
+            title = stringResource(R.string.settings_sonos_enabled_title),
+            subtitle = stringResource(R.string.settings_sonos_enabled_subtitle),
+            checked = enabled,
+            onCheckedChange = { sonosViewModel.setEnabled(it) },
+            leadingIcon = { Icon(painterResource(R.drawable.rounded_speaker_24), null, tint = MaterialTheme.colorScheme.secondary) }
+        )
     }
 }
 

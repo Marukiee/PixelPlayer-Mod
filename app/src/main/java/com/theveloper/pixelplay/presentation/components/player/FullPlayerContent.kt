@@ -132,6 +132,8 @@ import com.theveloper.pixelplay.presentation.components.subcomps.FetchLyricsDial
 import com.theveloper.pixelplay.presentation.viewmodel.LyricsSearchUiState
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerSheetState
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
+import com.theveloper.pixelplay.presentation.viewmodel.SonosViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.theveloper.pixelplay.ui.theme.GoogleSansRounded
 import com.theveloper.pixelplay.utils.AudioMetaUtils.mimeTypeToFormat
 import com.theveloper.pixelplay.utils.LyricsImportFailureReason
@@ -265,6 +267,8 @@ fun FullPlayerContent(
     val isImmersiveTemporarilyDisabled = fullPlayerSlice.isImmersiveTemporarilyDisabled
     val isRemotePlaybackActive = fullPlayerSlice.isRemotePlaybackActive
     val selectedRouteName = fullPlayerSlice.selectedRouteName
+    val sonosViewModel: SonosViewModel = hiltViewModel()
+    val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
     val isBluetoothEnabled = fullPlayerSlice.isBluetoothEnabled
     val bluetoothName = fullPlayerSlice.bluetoothName
     val navigationBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -767,10 +771,14 @@ fun FullPlayerContent(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val showCastLabel = isCastConnecting || (isRemotePlaybackActive && selectedRouteName != null)
+                            val sonosName = sonosSession?.group?.displayName
+                            val sonosConnecting = sonosSession?.isConnecting == true
+                            val showCastLabel = isCastConnecting || (isRemotePlaybackActive && selectedRouteName != null) || sonosName != null
                             val isBluetoothActive =
-                                isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && !isRemotePlaybackActive && !isCastConnecting
+                                isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && !isRemotePlaybackActive && !isCastConnecting &&
+                                    sonosName == null
                             val castIconPainter = when {
+                                sonosName != null -> painterResource(R.drawable.rounded_speaker_24)
                                 isCastConnecting || isRemotePlaybackActive -> painterResource(R.drawable.rounded_cast_24)
                                 isBluetoothActive -> painterResource(R.drawable.rounded_bluetooth_24)
                                 else -> painterResource(R.drawable.rounded_mobile_speaker_24)
@@ -834,7 +842,8 @@ fun FullPlayerContent(
                                             Spacer(Modifier.width(8.dp))
                                             AnimatedContent(
                                                 targetState = when {
-                                                    isCastConnecting -> stringResource(R.string.player_connecting)
+                                                    isCastConnecting || sonosConnecting -> stringResource(R.string.player_connecting)
+                                                    sonosName != null -> sonosName
                                                     isRemotePlaybackActive && selectedRouteName != null -> selectedRouteName
                                                     else -> ""
                                                 },
@@ -856,7 +865,7 @@ fun FullPlayerContent(
                                                         overflow = TextOverflow.Ellipsis,
                                                         modifier = Modifier.weight(1f, fill = false)
                                                     )
-                                                    AnimatedVisibility(visible = isCastConnecting) {
+                                                    AnimatedVisibility(visible = isCastConnecting || sonosConnecting) {
                                                         CircularProgressIndicator(
                                                             modifier = Modifier
                                                                 .size(14.dp),
@@ -864,7 +873,7 @@ fun FullPlayerContent(
                                                             color = playerAccentColor
                                                         )
                                                     }
-                                                    if (isRemotePlaybackActive && !isCastConnecting) {
+                                                    if ((isRemotePlaybackActive && !isCastConnecting) || (sonosName != null && !sonosConnecting)) {
                                                         Box(
                                                             modifier = Modifier
                                                                 .size(8.dp)
