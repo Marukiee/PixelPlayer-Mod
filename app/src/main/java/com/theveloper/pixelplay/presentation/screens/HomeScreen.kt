@@ -77,7 +77,11 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.theveloper.pixelplay.data.stats.StatsTimeRange
+import com.theveloper.pixelplay.presentation.components.home.GenreFlag
 import com.theveloper.pixelplay.presentation.components.home.HomeMixCard
+import com.theveloper.pixelplay.presentation.components.home.HomeMixVisual
+import com.theveloper.pixelplay.presentation.utils.GenreIconProvider
+import com.theveloper.pixelplay.presentation.screens.search.components.getGenreImageResource as keywordGenreImageResource
 import com.theveloper.pixelplay.presentation.components.home.HomeMixesRow
 import com.theveloper.pixelplay.presentation.components.home.HomeRecentlyPlayedRow
 import com.theveloper.pixelplay.presentation.components.home.HomeRediscoverSection
@@ -288,7 +292,8 @@ fun HomeScreen(
         topGenreNames(homeStatsOverview?.topGenres.orEmpty(), limit = 2)
     }
     val topLibraryArtist = remember(topArtists) { topArtists.firstOrNull { it.artistId != null } }
-    val mixCards = remember(dailyMixSongs, genreMixNames, topLibraryArtist, dailyMixTitle) {
+    val customGenreIcons by playerViewModel.customGenreIcons.collectAsStateWithLifecycle()
+    val mixCards = remember(dailyMixSongs, genreMixNames, topLibraryArtist, dailyMixTitle, customGenreIcons) {
         buildList {
             if (dailyMixSongs.isNotEmpty()) {
                 add(
@@ -296,6 +301,7 @@ fun HomeScreen(
                         key = "daily_mix",
                         title = dailyMixTitle,
                         subtitle = dailyMixSubtitle,
+                        visual = HomeMixVisual.Tonal,
                         onOpen = { navController.navigateSafely(Screen.DailyMixScreen.route) },
                         onPlay = {
                             playerViewModel.playSongsShuffled(dailyMixSongs, queueName = dailyMixTitle, startAtZero = true)
@@ -309,6 +315,14 @@ fun HomeScreen(
                         key = "genre_$genre",
                         title = genre,
                         subtitle = genreMixSubtitle,
+                        visual = HomeMixVisual.Genre(
+                            genreName = genre,
+                            illustration = GenreIconProvider.getGenreImageResource(genre, customGenreIcons).let { icon ->
+                                // Exact names only know "Pop", not "Swedish Pop"; fall back to the keyword lookup.
+                                if (icon == R.drawable.rounded_library_music_24) keywordGenreImageResource(genre) else icon
+                            },
+                            flag = GenreFlag.forGenre(genre)
+                        ),
                         onOpen = {
                             navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(genre, "UTF-8")))
                         },
@@ -329,6 +343,7 @@ fun HomeScreen(
                         key = "artist_$artistId",
                         title = topLibraryArtist.name,
                         subtitle = artistMixSubtitle,
+                        visual = HomeMixVisual.Artist(topLibraryArtist.imageModel),
                         onOpen = { navController.navigateSafely(Screen.ArtistDetail.createRoute(artistId)) },
                         onPlay = {
                             scope.launch {
@@ -346,10 +361,13 @@ fun HomeScreen(
 
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val density = LocalDensity.current
-    val scrollThresholdPx = remember(density) { with(density) { 180.dp.toPx() } }
+    // The Your Mix card sits right under the top bar, so the bar needs its background as soon as
+    // anything scrolls beneath it.
+    val scrollThresholdPx = remember(density) { with(density) { 4.dp.toPx() } }
     val isScrolledPastThreshold = remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > scrollThresholdPx }
     }
+    val topBarTitleStyle = rememberYourMixTitleStyle(fontSize = 24.sp, lineHeight = 26.sp)
 
     // Persist the scroll position across navigation away/back. The Stats card and other
     // conditional sections can shift indices while data re-emits when returning, which
@@ -400,21 +418,13 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 HomeGradientTopBar(
-                    onNavigationIconClick = {
+                    onSettingsClick = {
                         navController.navigateSafely(Screen.Settings.route)
                     },
-                    onMoreOptionsClick = {
-                        showChangelogBottomSheet = true
+                    onSourcesClick = {
+                        showStreamingProviderSheet = true
                     },
-                    onBetaClick = {
-                        showBetaInfoBottomSheet = true
-                    },
-                    onTelegramClick = {
-                         showStreamingProviderSheet = true
-                    },
-                    onMenuClick = {
-                        // onOpenSidebar() // Disabled
-                    },
+                    titleStyle = topBarTitleStyle,
                     isScrolled = isScrolledPastThreshold.value
                 )
             }
