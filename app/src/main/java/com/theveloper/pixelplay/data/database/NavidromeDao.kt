@@ -73,6 +73,9 @@ interface NavidromeDao {
     @Query("DELETE FROM navidrome_songs WHERE playlist_id = '__library__'")
     suspend fun clearLibrarySongs()
 
+    @Query("SELECT COUNT(*) FROM navidrome_songs WHERE playlist_id = '__library__'")
+    suspend fun getLibrarySongCount(): Int
+
     // ─── Clear All ─────────────────────────────────────────────────────
 
     @Query("DELETE FROM navidrome_songs")

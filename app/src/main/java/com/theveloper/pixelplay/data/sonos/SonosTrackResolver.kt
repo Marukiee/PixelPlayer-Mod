@@ -47,11 +47,9 @@ class SonosTrackResolver @Inject constructor(
     suspend fun prepare(): SonosSourceProblem? = mutex.withLock {
         sourceProblem()?.let { return it }
         if (byTitle.isEmpty()) {
-            var songs = navidromeDao.getAllNavidromeSongsList()
-            if (songs.isEmpty()) {
-                navidromeRepository.syncLibrarySongs()
-                songs = navidromeDao.getAllNavidromeSongsList()
-            }
+            // Playlist rows alone are not the whole server; fetch the full library once if it is missing.
+            if (navidromeDao.getLibrarySongCount() == 0) navidromeRepository.syncLibrarySongs()
+            val songs = navidromeDao.getAllNavidromeSongsList()
             byTitle = songs.distinctBy { it.navidromeId }
                 .groupBy { NavidromeSongMatcher.normalize(it.title) }
             Timber.tag(TAG).d("Navidrome index: %d songs", songs.size)

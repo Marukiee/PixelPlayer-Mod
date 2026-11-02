@@ -627,14 +627,15 @@ class SonosController @Inject constructor(
         if (active !== s) return
 
         if (index !in s.queue.indices) return
-        if (trackUri.isNotEmpty() && s.queue[index].uri != trackUri && settled) {
-            // Someone changed the queue in the Sonos app; we can no longer tell what plays.
-            endSession(R.string.sonos_msg_taken_over, s.group.coordinator.name, pauseLocal = true)
+        val busy = now() - s.lastTrackCommandAt < TRACK_COMMAND_GRACE_MS || s.syncJob?.isActive == true
+        if (settled && !busy && !sameStream(s.queue[index].uri, trackUri)) {
+            // The queue was edited in the Sonos app, so our copy is off: rebuild it from the phone.
+            s.queue.clear()
+            scheduleSync(s, jump = false)
             return
         }
         val local = readLocal() ?: return
         val sonosId = s.queue[index].mediaId
-        val busy = now() - s.lastTrackCommandAt < TRACK_COMMAND_GRACE_MS || s.syncJob?.isActive == true
         if (local.currentMediaId != sonosId) {
             if (busy) return
             val localIndex = s.queue.indexOfFirst { it.mediaId == local.currentMediaId }
@@ -711,6 +712,27 @@ class SonosController @Inject constructor(
         private const val AUTO_ADVANCE_GRACE_MS = 7_000L
         private const val TAKEOVER_GRACE_MS = 6_000L
         private const val DRIFT_LIMIT_MS = 2_500L
+
+        /**
+         * Whether the speaker plays the stream we queued. Compares the Subsonic song id only,
+         * because a speaker may hand the URL back with other encoding or parameter order.
+         * When either id is unknown it assumes a match rather than rebuilding for nothing.
+         */
+        internal fun sameStream(queued: String, reported: String): Boolean {
+            if (reported.isBlank()) return true
+            val a = subsonicId(queued) ?: return true
+            val b = subsonicId(reported) ?: return true
+            return a == b
+        }
+
+        internal fun subsonicId(uri: String): String? {
+            val query = uri.substringAfter('?', "").substringBefore('#')
+            if (query.isEmpty()) return null
+            return query.split('&').firstNotNullOfOrNull { part ->
+                val (key, value) = part.split('=', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+                if (key == "id" || key == "amp;id") java.net.URLDecoder.decode(value, "UTF-8").ifBlank { null } else null
+            }
+        }
 
         /** Index of [mediaId] in [queue] closest to [around], or -1. */
         internal fun nearestIndexOf(queue: List<SonosTrack>, mediaId: String, around: Int): Int =

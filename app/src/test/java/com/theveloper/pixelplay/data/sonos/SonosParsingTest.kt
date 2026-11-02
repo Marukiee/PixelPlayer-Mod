@@ -131,6 +131,19 @@ class SonosParsingTest {
         assertThat(SonosController.nearestIndexOf(queue, "z", 1)).isEqualTo(-1)
     }
 
+    @Test
+    fun sameStream_comparesTheSubsonicIdOnly() {
+        val queued = "http://10.0.0.5:4533/rest/stream.view?u=mark&t=abc&s=def&v=1.16.1&c=PixelPlayer&id=al-42"
+        val reordered = "http://10.0.0.5:4533/rest/stream.view?id=al%2D42&c=PixelPlayer&u=mark&t=abc&s=def&v=1.16.1"
+        val other = "http://10.0.0.5:4533/rest/stream.view?u=mark&t=xyz&s=uvw&id=al-43"
+        assertThat(SonosController.subsonicId(queued)).isEqualTo("al-42")
+        assertThat(SonosController.sameStream(queued, reordered)).isTrue()
+        assertThat(SonosController.sameStream(queued, other)).isFalse()
+        // Unknown shapes never count as a mismatch.
+        assertThat(SonosController.sameStream(queued, "x-sonos-http:track.mp3")).isTrue()
+        assertThat(SonosController.sameStream(queued, "")).isTrue()
+    }
+
     private fun entity(id: String, title: String, artist: String, album: String, durationMs: Long) = NavidromeSongEntity(
         id = id,
         navidromeId = id,
