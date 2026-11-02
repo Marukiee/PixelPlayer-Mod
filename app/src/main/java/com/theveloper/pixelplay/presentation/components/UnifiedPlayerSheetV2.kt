@@ -458,7 +458,6 @@ fun UnifiedPlayerSheetV2(
     val hapticFeedback = LocalHapticFeedback.current
     val miniPlayerSwipeGestureHandler = rememberMiniPlayerSwipeGestureHandler(
         density = density,
-        hapticFeedback = hapticFeedback,
         onSwipeToNext = { playerViewModel.nextSong() },
         onSwipeToPrevious = { playerViewModel.previousSong() }
     )
@@ -639,10 +638,15 @@ fun UnifiedPlayerSheetV2(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .miniPlayerSwipeHorizontalGesture(
+                                enabled = currentSheetContentState == PlayerSheetState.COLLAPSED,
+                                handler = miniPlayerSwipeGestureHandler
+                            )
                             .graphicsLayer {
                                 scaleX = miniAppearScale
                                 scaleY = visualOvershootScaleY.value * miniAppearScale
-                                alpha = miniReadyAlpha
+                                alpha = miniReadyAlpha * miniPlayerSwipeGestureHandler.alpha.value
+                                translationX = miniPlayerSwipeGestureHandler.offsetX.value
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             }
                             // outerLayout:
@@ -713,10 +717,6 @@ fun UnifiedPlayerSheetV2(
                                     placeable.placeRelative(xOffset, 0)
                                 }
                             }
-                            .miniPlayerSwipeHorizontalGesture(
-                                enabled = currentSheetContentState == PlayerSheetState.COLLAPSED,
-                                handler = miniPlayerSwipeGestureHandler
-                            )
                             .playerSheetVerticalDragGesture(
                                 enabled = sheetInteractionState.canDragSheet,
                                 handler = sheetInteractionState.sheetVerticalDragGestureHandler
