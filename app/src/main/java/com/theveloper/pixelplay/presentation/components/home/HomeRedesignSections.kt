@@ -1,6 +1,7 @@
 package com.theveloper.pixelplay.presentation.components.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -35,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
@@ -170,6 +172,7 @@ fun HomeYourMixCard(
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
     onSongClick: (Song) -> Unit,
+    onOpen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -183,6 +186,7 @@ fun HomeYourMixCard(
             .padding(horizontal = 16.dp)
             .clip(smoothShape(32.dp))
             .background(colors.primaryContainer)
+            .clickable(onClick = onOpen)
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -193,12 +197,26 @@ fun HomeYourMixCard(
                 color = colors.onPrimaryContainer,
                 maxLines = 2
             )
-            Text(
-                text = stringResource(R.string.home_your_mix_card_subtitle, songs.size),
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.onPrimaryContainer.copy(alpha = 0.75f),
+            // The arrow hints that the card opens the full Your Mix list.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 6.dp, bottom = 16.dp)
-            )
+            ) {
+                Text(
+                    text = stringResource(R.string.home_your_mix_card_subtitle, songs.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onPrimaryContainer.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.home_open_all),
+                    tint = colors.onPrimaryContainer.copy(alpha = 0.75f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -303,10 +321,10 @@ fun HomeRecentlyPlayedRow(
             itemsIndexed(items, key = { _, item -> item.song.id }, contentType = { _, _ -> "recent_cover" }) { index, item ->
                 val song = item.song
                 val coverShape = coverShapes[index % coverShapes.size]
+                // No rounded clip on the whole item: its bottom corner cut off the first letter of the artist.
                 Column(
                     modifier = Modifier
                         .width(132.dp)
-                        .clip(smoothShape(20.dp))
                         .clickable { onSongClick(song) }
                 ) {
                     Box {
@@ -408,9 +426,7 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle)
     val visual = mix.visual
     val flag = (visual as? HomeMixVisual.Genre)?.flag
     val (container, content) = when (visual) {
-        is HomeMixVisual.Genre -> if (flag != null) {
-            flag.background to flag.onBackground
-        } else {
+        is HomeMixVisual.Genre -> {
             val theme = GenreThemeUtils.getGenreThemeColor(genreLibraryId(visual.genreName), isDark)
             theme.container to theme.onContainer
         }
@@ -418,8 +434,8 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle)
         HomeMixVisual.Tonal -> colors.tertiaryContainer to colors.onTertiaryContainer
     }
     val decorationShapes = decorationShapes()
-    val buttonContainer = flag?.accent ?: content
-    val buttonContent = flag?.background ?: container
+    val buttonContainer = flag?.buttonColor ?: content
+    val buttonContent = flag?.buttonIconColor ?: container
 
     Box(
         modifier = Modifier
@@ -431,19 +447,15 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle)
         when (visual) {
             is HomeMixVisual.Genre -> when {
                 // The flag as a playful sticker in the corner, like the artist photo on artist mixes.
-                flag != null -> {
-                    val shape = decorationShapes[index % decorationShapes.size]
-                    GenreFlagBackground(
-                        flag = flag,
-                        crossXFraction = 0.36f,
-                        crossYFraction = 0.5f,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .offset(x = 22.dp, y = 22.dp)
-                            .size(128.dp)
-                            .clip(shape)
-                    )
-                }
+                // Same calm cookie shape as the flag stickers in Search and on the genre page.
+                flag != null -> GenreFlagSticker(
+                    flag = flag,
+                    shape = flagStickerShape(),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                        .size(92.dp)
+                )
                 visual.illustration == R.drawable.rounded_library_music_24 -> DecorationBlob(
                     content,
                     decorationShapes[index % decorationShapes.size],
@@ -562,68 +574,88 @@ fun genreIllustration(genre: String, customIcons: Map<String, Int>): Any {
 fun genreLibraryId(genreName: String): String =
     genreName.lowercase().replace(" ", "_").replace("/", "_")
 
-/** National flags for genres like "Swedish Indie" or "Svensk pop". */
+/** National flags for genres like "Swedish Indie", "Norsk pop" or "Nederpop". */
 enum class GenreFlag(
-    val background: Color,
-    val cross: Color,
-    val innerCross: Color?,
-    val accent: Color,
-    val onBackground: Color,
-    val isTricolor: Boolean = false
+    val style: FlagStyle,
+    /** Nordic cross: background, cross, optional inner cross. Stripes: the three stripes in order. */
+    val colors: List<Color>,
+    val buttonColor: Color,
+    val buttonIconColor: Color,
+    private val keywords: List<String>
 ) {
-    SWEDEN(Color(0xFF006AA7), Color(0xFFFECC00), null, Color(0xFFFECC00), Color.White),
-    NORWAY(Color(0xFFBA0C2F), Color.White, Color(0xFF00205B), Color.White, Color.White),
-    DENMARK(Color(0xFFC8102E), Color.White, null, Color.White, Color.White),
-    FINLAND(Color.White, Color(0xFF002F6C), null, Color(0xFF002F6C), Color(0xFF002F6C)),
-    NETHERLANDS(Color(0xFFAE1C28), Color.White, Color(0xFF21468B), Color(0xFF21468B), Color.White, isTricolor = true);
+    SWEDEN(FlagStyle.NORDIC_CROSS, listOf(Color(0xFF006AA7), Color(0xFFFECC00)), Color(0xFF006AA7), Color(0xFFFECC00), listOf("swed", "svensk", "sverige")),
+    NORWAY(FlagStyle.NORDIC_CROSS, listOf(Color(0xFFBA0C2F), Color.White, Color(0xFF00205B)), Color(0xFFBA0C2F), Color.White, listOf("norw", "norsk", "norge")),
+    DENMARK(FlagStyle.NORDIC_CROSS, listOf(Color(0xFFC8102E), Color.White), Color(0xFFC8102E), Color.White, listOf("danish", "dansk", "danmark")),
+    FINLAND(FlagStyle.NORDIC_CROSS, listOf(Color.White, Color(0xFF002F6C)), Color(0xFF002F6C), Color.White, listOf("finnish", "finsk", "suomi")),
+    ICELAND(FlagStyle.NORDIC_CROSS, listOf(Color(0xFF02529C), Color.White, Color(0xFFDC1E35)), Color(0xFF02529C), Color.White, listOf("iceland", "islensk", "íslensk")),
+    NETHERLANDS(FlagStyle.HORIZONTAL_STRIPES, listOf(Color(0xFFAE1C28), Color.White, Color(0xFF21468B)), Color(0xFFFF7F00), Color.White, listOf("dutch", "nederland", "nederpop")),
+    GERMANY(FlagStyle.HORIZONTAL_STRIPES, listOf(Color(0xFF000000), Color(0xFFDD0000), Color(0xFFFFCE00)), Color(0xFFDD0000), Color.White, listOf("german", "deutsch")),
+    FRANCE(FlagStyle.VERTICAL_STRIPES, listOf(Color(0xFF002395), Color.White, Color(0xFFED2939)), Color(0xFF002395), Color.White, listOf("french", "francais", "français")),
+    ITALY(FlagStyle.VERTICAL_STRIPES, listOf(Color(0xFF009246), Color.White, Color(0xFFCE2B37)), Color(0xFF009246), Color.White, listOf("italian", "italiano")),
+    BELGIUM(FlagStyle.VERTICAL_STRIPES, listOf(Color(0xFF000000), Color(0xFFFAE042), Color(0xFFED2939)), Color(0xFFED2939), Color.White, listOf("belgian", "belgisch")),
+    IRELAND(FlagStyle.VERTICAL_STRIPES, listOf(Color(0xFF169B62), Color.White, Color(0xFFFF883E)), Color(0xFF169B62), Color.White, listOf("irish"));
 
     companion object {
         fun forGenre(genre: String): GenreFlag? {
             val key = genre.lowercase()
-            return when {
-                "swed" in key || "svensk" in key || "sverige" in key -> SWEDEN
-                "norw" in key || "norsk" in key -> NORWAY
-                "danish" in key || "dansk" in key -> DENMARK
-                "finnish" in key || "suomi" in key -> FINLAND
-                "dutch" in key || "nederland" in key || "nederpop" in key -> NETHERLANDS
-                else -> null
+            return entries.firstOrNull { flag -> flag.keywords.any { it in key } }
+        }
+    }
+}
+
+enum class FlagStyle { NORDIC_CROSS, HORIZONTAL_STRIPES, VERTICAL_STRIPES }
+
+/** Draws the flag to fill its bounds; the Nordic cross sits a bit towards the hoist like the real flags. */
+@Composable
+fun GenreFlagBackground(
+    flag: GenreFlag,
+    modifier: Modifier,
+    crossXFraction: Float = 0.36f,
+    crossYFraction: Float = 0.5f
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        when (flag.style) {
+            FlagStyle.HORIZONTAL_STRIPES -> flag.colors.forEachIndexed { i, color ->
+                drawRect(color, topLeft = Offset(0f, i * h / 3f), size = androidx.compose.ui.geometry.Size(w, h / 3f + 1f))
+            }
+            FlagStyle.VERTICAL_STRIPES -> flag.colors.forEachIndexed { i, color ->
+                drawRect(color, topLeft = Offset(i * w / 3f, 0f), size = androidx.compose.ui.geometry.Size(w / 3f + 1f, h))
+            }
+            FlagStyle.NORDIC_CROSS -> {
+                drawRect(flag.colors[0])
+                val bar = minOf(w, h) * 0.22f
+                val crossX = w * crossXFraction - bar / 2f
+                val crossY = h * crossYFraction - bar / 2f
+                drawRect(flag.colors[1], topLeft = Offset(crossX, 0f), size = androidx.compose.ui.geometry.Size(bar, h))
+                drawRect(flag.colors[1], topLeft = Offset(0f, crossY), size = androidx.compose.ui.geometry.Size(w, bar))
+                flag.colors.getOrNull(2)?.let { inner ->
+                    val innerBar = bar * 0.5f
+                    val inset = (bar - innerBar) / 2f
+                    drawRect(inner, topLeft = Offset(crossX + inset, 0f), size = androidx.compose.ui.geometry.Size(innerBar, h))
+                    drawRect(inner, topLeft = Offset(0f, crossY + inset), size = androidx.compose.ui.geometry.Size(w, innerBar))
+                }
             }
         }
     }
 }
 
-/** Nordic cross (or the Dutch tricolour) drawn to fill a portrait card, cross offset to the left like the real flag. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun GenreFlagBackground(
-    flag: GenreFlag,
-    modifier: Modifier,
-    crossXFraction: Float = 0.30f,
-    crossYFraction: Float = 0.56f
-) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        if (flag.isTricolor) {
-            drawRect(flag.background, size = androidx.compose.ui.geometry.Size(w, h / 3f))
-            drawRect(flag.cross, topLeft = Offset(0f, h / 3f), size = androidx.compose.ui.geometry.Size(w, h / 3f))
-            drawRect(flag.innerCross ?: flag.background, topLeft = Offset(0f, 2f * h / 3f), size = androidx.compose.ui.geometry.Size(w, h / 3f))
-            return@Canvas
-        }
-        drawRect(flag.background)
-        val bar = minOf(w, h) * 0.18f
-        val crossX = w * crossXFraction - bar / 2f
-        val crossY = h * crossYFraction - bar / 2f
-        drawRect(flag.cross, topLeft = Offset(crossX, 0f), size = androidx.compose.ui.geometry.Size(bar, h))
-        drawRect(flag.cross, topLeft = Offset(0f, crossY), size = androidx.compose.ui.geometry.Size(w, bar))
-        flag.innerCross?.let { inner ->
-            val innerBar = bar * 0.5f
-            val inset = (bar - innerBar) / 2f
-            drawRect(inner, topLeft = Offset(crossX + inset, 0f), size = androidx.compose.ui.geometry.Size(innerBar, h))
-            drawRect(inner, topLeft = Offset(0f, crossY + inset), size = androidx.compose.ui.geometry.Size(w, innerBar))
-        }
-    }
-}
+fun flagStickerShape(): Shape = MaterialShapes.Cookie9Sided.toShape()
 
+/** The flag as a sticker: fully visible, slightly tilted, with a white edge so it stands out on any card. */
+@Composable
+fun GenreFlagSticker(flag: GenreFlag, shape: Shape, modifier: Modifier = Modifier) {
+    GenreFlagBackground(
+        flag = flag,
+        modifier = modifier
+            .rotate(-8f)
+            .clip(shape)
+            .border(3.dp, Color.White, shape)
+    )
+}
 
 /** Round artist photos with listening time; only artists that exist in the library open a page. */
 @Composable
@@ -648,7 +680,6 @@ fun HomeTopArtistsRow(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .width(84.dp)
-                        .clip(smoothShape(16.dp))
                         .then(if (artistId != null) Modifier.clickable { onArtistClick(artistId) } else Modifier)
                 ) {
                     if (artist.imageModel != null) {

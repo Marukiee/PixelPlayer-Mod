@@ -1,5 +1,10 @@
 package com.theveloper.pixelplay.presentation.screens.search.components
 
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
+import com.theveloper.pixelplay.presentation.components.home.GenreFlag
+import com.theveloper.pixelplay.presentation.components.home.GenreFlagSticker
+import com.theveloper.pixelplay.presentation.components.home.flagStickerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -168,6 +173,7 @@ fun GenreCategoriesGrid(
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun GenreCard(
     genre: Genre,
@@ -274,22 +280,35 @@ private fun GenreCard(
                 )
             }
 
-            // Imagen del género en esquina inferior derecha
-            Box(
-                modifier = Modifier
-                    .size(90.dp) 
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 16.dp, y = 16.dp) 
-            ) {
-                SmartImage(
-                    model = GenreIconProvider.getGenreImageResource(genre.name, customIcons),
-                    contentDescription = "Genre illustration",
+            // National genres ("Swedish Indie", "Norsk pop") get their flag as a sticker, like on Home.
+            val flag = remember(genre.name) { GenreFlag.forGenre(genre.name) }
+            if (flag != null) {
+                GenreFlagSticker(
+                    flag = flag,
+                    shape = flagStickerShape(),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .alpha(0.55f),
-                    colorFilter = ColorFilter.tint(onBackgroundColor),
-                    contentScale = ContentScale.Crop
+                        .align(Alignment.BottomEnd)
+                        .padding(10.dp)
+                        .size(if (isGridView) 60.dp else 64.dp)
                 )
+            } else {
+                // Imagen del género en esquina inferior derecha
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 16.dp, y = 16.dp)
+                ) {
+                    SmartImage(
+                        model = GenreIconProvider.getGenreImageResource(genre.name, customIcons),
+                        contentDescription = "Genre illustration",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .alpha(0.55f),
+                        colorFilter = ColorFilter.tint(onBackgroundColor),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
             // Nombre del género en esquina superior izquierda

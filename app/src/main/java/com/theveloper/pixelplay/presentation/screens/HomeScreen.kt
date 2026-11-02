@@ -289,7 +289,7 @@ fun HomeScreen(
     val genreMixSubtitle = stringResource(R.string.home_mix_genre_subtitle)
     val artistMixSubtitle = stringResource(R.string.home_mix_artist_subtitle)
     val genreMixNames = remember(homeStatsOverview) {
-        topGenreNames(homeStatsOverview?.topGenres.orEmpty(), limit = 2)
+        topGenreNames(homeStatsOverview?.topGenres.orEmpty(), limit = 3)
     }
     val topLibraryArtist = remember(topArtists) { topArtists.firstOrNull { it.artistId != null } }
     val customGenreIcons by playerViewModel.customGenreIcons.collectAsStateWithLifecycle()
@@ -492,7 +492,8 @@ fun HomeScreen(
                                 } else {
                                     playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
                                 }
-                            }
+                            },
+                            onOpen = { navController.navigateSafely(Screen.YourMix.route) }
                         )
                     }
                 }

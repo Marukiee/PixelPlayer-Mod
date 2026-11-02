@@ -36,7 +36,8 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.toShape
 import androidx.compose.ui.graphics.ColorFilter
 import com.theveloper.pixelplay.presentation.components.home.GenreFlag
-import com.theveloper.pixelplay.presentation.components.home.GenreFlagBackground
+import com.theveloper.pixelplay.presentation.components.home.GenreFlagSticker
+import com.theveloper.pixelplay.presentation.components.home.flagStickerShape
 import com.theveloper.pixelplay.presentation.components.home.genreIllustration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -424,8 +425,8 @@ fun GenreDetailScreen(
                 collapseFraction = collapseFraction,
                 headerHeight = currentTopBarHeightDp,
                 onBackPressed = { navController.popBackStack() },
-                startColor = headerFlag?.background ?: startColor,
-                contentColor = headerFlag?.onBackground ?: contentColor,
+                startColor = startColor,
+                contentColor = contentColor,
                 illustration = headerIllustration,
                 flag = headerFlag,
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -874,11 +875,10 @@ private fun GenreHeaderDecoration(
     modifier: Modifier = Modifier
 ) {
     if (flag != null) {
-        GenreFlagBackground(
+        GenreFlagSticker(
             flag = flag,
-            crossXFraction = 0.36f,
-            crossYFraction = 0.5f,
-            modifier = modifier.clip(MaterialShapes.Cookie9Sided.toShape())
+            shape = flagStickerShape(),
+            modifier = modifier.padding(10.dp)
         )
     } else if (illustration != null && illustration != R.drawable.rounded_library_music_24) {
         SmartImage(

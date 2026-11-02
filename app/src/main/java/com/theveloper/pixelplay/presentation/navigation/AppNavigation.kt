@@ -38,6 +38,7 @@ import com.theveloper.pixelplay.presentation.screens.AccountsScreen
 import com.theveloper.pixelplay.presentation.screens.ArtistDetailScreen
 import com.theveloper.pixelplay.presentation.screens.ArtistSettingsScreen
 import com.theveloper.pixelplay.presentation.screens.DailyMixScreen
+import com.theveloper.pixelplay.presentation.screens.MixScreenKind
 import com.theveloper.pixelplay.presentation.screens.EditTransitionScreen
 import com.theveloper.pixelplay.presentation.screens.EasterEggScreen
 import com.theveloper.pixelplay.presentation.screens.ExperimentalSettingsScreen
@@ -283,6 +284,17 @@ fun AppNavigation(
                     DailyMixScreen(
                         playerViewModel = playerViewModel,
                         navController = navController
+                    )
+                }
+            }
+            composable(
+                Screen.YourMix.route,
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel, animatedVisibilityScope = this) {
+                    DailyMixScreen(
+                        playerViewModel = playerViewModel,
+                        navController = navController,
+                        kind = MixScreenKind.YOUR_MIX
                     )
                 }
             }
