@@ -4,7 +4,7 @@
 
 - [ ] Hele app in het Nederlands vertalen
 - [ ] Tweede variant van de crash na herstarten van de telefoon
-- [ ] Spotify-koppeling, gericht op FLAC kopen (later, Mark kiest nog welke functies)
+- [ ] Spotify-koppeling, gericht op FLAC kopen: eerst de te kopen-lijst (keuze van Mark, 2026-11-02)
 
 ## Hele app in het Nederlands vertalen
 
@@ -18,7 +18,7 @@ Zat al in de juli-versie en in upstream. Na een herstart start Android de app vi
 
 Doel: Spotify gebruiken om te ontdekken, en zoveel mogelijk zelf als FLAC kopen. Dit kan via de Spotify Web API, met inloggen via PKCE (geen geheime sleutel in de app). Mark moet daarvoor één keer een gratis app aanmaken op developer.spotify.com. Ideeën:
 
-1. **Te kopen-lijst:** Spotify-likes en -afspeellijsten vergelijken met de eigen bibliotheek (op ISRC als dat in de tags staat, anders op artiest en titel). Wat ontbreekt, komt op een lijst met knoppen naar Qobuz, Bandcamp en 7digital.
+1. **Te kopen-lijst (komt als eerste):** Spotify-likes en -afspeellijsten vergelijken met de eigen bibliotheek (op ISRC als dat in de tags staat, anders op artiest en titel). Wat ontbreekt, komt op een lijst met knoppen naar Qobuz, Bandcamp en 7digital.
 2. **Nieuwe releases:** albums van artiesten uit je bibliotheek, of die je op Spotify volgt, die je nog niet hebt. Als lijst of melding.
 3. **Afspeellijsten importeren:** een Spotify-afspeellijst wordt een PixelPlayer-afspeellijst met de nummers die je hebt; de rest gaat naar de te kopen-lijst.
 4. **Likes synchroniseren:** een like in PixelPlayer wordt ook op Spotify bewaard, en andersom.
