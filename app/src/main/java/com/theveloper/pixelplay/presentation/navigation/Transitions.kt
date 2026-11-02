@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 // Curva Emphasized oficial de Material 3 (la que usan los Pixel contemporáneos)
 val M3EmphasizedEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 const val AOSP_TRANSITION_DURATION = 350
+// Going back (button or finished back gesture) settles faster than going forward.
+const val AOSP_POP_TRANSITION_DURATION = 250
 
 // Equivale a sud_slide_next_in
 fun aospSharedAxisEnter(): EnterTransition {
@@ -42,9 +44,9 @@ fun aospSharedAxisExit(): ExitTransition {
 fun aospSharedAxisPopEnter(): EnterTransition {
     return slideInHorizontally(
         initialOffsetX = { -it / 3 }, // Reaparece desde 1/3 de la izquierda
-        animationSpec = tween(durationMillis = AOSP_TRANSITION_DURATION, easing = M3EmphasizedEasing)
+        animationSpec = tween(durationMillis = AOSP_POP_TRANSITION_DURATION, easing = M3EmphasizedEasing)
     ) + fadeIn(
-        animationSpec = tween(durationMillis = AOSP_TRANSITION_DURATION, easing = M3EmphasizedEasing)
+        animationSpec = tween(durationMillis = AOSP_POP_TRANSITION_DURATION, easing = M3EmphasizedEasing)
     )
 }
 
@@ -53,12 +55,12 @@ fun aospSharedAxisPopExit(): ExitTransition {
     return slideOutHorizontally(
         targetOffsetX = { it }, // Se desliza completamente fuera de la pantalla
         animationSpec = tween(
-            durationMillis = AOSP_TRANSITION_DURATION,
+            durationMillis = AOSP_POP_TRANSITION_DURATION,
             easing = Easing { f -> f * f * f } // Durante el arrastre se desplaza muy poco, y al completarse se desliza por completo
         )
     ) + scaleOut(
         targetScale = 0.85f, // Se achica más (efecto de profundidad más pronunciado)
-        animationSpec = tween(durationMillis = AOSP_TRANSITION_DURATION, easing = M3EmphasizedEasing)
+        animationSpec = tween(durationMillis = AOSP_POP_TRANSITION_DURATION, easing = M3EmphasizedEasing)
     )
 }
 
