@@ -2,14 +2,16 @@
 
 ## Open lijst voor een grote ronde
 
-- [ ] Hele app in het Nederlands vertalen
-- [ ] Tweede variant van de crash na herstarten van de telefoon
-- [ ] Spotify: te kopen-lijst (eerst)
-- [ ] Spotify: nieuwe releases
-- [ ] Spotify: afspeellijsten importeren
-- [ ] Spotify en PixelPlayer: luisterstatistieken samenvoegen
-- [ ] Sonos: afspelen via Navidrome, met groeperen en volume per speaker
-- [ ] PixelPlayerOSS: fixes overnemen of overstappen (Mark beslist)
+Volgorde gekozen door Mark (2026-11-02):
+
+1. [ ] Sonos: afspelen via Navidrome, met groeperen en volume per speaker
+2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
+3. [ ] Spotify: te kopen-lijst
+4. [ ] Spotify: nieuwe releases
+5. [ ] Spotify: afspeellijsten importeren
+6. [ ] Spotify en PixelPlayer: luisterstatistieken samenvoegen
+7. [ ] Hele app in het Nederlands vertalen
+8. [ ] Tweede variant van de crash na herstarten van de telefoon
 
 ## Hele app in het Nederlands vertalen
 
