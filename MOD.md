@@ -44,4 +44,4 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 - Wijzigingen in de Sonos-app (volgende, pauze) volgt de telefoon; speelt de speaker iets anders, dan stopt de koppeling
 - Volumeknoppen regelen de Sonos zolang de app open is
 - Instellingen > Sonos: hoeveel nummers op Navidrome staan, overslaan of stoppen bij nummers die alleen op je telefoon staan
-- Werkt alleen als de Sonos je Navidrome-server kan bereiken (adres op je thuisnetwerk, niet via Tailscale)
+- Thuisadres voor Sonos: gebruikt de app Navidrome via Tailscale, dan krijgen alleen de speakers het adres op je thuisnetwerk

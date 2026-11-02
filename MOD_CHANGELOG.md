@@ -1,3 +1,5 @@
+- Thuisadres voor Sonos (Instellingen > Sonos): de app blijft Tailscale gebruiken, de speakers krijgen je thuisadres
+- Verbinden met Sonos werkt ook als er net een nummer speelt dat niet op Navidrome staat
 - Afspelen op Sonos: kies een ruimte bij de verbindknop in de speler, de speakers spelen vanaf Navidrome
 - Groeperen met vinkjes zoals in de Sonos-app, groepsvolume en volume per speaker
 - De hele wachtrij staat op de Sonos, dus hij speelt door als je telefoon uit is

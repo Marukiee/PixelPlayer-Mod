@@ -65,6 +65,7 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 - De telefoon blijft de baas over de wachtrij en speelt stil mee: het geluid wordt in de audio-sink op 0 gezet (`SonosAudioGate`, `MutingAudioSink`), zonder audiofocus en zonder crossfade. Daardoor werken melding, vergrendelscherm, swipes en luisterstatistieken gewoon.
 - `SonosController` stuurt elke actie van de telefoon door (afspelen, pauze, volgende, spoelen, wachtrij) en zet de komende 100 nummers op de Sonos-wachtrij. De Sonos is leidend voor de positie; wat in de Sonos-app gebeurt, volgt de telefoon.
 - `SonosTrackResolver` koppelt nummers aan de Navidrome-cache (titel, artiest, album, duur). Hi-res (boven 48 kHz) en Opus of DSD vraagt hij als MP3 320 op, omdat Sonos die niet afspeelt.
+- Thuisadres (0.7.5-mod.10): de app gebruikt het Navidrome-inlogadres (bij Mark Tailscale, `100.86.14.39`), de speakers krijgen het adres uit Instellingen > Sonos (`http://192.168.1.157:4533`, maruks-server). `SonosTrackResolver.rebase` zet het begin van de stream- en hoes-URL om.
 - Getest op de emulator tegen een echte Navidrome en een nep-Sonos met drie speakers. Nog niet getest op echte Sonos-hardware.
 
 Nog na te lopen thuis (alleen met echte speakers):

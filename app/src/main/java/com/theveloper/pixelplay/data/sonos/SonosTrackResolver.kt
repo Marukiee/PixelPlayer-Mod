@@ -6,6 +6,9 @@ import com.theveloper.pixelplay.data.database.NavidromeSongEntity
 import com.theveloper.pixelplay.data.database.SongMatchRow
 import com.theveloper.pixelplay.data.navidrome.NavidromeRepository
 import com.theveloper.pixelplay.data.navidrome.NavidromeSongMatcher
+import com.theveloper.pixelplay.data.navidrome.model.NavidromeCredentials
+import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -28,19 +31,34 @@ enum class SonosSourceProblem { NOT_LOGGED_IN, TAILSCALE_ADDRESS, NO_SONGS }
 class SonosTrackResolver @Inject constructor(
     private val navidromeDao: NavidromeDao,
     private val navidromeRepository: NavidromeRepository,
-    private val musicDao: MusicDao
+    private val musicDao: MusicDao,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) {
     private val mutex = Mutex()
     private var byTitle: Map<String, List<NavidromeSongEntity>> = emptyMap()
     private val cache = HashMap<String, SonosTrack?>()
+    /** Home address from Settings > Sonos, read on each check so a change applies to the next session. */
+    private var homeBase: String? = null
 
-    fun sourceProblem(): SonosSourceProblem? {
+    suspend fun sourceProblem(): SonosSourceProblem? {
         if (!navidromeRepository.isLoggedIn) return SonosSourceProblem.NOT_LOGGED_IN
-        val host = navidromeRepository.serverUrl?.let {
-            (if (it.contains("://")) it else "https://$it").toHttpUrlOrNull()?.host
-        }
+        homeBase = normalizeAddress(userPreferencesRepository.sonosHomeAddressFlow.first())
+        val host = sonosBaseUrl()?.toHttpUrlOrNull()?.host
         if (host != null && isTailscaleHost(host)) return SonosSourceProblem.TAILSCALE_ADDRESS
         return null
+    }
+
+    /** The Navidrome address the speakers will use. */
+    fun sonosBaseUrl(): String? = homeBase ?: loginBase()
+
+    private fun loginBase(): String? =
+        navidromeRepository.serverUrl?.let { NavidromeCredentials(it, "", "").normalizedServerUrl }
+
+    /** Moves a URL built for the app (maybe over Tailscale) onto the address the speakers can reach. */
+    private fun forSonos(url: String): String {
+        val home = homeBase ?: return url
+        val login = loginBase() ?: return url
+        return rebase(url, login, home)
     }
 
     /** Loads the Navidrome library index. Returns a problem when Sonos cannot play from Navidrome. */
@@ -97,18 +115,20 @@ class SonosTrackResolver @Inject constructor(
         // Sonos plays FLAC up to 48 kHz and no Opus or DSD; ask Navidrome for MP3 320 then.
         val suffix = entity?.suffix?.lowercase()
         val transcode = (row.sampleRate ?: 0) > 48_000 || suffix in UNSUPPORTED_SUFFIXES
-        val uri = if (transcode) {
-            navidromeRepository.getStreamUrl(navidromeId, maxBitRate = 320, format = "mp3")
-        } else {
-            navidromeRepository.getStreamUrl(navidromeId)
-        }
+        val uri = forSonos(
+            if (transcode) {
+                navidromeRepository.getStreamUrl(navidromeId, maxBitRate = 320, format = "mp3")
+            } else {
+                navidromeRepository.getStreamUrl(navidromeId)
+            }
+        )
         val mime = if (transcode) "audio/mpeg" else entity?.mimeType ?: mimeForSuffix(suffix)
         val metadata = buildDidl(
             itemId = "pixelplay-$navidromeId",
             title = row.title,
             artist = row.artistName,
             album = row.albumName,
-            artUri = navidromeRepository.getCoverArtUrl(entity?.coverArtId ?: navidromeId),
+            artUri = navidromeRepository.getCoverArtUrl(entity?.coverArtId ?: navidromeId)?.let(::forSonos),
             uri = uri,
             mimeType = mime,
             durationMs = row.duration
@@ -122,6 +142,22 @@ class SonosTrackResolver @Inject constructor(
     companion object {
         private const val TAG = "SonosResolver"
         private val UNSUPPORTED_SUFFIXES = setOf("opus", "ape", "wv", "dsf", "dff", "mka", "tak")
+
+        /** Cleans up a typed address: adds http:// (home servers rarely have https), drops the trailing slash. */
+        fun normalizeAddress(input: String?): String? {
+            val raw = input?.trim().orEmpty()
+            val schemeRegex = Regex("^(https?)://", RegexOption.IGNORE_CASE)
+            val scheme = schemeRegex.find(raw)?.groupValues?.get(1)?.lowercase() ?: "http"
+            val rest = raw.replace(schemeRegex, "").trimEnd('/')
+            if (rest.isEmpty() || rest.contains("://") || rest.startsWith(":")) return null
+            val url = "$scheme://$rest".toHttpUrlOrNull() ?: return null
+            if (url.host.isBlank()) return null
+            return url.toString().trimEnd('/')
+        }
+
+        /** Swaps the [loginBase] at the start of [url] for [homeBase]; other URLs stay as they are. */
+        fun rebase(url: String, loginBase: String, homeBase: String): String =
+            if (url.startsWith("$loginBase/")) homeBase + url.removePrefix(loginBase) else url
 
         fun isTailscaleHost(host: String): Boolean {
             if (host.endsWith(".ts.net", ignoreCase = true)) return true

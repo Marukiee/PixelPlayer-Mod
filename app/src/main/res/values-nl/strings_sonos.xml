@@ -22,7 +22,7 @@
     <string name="sonos_msg_taken_over">%1$s speelt nu iets anders</string>
     <string name="sonos_msg_lost">Verbinding met %1$s kwijt</string>
     <string name="sonos_problem_not_logged_in">Sonos speelt vanaf je Navidrome-server. Log eerst in bij Navidrome (Instellingen, Navidrome).</string>
-    <string name="sonos_problem_tailscale">Sonos kan je Navidrome-server niet bereiken via Tailscale. Gebruik het adres op je thuisnetwerk in de Navidrome-instellingen.</string>
+    <string name="sonos_problem_tailscale">Sonos kan je Navidrome-server niet bereiken via Tailscale. Vul het thuisadres in bij Instellingen, Sonos.</string>
     <string name="sonos_problem_no_songs">Geen nummers gevonden op je Navidrome-server.</string>
 
     <string name="settings_category_sonos_title">Sonos</string>
@@ -30,7 +30,7 @@
     <string name="settings_sonos_source_title">Navidrome als bron</string>
     <string name="settings_sonos_source_checking">Bibliotheek nakijken…</string>
     <string name="settings_sonos_source_count">%1$d van %2$d nummers kunnen op Sonos spelen</string>
-    <string name="settings_sonos_source_server">Server: %1$s</string>
+    <string name="settings_sonos_source_server">Sonos gebruikt %1$s</string>
     <string name="settings_sonos_playback_section">Afspelen</string>
     <string name="settings_sonos_unavailable_title">Nummers niet op Navidrome</string>
     <string name="settings_sonos_unavailable_subtitle">Wat er gebeurt met nummers die alleen op je telefoon staan</string>
@@ -41,4 +41,15 @@
     <string name="settings_sonos_speakers_section">Speakers</string>
     <string name="settings_sonos_enabled_title">Sonos tonen bij Verbinden</string>
     <string name="settings_sonos_enabled_subtitle">Speakers op je wifi vanzelf vinden</string>
+    <string name="settings_sonos_navidrome_section">Navidrome</string>
+    <string name="settings_sonos_home_address_title">Thuisadres voor Sonos</string>
+    <string name="settings_sonos_home_address_unset">Niet ingesteld: Sonos gebruikt je Navidrome-inlogadres</string>
+    <string name="settings_sonos_home_address_hint">Het adres van je server op je thuiswifi, zoals http://192.168.1.157:4533. De app zelf blijft je normale adres gebruiken, bijvoorbeeld Tailscale.</string>
+    <string name="settings_sonos_home_address_label">Thuisadres</string>
+    <string name="settings_sonos_home_address_invalid">Dit is geen geldig adres</string>
+    <string name="settings_sonos_save">Opslaan</string>
+    <string name="settings_sonos_cancel">Annuleren</string>
+    <string name="settings_sonos_reachable">bereikbaar</string>
+    <string name="settings_sonos_unreachable">nu niet bereikbaar vanaf deze telefoon</string>
+    <string name="settings_sonos_problem_tailscale">Sonos kan Navidrome niet bereiken via Tailscale. Vul hieronder het thuisadres van je server in.</string>
 </resources>

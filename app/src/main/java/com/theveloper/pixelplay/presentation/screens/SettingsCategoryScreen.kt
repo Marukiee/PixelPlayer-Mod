@@ -110,6 +110,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -3149,7 +3151,7 @@ private fun SonosSettingsBlock() {
             val body = when {
                 info == null -> stringResource(R.string.settings_sonos_source_checking)
                 info.problem == SonosSourceProblem.NOT_LOGGED_IN -> stringResource(R.string.sonos_problem_not_logged_in)
-                info.problem == SonosSourceProblem.TAILSCALE_ADDRESS -> stringResource(R.string.sonos_problem_tailscale)
+                info.problem == SonosSourceProblem.TAILSCALE_ADDRESS -> stringResource(R.string.settings_sonos_problem_tailscale)
                 info.problem == SonosSourceProblem.NO_SONGS || info.total == 0 -> stringResource(R.string.sonos_problem_no_songs)
                 else -> stringResource(R.string.settings_sonos_source_count, info.playable, info.total)
             }
@@ -3182,14 +3184,82 @@ private fun SonosSettingsBlock() {
                     drawStopIndicator = {}
                 )
             }
-            info?.server?.let {
-                Text(
-                    text = stringResource(R.string.settings_sonos_source_server, it),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f)
-                )
+            info?.sonosAddress?.let { address ->
+                val reach = when (info.reachable) {
+                    true -> " • " + stringResource(R.string.settings_sonos_reachable)
+                    false -> " • " + stringResource(R.string.settings_sonos_unreachable)
+                    null -> ""
+                }
+                AnimatedContent(
+                    targetState = stringResource(R.string.settings_sonos_source_server, address) + reach,
+                    transitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
+                    label = "sonosSourceAddress"
+                ) { text ->
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f)
+                    )
+                }
             }
         }
+    }
+
+    val homeAddress by sonosViewModel.homeAddress.collectAsStateWithLifecycle()
+    var showHomeAddressDialog by remember { mutableStateOf(false) }
+    SettingsSubsection(title = stringResource(R.string.settings_sonos_navidrome_section)) {
+        SettingsItem(
+            title = stringResource(R.string.settings_sonos_home_address_title),
+            subtitle = homeAddress.ifBlank { stringResource(R.string.settings_sonos_home_address_unset) },
+            leadingIcon = { Icon(painterResource(R.drawable.rounded_wifi_24), null, tint = MaterialTheme.colorScheme.secondary) },
+            onClick = { showHomeAddressDialog = true }
+        )
+    }
+    if (showHomeAddressDialog) {
+        var text by remember { mutableStateOf(homeAddress) }
+        var invalid by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { showHomeAddressDialog = false },
+            icon = { Icon(painterResource(R.drawable.rounded_wifi_24), null, tint = MaterialTheme.colorScheme.secondary) },
+            title = { Text(stringResource(R.string.settings_sonos_home_address_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_sonos_home_address_hint),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = {
+                            text = it
+                            invalid = false
+                        },
+                        label = { Text(stringResource(R.string.settings_sonos_home_address_label)) },
+                        placeholder = { Text("http://192.168.1.157:4533") },
+                        singleLine = true,
+                        isError = invalid,
+                        supportingText = if (invalid) {
+                            { Text(stringResource(R.string.settings_sonos_home_address_invalid)) }
+                        } else {
+                            null
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (sonosViewModel.setHomeAddress(text)) showHomeAddressDialog = false else invalid = true
+                }) { Text(stringResource(R.string.settings_sonos_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showHomeAddressDialog = false }) {
+                    Text(stringResource(R.string.settings_sonos_cancel))
+                }
+            }
+        )
     }
 
     SettingsSubsection(title = stringResource(R.string.settings_sonos_playback_section)) {

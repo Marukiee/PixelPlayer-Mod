@@ -22,7 +22,7 @@
     <string name="sonos_msg_taken_over">%1$s is playing something else now</string>
     <string name="sonos_msg_lost">Lost the connection with %1$s</string>
     <string name="sonos_problem_not_logged_in">Sonos plays from your Navidrome server. Log in to Navidrome first (Settings, Navidrome).</string>
-    <string name="sonos_problem_tailscale">Sonos can\'t reach your Navidrome server through Tailscale. Use its address on your home network in the Navidrome settings.</string>
+    <string name="sonos_problem_tailscale">Sonos can\'t reach your Navidrome server through Tailscale. Enter its home address in Settings, Sonos.</string>
     <string name="sonos_problem_no_songs">No songs found on your Navidrome server.</string>
 
     <string name="settings_category_sonos_title">Sonos</string>
@@ -30,7 +30,7 @@
     <string name="settings_sonos_source_title">Navidrome as source</string>
     <string name="settings_sonos_source_checking">Checking your library…</string>
     <string name="settings_sonos_source_count">%1$d of %2$d songs can play on Sonos</string>
-    <string name="settings_sonos_source_server">Server: %1$s</string>
+    <string name="settings_sonos_source_server">Sonos uses %1$s</string>
     <string name="settings_sonos_playback_section">Playback</string>
     <string name="settings_sonos_unavailable_title">Songs not on Navidrome</string>
     <string name="settings_sonos_unavailable_subtitle">What happens with songs that are only on your phone</string>
@@ -41,4 +41,15 @@
     <string name="settings_sonos_speakers_section">Speakers</string>
     <string name="settings_sonos_enabled_title">Show Sonos in Connect</string>
     <string name="settings_sonos_enabled_subtitle">Find speakers on your Wi-Fi automatically</string>
+    <string name="settings_sonos_navidrome_section">Navidrome</string>
+    <string name="settings_sonos_home_address_title">Home address for Sonos</string>
+    <string name="settings_sonos_home_address_unset">Not set: Sonos uses your Navidrome login address</string>
+    <string name="settings_sonos_home_address_hint">The address of your server on your home Wi-Fi, like http://192.168.1.157:4533. The app itself keeps using your normal address, for example Tailscale.</string>
+    <string name="settings_sonos_home_address_label">Home address</string>
+    <string name="settings_sonos_home_address_invalid">This is not a valid address</string>
+    <string name="settings_sonos_save">Save</string>
+    <string name="settings_sonos_cancel">Cancel</string>
+    <string name="settings_sonos_reachable">reachable</string>
+    <string name="settings_sonos_unreachable">not reachable from this phone right now</string>
+    <string name="settings_sonos_problem_tailscale">Sonos can\'t reach Navidrome through Tailscale. Enter your server\'s home address below.</string>
 </resources>

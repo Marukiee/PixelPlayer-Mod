@@ -260,6 +260,7 @@ class UserPreferencesRepository @Inject constructor(
         val SONOS_ENABLED = booleanPreferencesKey("sonos_enabled")
         val SONOS_SKIP_UNAVAILABLE = booleanPreferencesKey("sonos_skip_unavailable")
         val SONOS_VOLUME_KEYS = booleanPreferencesKey("sonos_volume_keys")
+        val SONOS_HOME_ADDRESS = stringPreferencesKey("sonos_home_address")
 
     }
 
@@ -816,6 +817,14 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
 
     suspend fun setSonosVolumeKeys(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.SONOS_VOLUME_KEYS] = enabled }
+    }
+
+    /** Navidrome base URL the speakers use, e.g. the home address when the app goes through Tailscale. Empty: same as the login. */
+    val sonosHomeAddressFlow: Flow<String> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_HOME_ADDRESS].orEmpty() }
+
+    suspend fun setSonosHomeAddress(address: String) {
+        dataStore.edit { it[PreferencesKeys.SONOS_HOME_ADDRESS] = address }
     }
 
     // ─── Sort options ─────────────────────────────────────────────────────────

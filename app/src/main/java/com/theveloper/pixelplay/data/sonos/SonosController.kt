@@ -613,7 +613,8 @@ class SonosController @Inject constructor(
         s.positionMs = relMs
         _session.update { it?.copy(isPlaying = transport == "PLAYING" || transport == "TRANSITIONING") }
 
-        val settled = now() - s.lastResetAt > TAKEOVER_GRACE_MS
+        // Only once our queue is on the speaker can someone else take it over.
+        val settled = s.lastResetAt > 0 && now() - s.lastResetAt > TAKEOVER_GRACE_MS
         // A track outside our queue usually means the TV or another app took over: check right away.
         if (settled && (tick % 2 == 0 || index !in s.queue.indices)) {
             val media = avt(s, "GetMediaInfo")["CurrentURI"].orEmpty()

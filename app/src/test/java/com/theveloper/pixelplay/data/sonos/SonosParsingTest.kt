@@ -144,6 +144,23 @@ class SonosParsingTest {
         assertThat(SonosController.sameStream(queued, "")).isTrue()
     }
 
+    @Test
+    fun homeAddress_isCleanedUpAndSwappedIntoSonosUrls() {
+        assertThat(SonosTrackResolver.normalizeAddress("192.168.1.157:4533/")).isEqualTo("http://192.168.1.157:4533")
+        assertThat(SonosTrackResolver.normalizeAddress(" https://music.home/navidrome ")).isEqualTo("https://music.home/navidrome")
+        assertThat(SonosTrackResolver.normalizeAddress("")).isNull()
+        assertThat(SonosTrackResolver.normalizeAddress("http://")).isNull()
+
+        val login = "http://100.86.14.39:4533"
+        val home = "http://192.168.1.157:4533"
+        val stream = "$login/rest/stream.view?u=mark&t=abc&s=def&id=42"
+        assertThat(SonosTrackResolver.rebase(stream, login, home))
+            .isEqualTo("$home/rest/stream.view?u=mark&t=abc&s=def&id=42")
+        // A longer host that only starts the same is left alone.
+        assertThat(SonosTrackResolver.rebase("http://100.86.14.39:45330/rest/x", login, home))
+            .isEqualTo("http://100.86.14.39:45330/rest/x")
+    }
+
     private fun entity(id: String, title: String, artist: String, album: String, durationMs: Long) = NavidromeSongEntity(
         id = id,
         navidromeId = id,
