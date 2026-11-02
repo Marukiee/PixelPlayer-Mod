@@ -86,12 +86,12 @@ private fun RecentlyPlayedRangeChip(
     val motionScheme = MotionScheme.expressive()
 
     val containerColor by animateColorAsState(
-        targetValue = if (selected) colors.tertiary else Color.Transparent,
+        targetValue = if (selected) colors.tertiary else colors.surfaceContainerHigh,
         animationSpec = motionScheme.defaultEffectsSpec(),
         label = "RecentlyPlayedRangeChipContainerColor"
     )
     val contentColor by animateColorAsState(
-        targetValue = if (selected) colors.onTertiary else colors.tertiary,
+        targetValue = if (selected) colors.onTertiary else colors.onSurfaceVariant,
         animationSpec = motionScheme.fastEffectsSpec(),
         label = "RecentlyPlayedRangeChipContentColor"
     )
@@ -123,10 +123,6 @@ private fun RecentlyPlayedRangeChip(
         shape = CircleShape,
         color = containerColor,
         contentColor = contentColor,
-        border = BorderStroke(
-            width = RecentlyPlayedRangeChipBorderWidth,
-            color = colors.tertiary
-        ),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {

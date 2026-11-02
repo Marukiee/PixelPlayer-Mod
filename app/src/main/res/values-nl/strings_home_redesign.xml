@@ -22,4 +22,5 @@
     <string name="home_duration_minutes">%1$d m</string>
     <string name="home_duration_under_minute">&lt;1 m</string>
     <string name="home_open_all">Alles bekijken</string>
+    <string name="recently_played_header_count">%1$d nummers</string>
 </resources>

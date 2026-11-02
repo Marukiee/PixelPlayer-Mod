@@ -55,6 +55,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -397,7 +400,7 @@ private fun ExpressiveRecentlyPlayedHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(190.dp)
+            .height(250.dp)
             .graphicsLayer {
                 translationY = parallaxOffset
                 alpha = headerAlpha
@@ -445,6 +448,59 @@ private fun ExpressiveRecentlyPlayedHeader(
                 text = title,
                 style = titleStyle,
                 color = MaterialTheme.colorScheme.onSurface
+            )
+            if (songs.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.recently_played_header_count, songs.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 2.dp, top = 2.dp)
+                )
+            }
+        }
+
+        RecentlyPlayedHeaderCollage(
+            artUris = highlightedArt,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 34.dp, end = 16.dp)
+                .size(width = 196.dp, height = 128.dp)
+        )
+    }
+}
+
+/** The latest covers in playful Expressive shapes, matching the Home page. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun RecentlyPlayedHeaderCollage(artUris: List<String?>, modifier: Modifier = Modifier) {
+    val shapes = listOf(
+        MaterialShapes.Cookie9Sided.toShape(),
+        MaterialShapes.Arch.toShape(),
+        MaterialShapes.Clover4Leaf.toShape(),
+        MaterialShapes.Sunny.toShape()
+    )
+    // (size, alignment, rotation) per cover
+    val placements = remember {
+        listOf(
+            Triple(92.dp, Alignment.TopEnd, 8f),
+            Triple(72.dp, Alignment.CenterStart, -6f),
+            Triple(78.dp, Alignment.BottomCenter, 0f),
+            Triple(54.dp, Alignment.TopCenter, 12f)
+        )
+    }
+    Box(modifier = modifier) {
+        artUris.take(placements.size).forEachIndexed { index, uri ->
+            val (size, alignment, rotation) = placements[index]
+            val shape = shapes[index]
+            SmartImage(
+                model = uri,
+                contentDescription = null,
+                shape = shape,
+                modifier = Modifier
+                    .align(alignment)
+                    .size(size)
+                    .rotate(rotation)
+                    .clip(shape)
             )
         }
     }
