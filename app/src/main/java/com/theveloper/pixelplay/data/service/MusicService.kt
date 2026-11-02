@@ -1189,7 +1189,16 @@ class MusicService : MediaLibraryService() {
                 }
             }
         }
-        val startCommandResult = super.onStartCommand(intent, flags, startId)
+        val startCommandResult = try {
+            super.onStartCommand(intent, flags, startId)
+        } catch (e: ForegroundServiceStartNotAllowedException) {
+            // Right after boot SystemUI asks the last media app to resume playback, and Media3
+            // then calls startForeground(), which Android 12+ refuses from BOOT_COMPLETED.
+            // ActivityThread would rethrow it as a RuntimeException and crash the app.
+            Timber.tag(TAG).w(e, "Foreground start refused in onStartCommand; ignoring this start")
+            stopSelfResult(startId)
+            return START_NOT_STICKY
+        }
         if (needsTemporaryForeground || startedTemporaryForegroundInOnCreate) {
             if (mediaSession?.player?.hasForegroundPlaybackIntent() != true) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
