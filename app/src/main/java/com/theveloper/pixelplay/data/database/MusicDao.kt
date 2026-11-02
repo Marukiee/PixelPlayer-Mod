@@ -1528,6 +1528,18 @@ interface MusicDao {
     @Query("SELECT * FROM artists WHERE id = :artistId")
     fun getArtistById(artistId: Long): Flow<ArtistEntity?>
 
+    @Query("SELECT * FROM artists WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun findArtistByName(name: String): ArtistEntity?
+
+    /** Liked songs whose last play is older than [playedBefore] (or that were never played). */
+    @Query("""
+        SELECT songs.* FROM songs
+        INNER JOIN favorites ON songs.id = favorites.songId AND favorites.isFavorite = 1
+        LEFT JOIN song_engagements ON song_engagements.song_id = CAST(songs.id AS TEXT)
+        WHERE COALESCE(song_engagements.last_played_timestamp, 0) < :playedBefore
+    """)
+    suspend fun getFavoriteSongsNotPlayedSince(playedBefore: Long): List<SongEntity>
+
     @Query("SELECT * FROM artists WHERE name LIKE '%' || :query || '%' ORDER BY name ASC")
     fun searchArtists(query: String): Flow<List<ArtistEntity>>
 

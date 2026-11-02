@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_recently_played_title">Recent gespeeld</string>
+    <string name="home_your_mix_card_subtitle">%1$d nummers · vandaag voor jou</string>
+    <string name="home_play">Afspelen</string>
+    <string name="home_made_for_you_title">Mixen voor jou</string>
+    <string name="home_mix_daily_title">Daily Mix</string>
+    <string name="home_mix_daily_subtitle">Op basis van je luistergedrag</string>
+    <string name="home_mix_genre_subtitle">Genre-mix</string>
+    <string name="home_mix_artist_subtitle">Artiest-mix</string>
+    <string name="home_mix_play">%1$s afspelen</string>
+    <string name="home_top_artists_week">Je artiesten deze week</string>
+    <string name="home_top_artists_month">Je artiesten deze maand</string>
+    <string name="home_top_artists_generic">Je topartiesten</string>
+    <string name="home_rediscover_title">Herontdekken</string>
+    <string name="home_rediscover_play_all">Alle herontdek-nummers afspelen</string>
+    <string name="home_stats_week">Deze week geluisterd</string>
+    <string name="home_stats_month">Deze maand geluisterd</string>
+    <string name="home_stats_generic">Luistertijd</string>
+    <string name="home_stats_top_artist">Top: %1$s</string>
+    <string name="home_duration_hours_minutes">%1$d u %2$d m</string>
+    <string name="home_duration_minutes">%1$d m</string>
+    <string name="home_duration_under_minute">&lt;1 m</string>
+    <string name="home_open_all">Alles bekijken</string>
+</resources>
