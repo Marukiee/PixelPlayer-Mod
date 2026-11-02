@@ -2,6 +2,24 @@ package com.theveloper.pixelplay.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.AddLink
+import androidx.compose.material.icons.rounded.LinkOff
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.random.Random
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
@@ -122,6 +140,10 @@ internal fun LazyListScope.sonosDeviceItems(
     session: SonosSessionState?,
     isScanning: Boolean,
     onSelectGroup: (SonosGroup) -> Unit,
+    onAddToPlaying: (SonosGroup) -> Unit,
+    onEditGroup: (SonosGroup) -> Unit,
+    onUngroup: (SonosGroup) -> Unit,
+    onStop: () -> Unit,
     onRefresh: () -> Unit
 ) {
     item(key = "sonosHeader") {
@@ -203,7 +225,20 @@ internal fun LazyListScope.sonosDeviceItems(
                 fadeInSpec = sonosMotion.defaultEffectsSpec(),
                 placementSpec = sonosMotion.defaultSpatialSpec(),
                 fadeOutSpec = sonosMotion.fastEffectsSpec()
-            )
+            ),
+            trailing = { tint ->
+                SonosRowMenu(
+                    group = group,
+                    isActive = isActive,
+                    playingName = session?.takeIf { !isActive && !it.isConnecting }?.group?.shortName,
+                    tint = tint,
+                    onPlayHere = { onSelectGroup(group) },
+                    onAddToPlaying = { onAddToPlaying(group) },
+                    onEditGroup = { onEditGroup(group) },
+                    onUngroup = { onUngroup(group) },
+                    onStop = onStop
+                )
+            }
         )
     }
 }
@@ -211,6 +246,132 @@ internal fun LazyListScope.sonosDeviceItems(
 /** Material 3 Expressive motion, the same scheme the player sheet and range chips use. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val sonosMotion = MotionScheme.expressive()
+
+/** The three-dot menu of a room: play, add it to the music that is on, group or split it. */
+@Composable
+private fun SonosRowMenu(
+    group: SonosGroup,
+    isActive: Boolean,
+    playingName: String?,
+    tint: Color,
+    onPlayHere: () -> Unit,
+    onAddToPlaying: () -> Unit,
+    onEditGroup: () -> Unit,
+    onUngroup: () -> Unit,
+    onStop: () -> Unit
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(
+                Icons.Rounded.MoreVert,
+                contentDescription = stringResource(R.string.sonos_more_options, group.displayName),
+                tint = tint
+            )
+        }
+        DropdownMenu(
+            expanded = open,
+            onDismissRequest = { open = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            val close: (() -> Unit) -> () -> Unit = { action -> { open = false; action() } }
+            if (!isActive) SonosMenuItem(stringResource(R.string.sonos_menu_play_here), Icons.Rounded.PlayArrow, close(onPlayHere))
+            if (playingName != null) {
+                SonosMenuItem(
+                    stringResource(R.string.sonos_menu_add_to_playing, playingName),
+                    Icons.Rounded.AddLink,
+                    close(onAddToPlaying)
+                )
+            }
+            SonosMenuItem(stringResource(R.string.sonos_menu_edit_group), Icons.Rounded.Link, close(onEditGroup))
+            if (group.members.size > 1) {
+                SonosMenuItem(stringResource(R.string.sonos_menu_ungroup), Icons.Rounded.LinkOff, close(onUngroup))
+            }
+            if (isActive) SonosMenuItem(stringResource(R.string.sonos_menu_stop), Icons.Rounded.PhoneAndroid, close(onStop))
+        }
+    }
+}
+
+@Composable
+private fun SonosMenuItem(text: String, icon: ImageVector, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(text, style = MaterialTheme.typography.bodyLarge) },
+        leadingIcon = { Icon(icon, contentDescription = null) },
+        onClick = onClick
+    )
+}
+
+/**
+ * The backdrop behind a device icon: a circle, or a slowly turning scallop while [active].
+ * The turn only touches the draw layer, so a list full of rows scrolls without recomposing.
+ */
+@Composable
+internal fun BoxScope.DeviceIconBackdrop(active: Boolean, color: Color) {
+    val scallopShape = remember { RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f) }
+    val scale by animateFloatAsState(
+        targetValue = if (active) 1.16f else 1f,
+        animationSpec = sonosMotion.defaultSpatialSpec(),
+        label = "deviceIconScale"
+    )
+    val rotation = remember { Animatable(0f) }
+    LaunchedEffect(active) {
+        if (active) {
+            rotation.animateTo(
+                360f,
+                infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart)
+            )
+        } else {
+            rotation.snapTo(0f)
+        }
+    }
+    Box(
+        modifier = Modifier
+            .matchParentSize()
+            .graphicsLayer {
+                rotationZ = rotation.value
+                scaleX = scale
+                scaleY = scale
+            }
+            .background(color, if (active) scallopShape else CircleShape)
+    )
+}
+
+/**
+ * Three bars that dance while the speakers play and settle when they pause, in place of
+ * a plain dot. The heights change in the draw phase only.
+ */
+@Composable
+internal fun SonosPlayingBars(playing: Boolean, color: Color, modifier: Modifier = Modifier) {
+    val bars = remember { List(3) { Animatable(0.35f) } }
+    LaunchedEffect(playing) {
+        bars.forEachIndexed { i, bar ->
+            launch {
+                if (!playing) {
+                    bar.animateTo(0.35f, sonosMotion.fastSpatialSpec())
+                    return@launch
+                }
+                delay(i * 120L)
+                while (true) {
+                    bar.animateTo(Random.nextDouble(0.55, 1.0).toFloat(), tween(Random.nextInt(240, 420)))
+                    bar.animateTo(Random.nextDouble(0.2, 0.5).toFloat(), tween(Random.nextInt(240, 420)))
+                }
+            }
+        }
+    }
+    Canvas(modifier = modifier.size(width = 14.dp, height = 12.dp)) {
+        val barWidth = size.width / 5f
+        bars.forEachIndexed { i, bar ->
+            val height = size.height * bar.value
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(i * 2 * barWidth, size.height - height),
+                size = Size(barWidth, height),
+                cornerRadius = CornerRadius(barWidth / 2f)
+            )
+        }
+    }
+}
 
 /** Same look as the Cast device rows: tonal pill, rotating scallop behind the active icon. */
 @Composable
@@ -221,7 +382,8 @@ private fun OutputRow(
     isSelected: Boolean,
     isBusy: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trailing: (@Composable (Color) -> Unit)? = null
 ) {
     val containerColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
@@ -232,18 +394,6 @@ private fun OutputRow(
         targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
         animationSpec = sonosMotion.defaultEffectsSpec(),
         label = "outputRowContent"
-    )
-    val scallopShape = remember { RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f) }
-    val rotation by rememberInfiniteTransition(label = "sonosRowRotation").animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart),
-        label = "sonosRowRotationValue"
-    )
-    val backgroundScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.16f else 1f,
-        animationSpec = sonosMotion.defaultSpatialSpec(),
-        label = "sonosRowScale"
     )
     Surface(
         modifier = modifier
@@ -267,16 +417,7 @@ private fun OutputRow(
                     .padding(start = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer(
-                            rotationZ = if (isSelected) rotation else 0f,
-                            scaleX = backgroundScale,
-                            scaleY = backgroundScale
-                        )
-                        .background(onContainer.copy(alpha = 0.12f), if (isSelected) scallopShape else CircleShape)
-                )
+                DeviceIconBackdrop(active = isSelected, color = onContainer.copy(alpha = 0.12f))
                 AnimatedContent(
                     targetState = isBusy,
                     transitionSpec = {
@@ -318,6 +459,7 @@ private fun OutputRow(
                     BadgeChip(text = text, icon = R.drawable.rounded_wifi_24, contentColor = onContainer)
                 }
             }
+            trailing?.invoke(onContainer)
         }
     }
 }
@@ -330,7 +472,8 @@ internal fun SonosActiveCard(
     onDisconnect: () -> Unit,
     onOpenGroup: () -> Unit,
     onGroupVolume: (Int) -> Unit,
-    onSpeakerVolume: (String, Int) -> Unit
+    onSpeakerVolume: (String, Int) -> Unit,
+    onToggleMute: () -> Unit
 ) {
     val heroShape = AbsoluteSmoothCornerShape(
         cornerRadiusTL = 42.dp,
@@ -480,7 +623,9 @@ internal fun SonosActiveCard(
                 label = stringResource(if (grouped) R.string.sonos_group_volume else R.string.sonos_volume),
                 value = state.groupVolume,
                 onValueChange = onGroupVolume,
-                prominent = true
+                prominent = true,
+                muted = state.isMuted,
+                onToggleMute = onToggleMute.takeIf { !state.isConnecting }
             )
             AnimatedVisibility(
                 visible = grouped,
@@ -513,17 +658,29 @@ internal fun SonosActiveCard(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun VolumeRow(label: String, value: Int?, onValueChange: (Int) -> Unit, prominent: Boolean) {
+private fun VolumeRow(
+    label: String,
+    value: Int?,
+    onValueChange: (Int) -> Unit,
+    prominent: Boolean,
+    muted: Boolean = false,
+    onToggleMute: (() -> Unit)? = null
+) {
     val onContainer = MaterialTheme.colorScheme.onTertiaryContainer
     val haptics = LocalHapticFeedback.current
     var sliderValue by remember { mutableFloatStateOf(value?.toFloat() ?: 0f) }
     var dragging by remember { mutableStateOf(false) }
     var lastStep by remember { mutableIntStateOf(-1) }
     LaunchedEffect(value) { if (!dragging && value != null) sliderValue = value.toFloat() }
+    val sliderAlpha by animateFloatAsState(
+        targetValue = if (muted) 0.4f else 1f,
+        animationSpec = sonosMotion.defaultEffectsSpec(),
+        label = "volumeMutedAlpha"
+    )
     Column(verticalArrangement = Arrangement.spacedBy(if (prominent) 8.dp else 2.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -539,6 +696,34 @@ private fun VolumeRow(label: String, value: Int?, onValueChange: (Int) -> Unit, 
                 style = MaterialTheme.typography.labelMedium,
                 color = onContainer
             )
+            if (onToggleMute != null) {
+                IconButton(
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                        onToggleMute()
+                    },
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = if (muted) onContainer else onContainer.copy(alpha = 0.12f),
+                        contentColor = if (muted) MaterialTheme.colorScheme.tertiaryContainer else onContainer
+                    ),
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    AnimatedContent(
+                        targetState = muted,
+                        transitionSpec = {
+                            (fadeIn(sonosMotion.defaultEffectsSpec()) + scaleIn(sonosMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
+                                (fadeOut(sonosMotion.fastEffectsSpec()) + scaleOut(sonosMotion.fastSpatialSpec(), targetScale = 0.6f))
+                        },
+                        label = "muteIcon"
+                    ) { isMuted ->
+                        Icon(
+                            imageVector = if (isMuted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+                            contentDescription = stringResource(if (isMuted) R.string.sonos_unmute else R.string.sonos_mute),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
         }
         val interactionSource = remember { MutableInteractionSource() }
         Slider(
@@ -579,7 +764,9 @@ private fun VolumeRow(label: String, value: Int?, onValueChange: (Int) -> Unit, 
                     colors = SliderDefaults.colors(thumbColor = onContainer)
                 )
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = sliderAlpha }
         )
     }
 }
@@ -595,6 +782,7 @@ internal fun SonosGroupSheet(
 ) {
     var selected by remember(group.id) { mutableStateOf(group.members.map { it.uuid }.toSet()) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -627,7 +815,11 @@ internal fun SonosGroupSheet(
                 )
             }
             Button(
-                onClick = { onDone(selected + group.coordinatorUuid) },
+                onClick = {
+                    val members = selected + group.coordinatorUuid
+                    // Slide the sheet away first, then apply, so it never just vanishes.
+                    scope.launch { sheetState.hide() }.invokeOnCompletion { onDone(members) }
+                },
                 shape = RoundedCornerShape(50),
                 modifier = Modifier
                     .fillMaxWidth()

@@ -19,6 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,13 +36,15 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 data class SonosSessionState(
     val group: SonosGroup,
     val isConnecting: Boolean = true,
     val isPlaying: Boolean = false,
     val groupVolume: Int? = null,
-    val speakerVolumes: Map<String, Int> = emptyMap()
+    val speakerVolumes: Map<String, Int> = emptyMap(),
+    val isMuted: Boolean = false
 )
 
 /**
@@ -74,10 +79,14 @@ class SonosController @Inject constructor(
     val session: StateFlow<SonosSessionState?> = _session.asStateFlow()
 
     private var skipUnavailableSongs = true
+    private var sonosEnabled = true
+    private var lastRefreshAt = 0L
     private var active: ActiveSession? = null
     private var observedPlayer: Player? = null
     private var volumeJob: Job? = null
     private var lastVolumeChangeAt = 0L
+    /** Each room's volume at the start of the current group volume change. */
+    private var volumeShares: Map<String, Int>? = null
 
     private class ActiveSession(var group: SonosGroup) {
         /** Mirror of the Sonos queue: track number = index + 1. */
@@ -93,6 +102,8 @@ class SonosController @Inject constructor(
         var skipStreak = 0
         /** The phone is skipping a song that is not on Navidrome; the Sonos must not restart. */
         var skipping = false
+        /** The speaker could not seek while paused; put it on the phone's spot when it starts playing. */
+        var alignOnPlay = false
         var pendingJump = false
         var pollJob: Job? = null
         var syncJob: Job? = null
@@ -108,8 +119,16 @@ class SonosController @Inject constructor(
     )
 
     init {
+        // Rooms from the last search show up right away; a fresh search runs in the background.
+        _groups.value = discovery.cachedGroups()
         scope.launch {
             userPreferencesRepository.sonosSkipUnavailableFlow.collect { skipUnavailableSongs = it }
+        }
+        scope.launch {
+            userPreferencesRepository.sonosEnabledFlow.collect { enabled ->
+                sonosEnabled = enabled
+                if (enabled) warmUp()
+            }
         }
         engine.addPlayerSwapListener { newPlayer ->
             if (active != null) attachTo(newPlayer)
@@ -118,12 +137,21 @@ class SonosController @Inject constructor(
 
     // ─── Discovery and groups ─────────────────────────────────────────────
 
+    /** Searches in the background when the last search is older than a minute, so Connect opens with rooms. */
+    fun warmUp() {
+        if (!sonosEnabled || now() - lastRefreshAt < WARM_UP_INTERVAL_MS) return
+        refresh()
+    }
+
     fun refresh() {
         if (_isScanning.value) return
+        lastRefreshAt = now()
         scope.launch {
             _isScanning.value = true
             try {
-                applyGroups(discovery.discoverGroups())
+                val found = discovery.discoverGroups()
+                // An empty answer on a flaky network should not wipe the rooms we know.
+                if (found.isNotEmpty() || _groups.value.isEmpty()) applyGroups(found)
             } finally {
                 _isScanning.value = false
             }
@@ -132,6 +160,7 @@ class SonosController @Inject constructor(
 
     private fun applyGroups(groups: List<SonosGroup>) {
         _groups.value = groups
+        if (groups.isNotEmpty()) discovery.saveGroups(groups)
         val s = active ?: return
         val updated = groups.firstOrNull { it.coordinatorUuid == s.group.coordinatorUuid }
         if (updated != null) {
@@ -175,6 +204,17 @@ class SonosController @Inject constructor(
             runCatching { discovery.readGroups(coordinator.host) }.onSuccess(::applyGroups)
             active?.let { refreshVolumes(it) }
         }
+    }
+
+    /** Every room of the group plays on its own again. */
+    fun ungroup(groupId: String) = setGroupMembers(groupId, emptySet())
+
+    /** Adds the rooms of [groupId] to the group that is playing now. */
+    fun addToActiveGroup(groupId: String) {
+        val s = active ?: return
+        val playing = _groups.value.firstOrNull { it.coordinatorUuid == s.group.coordinatorUuid } ?: return
+        val extra = _groups.value.firstOrNull { it.id == groupId } ?: return
+        setGroupMembers(playing.id, (playing.members + extra.members).map { it.uuid }.toSet())
     }
 
     // ─── Session ──────────────────────────────────────────────────────────
@@ -261,22 +301,58 @@ class SonosController @Inject constructor(
 
     // ─── Volume ───────────────────────────────────────────────────────────
 
+    /**
+     * Sets the group volume like the Sonos app: every room keeps its share, so a loud room
+     * moves faster than a quiet one. The shares are taken at the start of a drag or a run of
+     * key presses, so going down and back up again ends where it started.
+     */
     fun setGroupVolume(volume: Int) {
         val s = active ?: return
+        val state = _session.value ?: return
         val v = volume.coerceIn(0, 100)
-        _session.update { state ->
-            // The rooms follow the group slider right away; the next refresh brings the exact values.
-            val delta = v - (state?.groupVolume ?: v)
-            state?.copy(
-                groupVolume = v,
-                speakerVolumes = state.speakerVolumes.mapValues { (it.value + delta).coerceIn(0, 100) }
-            )
+        if (state.isMuted) setGroupMuted(false)
+        val members = s.group.members
+        if (members.size < 2 || members.any { it.uuid !in state.speakerVolumes }) {
+            _session.update { it?.copy(groupVolume = v) }
+            sendVolume {
+                soap.call(
+                    s.group.coordinator.host, SonosService.GROUP_RENDERING_CONTROL, "SetGroupVolume",
+                    "InstanceID" to 0, "DesiredVolume" to v
+                )
+            }
+            return
         }
+        val base = volumeShares?.takeIf {
+            now() - lastVolumeChangeAt < VOLUME_GESTURE_MS && it.keys == members.map { m -> m.uuid }.toSet()
+        } ?: members.associate { it.uuid to state.speakerVolumes.getValue(it.uuid) }
+        volumeShares = base
+        val targets = groupVolumeTargets(base, v)
+        _session.update { it?.copy(groupVolume = v, speakerVolumes = it.speakerVolumes + targets) }
         sendVolume {
-            soap.call(
-                s.group.coordinator.host, SonosService.GROUP_RENDERING_CONTROL, "SetGroupVolume",
-                "InstanceID" to 0, "DesiredVolume" to v
-            )
+            coroutineScope {
+                members.map { speaker ->
+                    async {
+                        soap.call(
+                            speaker.host, SonosService.RENDERING_CONTROL, "SetVolume",
+                            "InstanceID" to 0, "Channel" to "Master", "DesiredVolume" to targets.getValue(speaker.uuid)
+                        )
+                    }
+                }.awaitAll()
+            }
+        }
+    }
+
+    fun setGroupMuted(muted: Boolean) {
+        val s = active ?: return
+        lastVolumeChangeAt = now()
+        _session.update { it?.copy(isMuted = muted) }
+        scope.launch {
+            runCatching {
+                soap.call(
+                    s.group.coordinator.host, SonosService.GROUP_RENDERING_CONTROL, "SetGroupMute",
+                    "InstanceID" to 0, "DesiredMute" to if (muted) 1 else 0
+                )
+            }.onFailure(::report)
         }
     }
 
@@ -284,7 +360,12 @@ class SonosController @Inject constructor(
         val s = active ?: return
         val speaker = s.group.members.firstOrNull { it.uuid == uuid } ?: return
         val v = volume.coerceIn(0, 100)
-        _session.update { it?.copy(speakerVolumes = it.speakerVolumes + (uuid to v)) }
+        // A room set by hand gets a new share for the next group change.
+        volumeShares = null
+        _session.update { state ->
+            val speakers = state?.speakerVolumes.orEmpty() + (uuid to v)
+            state?.copy(speakerVolumes = speakers, groupVolume = speakers.values.average().roundToInt())
+        }
         sendVolume {
             soap.call(
                 speaker.host, SonosService.RENDERING_CONTROL, "SetVolume",
@@ -317,6 +398,12 @@ class SonosController @Inject constructor(
                 s.group.coordinator.host, SonosService.GROUP_RENDERING_CONTROL, "GetGroupVolume",
                 "InstanceID" to 0
             )["CurrentVolume"]?.toIntOrNull()
+            val muted = runCatching {
+                soap.call(
+                    s.group.coordinator.host, SonosService.GROUP_RENDERING_CONTROL, "GetGroupMute",
+                    "InstanceID" to 0
+                )["CurrentMute"] == "1"
+            }.getOrDefault(false)
             val speakers = if (s.group.members.size > 1) {
                 s.group.members.associate { speaker ->
                     speaker.uuid to (soap.call(
@@ -329,7 +416,9 @@ class SonosController @Inject constructor(
             }
             // Drop the answer if the user moved a volume while it was on its way.
             val stale = SystemClock.elapsedRealtime() - lastVolumeChangeAt < 2_000
-            if (active === s && !stale) _session.update { it?.copy(groupVolume = group, speakerVolumes = speakers) }
+            if (active === s && !stale) {
+                _session.update { it?.copy(groupVolume = group, speakerVolumes = speakers, isMuted = muted) }
+            }
         }
     }
 
@@ -364,7 +453,14 @@ class SonosController @Inject constructor(
             s.lastPlayPauseCommandAt = now()
             // A pending sync sends the play state itself once the queue is right.
             if (s.syncJob?.isActive == true) return
-            command(s) { if (playWhenReady) avt(s, "Play", "Speed" to "1") else pauseSonos(s) }
+            command(s) {
+                if (playWhenReady) {
+                    avt(s, "Play", "Speed" to "1")
+                    if (s.alignOnPlay) alignWithPhone(s)
+                } else {
+                    pauseSonos(s)
+                }
+            }
         }
 
         override fun onPositionDiscontinuity(
@@ -488,17 +584,40 @@ class SonosController @Inject constructor(
         avt(s, "RemoveAllTracksFromQueue")
         s.queue.clear()
         addToQueue(s, current)
+        // A fresh queue starts at its first track, so no TRACK_NR seek is needed.
         avt(s, "SetAVTransportURI", "CurrentURI" to s.group.queueUri, "CurrentURIMetaData" to "")
-        avt(s, "Seek", "Unit" to "TRACK_NR", "Target" to 1)
-        val resumeAt = local.positionMs.takeIf { it > 2_000 }
-        var seeked = resumeAt == null || runCatching { seekSonos(s, resumeAt) }.isSuccess
-        applyPlayState(s, local.playWhenReady)
-        // Some speakers only accept a time seek once the track is loaded.
-        if (!seeked && resumeAt != null && local.playWhenReady) {
-            delay(600)
-            seeked = runCatching { seekSonos(s, resumeAt) }.isSuccess
+        // Jump ahead by the time the speaker needs to start; the exact alignment follows once it plays.
+        val phoneAt = readLocal()?.positionMs ?: local.positionMs
+        val preSeeked = phoneAt > 1_500 &&
+            runCatching { seekSonos(s, phoneAt + if (local.playWhenReady) START_LEAD_MS else 0L) }.isSuccess
+        if (local.playWhenReady) {
+            s.lastPlayPauseCommandAt = now()
+            avt(s, "Play", "Speed" to "1")
+            alignWithPhone(s)
+        } else {
+            // Some speakers refuse a time seek before playing; align on the next play then.
+            s.alignOnPlay = phoneAt > 1_500 && !preSeeked
         }
         appendTracks(s, upcoming)
+    }
+
+    /**
+     * Waits until the speaker really plays, then puts it where the phone is now. The phone kept
+     * playing (muted) while the Sonos buffered, so the music continues from the same spot.
+     */
+    private suspend fun alignWithPhone(s: ActiveSession) {
+        s.alignOnPlay = false
+        val deadline = now() + PLAY_START_TIMEOUT_MS
+        while (now() < deadline) {
+            if (avt(s, "GetTransportInfo")["CurrentTransportState"] == "PLAYING") break
+            delay(120)
+        }
+        val phoneAt = readLocal()?.positionMs ?: return
+        if (phoneAt < 1_500) return
+        val sonosAt = SonosSoapClient.hmsToMs(avt(s, "GetPositionInfo")["RelTime"])
+        if (abs(sonosAt - phoneAt) < ALIGN_TOLERANCE_MS) return
+        runCatching { seekSonos(s, phoneAt + SEEK_LEAD_MS) }
+        s.lastTrackCommandAt = now()
     }
 
     private suspend fun replaceUpcoming(s: ActiveSession, index: Int, wanted: List<SonosTrack>) {
@@ -548,7 +667,10 @@ class SonosController @Inject constructor(
     private suspend fun applyPlayState(s: ActiveSession, playing: Boolean) {
         val state = avt(s, "GetTransportInfo")["CurrentTransportState"].orEmpty()
         s.lastPlayPauseCommandAt = now()
-        if (playing && state != "PLAYING") avt(s, "Play", "Speed" to "1")
+        if (playing && state != "PLAYING") {
+            avt(s, "Play", "Speed" to "1")
+            if (s.alignOnPlay) alignWithPhone(s)
+        }
         if (!playing && state == "PLAYING") pauseSonos(s)
     }
 
@@ -713,6 +835,14 @@ class SonosController @Inject constructor(
         private const val AUTO_ADVANCE_GRACE_MS = 7_000L
         private const val TAKEOVER_GRACE_MS = 6_000L
         private const val DRIFT_LIMIT_MS = 2_500L
+        private const val WARM_UP_INTERVAL_MS = 60_000L
+        private const val PLAY_START_TIMEOUT_MS = 4_000L
+        /** How long a speaker typically needs from Play to sound; the pre-seek aims that far ahead. */
+        private const val START_LEAD_MS = 700L
+        private const val SEEK_LEAD_MS = 250L
+        private const val ALIGN_TOLERANCE_MS = 1_200L
+        /** Volume changes closer together than this count as one drag or run of key presses. */
+        private const val VOLUME_GESTURE_MS = 1_500L
 
         /**
          * Whether the speaker plays the stream we queued. Compares the Subsonic song id only,
@@ -733,6 +863,24 @@ class SonosController @Inject constructor(
                 val (key, value) = part.split('=', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
                 if (key == "id" || key == "amp;id") java.net.URLDecoder.decode(value, "UTF-8").ifBlank { null } else null
             }
+        }
+
+        /**
+         * Spreads a group volume over the rooms in proportion to [base], so the average lands on
+         * [groupVolume]. A room that hits 100 stops there and the others keep rising; rooms that
+         * were all silent move together.
+         */
+        internal fun groupVolumeTargets(base: Map<String, Int>, groupVolume: Int): Map<String, Int> {
+            val target = groupVolume.coerceIn(0, 100).toDouble()
+            val quietest = base.values.filter { it > 0 }.minOrNull() ?: return base.mapValues { target.roundToInt() }
+            fun spread(factor: Double) = base.mapValues { (_, v) -> (v * factor).coerceIn(0.0, 100.0) }
+            var low = 0.0
+            var high = 100.0 / quietest
+            repeat(40) {
+                val mid = (low + high) / 2
+                if (spread(mid).values.average() < target) low = mid else high = mid
+            }
+            return spread(high).mapValues { it.value.roundToInt() }
         }
 
         /** Index of [mediaId] in [queue] closest to [around], or -1. */

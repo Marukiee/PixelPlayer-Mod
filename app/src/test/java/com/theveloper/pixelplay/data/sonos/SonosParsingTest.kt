@@ -161,6 +161,18 @@ class SonosParsingTest {
             .isEqualTo("http://100.86.14.39:45330/rest/x")
     }
 
+    @Test
+    fun groupVolume_loudRoomMovesFasterAndQuietRoomStaysOn() {
+        val base = mapOf("a" to 50, "b" to 10)
+        assertThat(SonosController.groupVolumeTargets(base, 20)).isEqualTo(mapOf("a" to 33, "b" to 7))
+        assertThat(SonosController.groupVolumeTargets(base, 30)).isEqualTo(base)
+        assertThat(SonosController.groupVolumeTargets(base, 0)).isEqualTo(mapOf("a" to 0, "b" to 0))
+        // The loud room stops at 100, the quiet one catches up.
+        assertThat(SonosController.groupVolumeTargets(base, 70)).isEqualTo(mapOf("a" to 100, "b" to 40))
+        assertThat(SonosController.groupVolumeTargets(base, 100)).isEqualTo(mapOf("a" to 100, "b" to 100))
+        assertThat(SonosController.groupVolumeTargets(mapOf("a" to 0, "b" to 0), 12)).isEqualTo(mapOf("a" to 12, "b" to 12))
+    }
+
     private fun entity(id: String, title: String, artist: String, album: String, durationMs: Long) = NavidromeSongEntity(
         id = id,
         navidromeId = id,

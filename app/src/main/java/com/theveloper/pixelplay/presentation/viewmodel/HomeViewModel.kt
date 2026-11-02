@@ -6,6 +6,7 @@ import com.theveloper.pixelplay.data.database.MusicDao
 import com.theveloper.pixelplay.data.database.toArtist
 import com.theveloper.pixelplay.data.database.toSong
 import com.theveloper.pixelplay.data.model.Song
+import com.theveloper.pixelplay.data.repository.ArtistImageRepository
 import com.theveloper.pixelplay.data.repository.MusicRepository
 import com.theveloper.pixelplay.data.stats.PlaybackStatsRepository.ArtistPlaybackSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
@@ -25,7 +28,8 @@ import kotlin.random.Random
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val musicDao: MusicDao,
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val artistImageRepository: ArtistImageRepository
 ) : ViewModel() {
 
     data class HomeArtist(
@@ -79,6 +83,22 @@ class HomeViewModel @Inject constructor(
                         totalDurationMs = summary.totalDurationMs
                     )
                 }
+            }
+            // Photos are normally fetched when an artist page opens; fetch the missing ones here.
+            val missing = _topArtists.value.filter { it.imageModel == null && it.artistId != null }
+            if (missing.isEmpty()) return@launch
+            val found = withContext(Dispatchers.IO) {
+                missing.map { artist ->
+                    async {
+                        artist.name to runCatching {
+                            artistImageRepository.getEffectiveArtistImageUrl(artist.artistId!!, firstArtistName(artist.name) ?: artist.name)
+                        }.getOrNull()
+                    }
+                }.awaitAll().toMap()
+            }
+            if (resolvedArtistSummaries != top) return@launch
+            _topArtists.value = _topArtists.value.map { artist ->
+                found[artist.name]?.takeIf { it.isNotBlank() }?.let { artist.copy(imageModel = it) } ?: artist
             }
         }
     }

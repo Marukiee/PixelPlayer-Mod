@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.wifi.WifiManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import org.w3c.dom.Element
 import timber.log.Timber
 import java.io.File
@@ -28,6 +30,8 @@ data class SonosGroup(
 ) {
     val coordinator: SonosSpeaker get() = members.first { it.uuid == coordinatorUuid }
     val displayName: String get() = members.joinToString(" + ") { it.name }
+    /** "Living room +2": fits in a small pill. */
+    val shortName: String get() = if (members.size > 1) "${coordinator.name} +${members.size - 1}" else coordinator.name
     val queueUri: String get() = "x-rincon-queue:$coordinatorUuid#0"
 }
 
@@ -56,9 +60,46 @@ class SonosDiscovery(
                 .getOrNull() ?: continue
             val known = groups.flatMap { g -> g.members.map { it.host } }.toSet()
             prefs.edit().putStringSet(KEY_KNOWN_HOSTS, known).apply()
+            saveGroups(groups)
             return groups
         }
         return emptyList()
+    }
+
+    /** The rooms from the last search, so the connect sheet can show them before searching again. */
+    fun cachedGroups(): List<SonosGroup> = runCatching {
+        val array = JSONArray(prefs.getString(KEY_GROUPS, null) ?: return emptyList())
+        (0 until array.length()).map { i ->
+            val g = array.getJSONObject(i)
+            val members = g.getJSONArray("members")
+            SonosGroup(
+                id = g.getString("id"),
+                coordinatorUuid = g.getString("coordinator"),
+                members = (0 until members.length()).map { j ->
+                    val m = members.getJSONObject(j)
+                    SonosSpeaker(
+                        uuid = m.getString("uuid"),
+                        name = m.getString("name"),
+                        host = m.getString("host"),
+                        model = m.optString("model").ifBlank { null }
+                    )
+                }
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    fun saveGroups(groups: List<SonosGroup>) {
+        val array = JSONArray()
+        for (group in groups) {
+            val members = JSONArray()
+            group.members.forEach { m ->
+                members.put(
+                    JSONObject().put("uuid", m.uuid).put("name", m.name).put("host", m.host).put("model", m.model ?: "")
+                )
+            }
+            array.put(JSONObject().put("id", group.id).put("coordinator", group.coordinatorUuid).put("members", members))
+        }
+        prefs.edit().putString(KEY_GROUPS, array.toString()).apply()
     }
 
     suspend fun readGroups(host: String): List<SonosGroup> {
@@ -126,6 +167,7 @@ class SonosDiscovery(
     companion object {
         private const val TAG = "SonosDiscovery"
         private const val KEY_KNOWN_HOSTS = "known_hosts"
+        private const val KEY_GROUPS = "groups"
 
         /** Takes "ip:port" out of the LOCATION header of an SSDP answer. */
         fun parseLocationHost(response: String): String? {

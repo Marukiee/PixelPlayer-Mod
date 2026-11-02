@@ -105,4 +105,7 @@ class SonosViewModel @Inject constructor(
     fun setSpeakerVolume(uuid: String, volume: Int) = controller.setSpeakerVolume(uuid, volume)
     fun setGroupMembers(groupId: String, memberUuids: Set<String>) =
         controller.setGroupMembers(groupId, memberUuids)
+    fun ungroup(groupId: String) = controller.ungroup(groupId)
+    fun addToActiveGroup(groupId: String) = controller.addToActiveGroup(groupId)
+    fun setMuted(muted: Boolean) = controller.setGroupMuted(muted)
 }

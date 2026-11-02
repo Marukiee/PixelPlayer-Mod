@@ -242,7 +242,8 @@ fun CastBottomSheet(
     val sonosGroups by sonosViewModel.groups.collectAsStateWithLifecycle()
     val sonosScanning by sonosViewModel.isScanning.collectAsStateWithLifecycle()
     val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
-    var showSonosGroupSheet by remember { mutableStateOf(false) }
+    // Coordinator of the group whose Group sheet is open, or null.
+    var sonosGroupSheetFor by remember { mutableStateOf<String?>(null) }
     val sheetScope = rememberCoroutineScope()
 
     LaunchedEffect(sonosEnabled, missingPermissions.isEmpty()) {
@@ -439,9 +440,10 @@ fun CastBottomSheet(
                                 SonosActiveCard(
                                     state = state,
                                     onDisconnect = { sonosViewModel.switchToPhone() },
-                                    onOpenGroup = { showSonosGroupSheet = true },
+                                    onOpenGroup = { sonosGroupSheetFor = state.group.coordinatorUuid },
                                     onGroupVolume = sonosViewModel::setGroupVolume,
-                                    onSpeakerVolume = sonosViewModel::setSpeakerVolume
+                                    onSpeakerVolume = sonosViewModel::setSpeakerVolume,
+                                    onToggleMute = { sonosViewModel.setMuted(!state.isMuted) }
                                 )
                             }
                         },
@@ -478,6 +480,10 @@ fun CastBottomSheet(
                                             sonosViewModel.connect(group.id)
                                         }
                                     },
+                                    onAddToPlaying = { group -> sonosViewModel.addToActiveGroup(group.id) },
+                                    onEditGroup = { group -> sonosGroupSheetFor = group.coordinatorUuid },
+                                    onUngroup = { group -> sonosViewModel.ungroup(group.id) },
+                                    onStop = sonosViewModel::switchToPhone,
                                     onRefresh = sonosViewModel::refresh
                                 )
                             }
@@ -513,14 +519,17 @@ fun CastBottomSheet(
                 }
             }
         }
-        val groupTarget = sonosSession?.group
-        if (showSonosGroupSheet && groupTarget != null) {
+        val groupTarget = sonosGroupSheetFor?.let { uuid ->
+            sonosGroups.firstOrNull { it.coordinatorUuid == uuid }
+                ?: sonosSession?.group?.takeIf { it.coordinatorUuid == uuid }
+        }
+        if (groupTarget != null) {
             SonosGroupSheet(
                 group = groupTarget,
                 allSpeakers = sonosGroups.flatMap { it.members }.distinctBy { it.uuid },
-                onDismiss = { showSonosGroupSheet = false },
+                onDismiss = { sonosGroupSheetFor = null },
                 onDone = { members ->
-                    showSonosGroupSheet = false
+                    sonosGroupSheetFor = null
                     sonosViewModel.setGroupMembers(groupTarget.id, members)
                 }
             )
@@ -923,45 +932,46 @@ private fun CastControlsTabContent(
             }
         }
 
+        Spacer(modifier = Modifier.height(bottomSpacing))
+    }
+}
+
+/** Wi-Fi and Bluetooth tiles; they live with the device list, the Controls tab is for the device that plays. */
+@Composable
+private fun ConnectivitySection(
+    state: CastSheetUiState,
+    allConnectivityOff: Boolean,
+    onTurnOnWifi: () -> Unit,
+    onOpenBluetoothSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = stringResource(R.string.cast_connectivity),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Text(
-                        text = if (allConnectivityOff) {
-                            stringResource(R.string.cast_turn_on_wifi_bt)
-                        } else {
-                            "Manage active radios and rescan"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onRefresh) {
-                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.cast_cd_refresh_connections))
-                }
-            }
-            QuickSettingsRow(
-                wifiOn = state.wifiRadioOn,
-                wifiConnected = state.wifiEnabled,
-                wifiSsid = state.wifiSsid,
-                onWifiClick = onTurnOnWifi,
-                bluetoothEnabled = state.isBluetoothEnabled,
-                bluetoothName = state.bluetoothName,
-                onBluetoothClick = onOpenBluetoothSettings
+            Text(
+                text = stringResource(R.string.cast_connectivity),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            )
+            Text(
+                text = stringResource(if (allConnectivityOff) R.string.cast_turn_on_wifi_bt else R.string.cast_connectivity_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Spacer(modifier = Modifier.height(bottomSpacing))
+        QuickSettingsRow(
+            wifiOn = state.wifiRadioOn,
+            wifiConnected = state.wifiEnabled,
+            wifiSsid = state.wifiSsid,
+            onWifiClick = onTurnOnWifi,
+            bluetoothEnabled = state.isBluetoothEnabled,
+            bluetoothName = state.bluetoothName,
+            onBluetoothClick = onOpenBluetoothSettings
+        )
     }
 }
 
@@ -989,6 +999,12 @@ private fun CastDevicesTabContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 20.dp)
     ) {
+        // With every radio off there is nothing to pick yet, so the switches come first.
+        if (allConnectivityOff) {
+            item(key = "connectivity") {
+                ConnectivitySection(state, allConnectivityOff = true, onTurnOnWifi, onOpenBluetoothSettings)
+            }
+        }
         if (!allConnectivityOff) {
             item(key = "deviceSectionHeader") {
                 DeviceSectionHeader(
@@ -1039,6 +1055,18 @@ private fun CastDevicesTabContent(
         }
 
         extraDeviceItems()
+
+        if (!allConnectivityOff) {
+            item(key = "connectivity") {
+                ConnectivitySection(
+                    state = state,
+                    allConnectivityOff = false,
+                    onTurnOnWifi = onTurnOnWifi,
+                    onOpenBluetoothSettings = onOpenBluetoothSettings,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
     }
 }
 
@@ -1689,24 +1717,6 @@ private fun CastDeviceRow(
     }
 
     val isActiveDevice = device.isSelected && device.connectionState == MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTED
-    val scallopShape = RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f)
-
-    // Animaciones
-    val infiniteRotation = rememberInfiniteTransition(label = "activeDeviceRotation")
-    val rotation by infiniteRotation.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 9000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "deviceRotation"
-    )
-    val backgroundScale by animateFloatAsState(
-        targetValue = if (isActiveDevice) 1.16f else 1f,
-        animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
-        label = "activeDeviceScale"
-    )
 
     val deviceIcon = when (device.deviceType) {
         MediaRouter.RouteInfo.DEVICE_TYPE_TV -> Icons.Rounded.Tv
@@ -1750,19 +1760,7 @@ private fun CastDeviceRow(
                     .padding(start = 4.dp), // Tamaño fijo para asegurar simetría
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer(
-                            rotationZ = if (isActiveDevice) rotation else 0f,
-                            scaleX = backgroundScale,
-                            scaleY = backgroundScale
-                        )
-                        .background(
-                            color = onContainer.copy(alpha = 0.12f),
-                            shape = if (isActiveDevice) scallopShape else CircleShape
-                        )
-                )
+                DeviceIconBackdrop(active = isActiveDevice, color = onContainer.copy(alpha = 0.12f))
 
                 Icon(
                     imageVector = deviceIcon,
