@@ -31,6 +31,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
+import androidx.compose.ui.graphics.ColorFilter
+import com.theveloper.pixelplay.presentation.components.home.GenreFlag
+import com.theveloper.pixelplay.presentation.components.home.GenreFlagBackground
+import com.theveloper.pixelplay.presentation.components.home.genreIllustration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -408,13 +415,19 @@ fun GenreDetailScreen(
 
             // Collapsible Top Bar with Gradient (On Top of List, High Z-Index)
             // This ensures the gradient is ON TOP of the scrolling content, so content scrolls BEHIND it.
+            val headerFlag = remember(genreDisplayName) { GenreFlag.forGenre(genreDisplayName) }
+            val headerIllustration = remember(genreDisplayName, customGenreIcons) {
+                genreIllustration(genreDisplayName, customGenreIcons)
+            }
             GenreCollapsibleTopBar(
                 title = genreDisplayName,
                 collapseFraction = collapseFraction,
                 headerHeight = currentTopBarHeightDp,
                 onBackPressed = { navController.popBackStack() },
-                startColor = startColor,
-                contentColor = contentColor,
+                startColor = headerFlag?.background ?: startColor,
+                contentColor = headerFlag?.onBackground ?: contentColor,
+                illustration = headerIllustration,
+                flag = headerFlag,
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 collapsedContentColor = MaterialTheme.colorScheme.onSurface
             )
@@ -766,7 +779,9 @@ fun GenreCollapsibleTopBar(
     startColor: Color,
     containerColor: Color,
     contentColor: Color,
-    collapsedContentColor: Color
+    collapsedContentColor: Color,
+    illustration: Any? = null,
+    flag: GenreFlag? = null
 ) {
     val solidAlpha = (collapseFraction * 2f).coerceIn(0f, 1f)
     val animatedContentColor = androidx.compose.ui.graphics.lerp(
@@ -776,7 +791,9 @@ fun GenreCollapsibleTopBar(
     )
 
     // Optimization: Pre-calculate alpha values
-    val gradientAlpha = 0.8f * (1f - solidAlpha)
+    val gradientAlpha = 0.95f * (1f - solidAlpha)
+    // The instrument or flag fades out before the bar is half collapsed.
+    val decorationAlpha = 1f - (collapseFraction * 2.2f).coerceIn(0f, 1f)
     
     // Optimization: Reuse gradient brush to avoid allocation on every pixel scroll
     val verticalGradient = remember(startColor, gradientAlpha) {
@@ -804,6 +821,19 @@ fun GenreCollapsibleTopBar(
                 .fillMaxSize()
                 .background(verticalGradient)
         )
+
+        if (decorationAlpha > 0f && (flag != null || illustration != null)) {
+            GenreHeaderDecoration(
+                illustration = illustration,
+                flag = flag,
+                tint = contentColor,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 18.dp, bottom = 14.dp)
+                    .size(128.dp)
+                    .graphicsLayer { alpha = decorationAlpha }
+            )
+        }
 
         Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
              FilledIconButton(
@@ -833,6 +863,34 @@ fun GenreCollapsibleTopBar(
     }
 }
 
+
+/** Same visual language as the genre mix cards on Home: a flag sticker or the genre's instrument. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun GenreHeaderDecoration(
+    illustration: Any?,
+    flag: GenreFlag?,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    if (flag != null) {
+        GenreFlagBackground(
+            flag = flag,
+            crossXFraction = 0.36f,
+            crossYFraction = 0.5f,
+            modifier = modifier.clip(MaterialShapes.Cookie9Sided.toShape())
+        )
+    } else if (illustration != null && illustration != R.drawable.rounded_library_music_24) {
+        SmartImage(
+            model = illustration,
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(tint),
+            contentScale = ContentScale.Fit,
+            placeHolderBackgroundColor = Color.Transparent,
+            modifier = modifier.alpha(0.55f)
+        )
+    }
+}
 
 // --- Section Extensions ---
 

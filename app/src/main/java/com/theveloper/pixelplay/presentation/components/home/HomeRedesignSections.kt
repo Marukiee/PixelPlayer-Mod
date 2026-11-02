@@ -10,7 +10,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import com.theveloper.pixelplay.ui.theme.GenreThemeUtils
@@ -69,6 +68,8 @@ import com.theveloper.pixelplay.presentation.components.SmartImage
 import com.theveloper.pixelplay.presentation.components.subcomps.EnhancedSongListItem
 import com.theveloper.pixelplay.presentation.model.RecentlyPlayedSongUiModel
 import com.theveloper.pixelplay.presentation.viewmodel.HomeViewModel
+import com.theveloper.pixelplay.presentation.utils.GenreIconProvider
+import com.theveloper.pixelplay.presentation.screens.search.components.getGenreImageResource as keywordGenreImageResource
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
 private val HomeCardThumbSize = Size(320, 320)
@@ -410,7 +411,7 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle)
         is HomeMixVisual.Genre -> if (flag != null) {
             flag.background to flag.onBackground
         } else {
-            val theme = GenreThemeUtils.getGenreThemeColor(genreThemeId(visual.genreName), isDark)
+            val theme = GenreThemeUtils.getGenreThemeColor(genreLibraryId(visual.genreName), isDark)
             theme.container to theme.onContainer
         }
         is HomeMixVisual.Artist -> colors.primaryContainer to colors.onPrimaryContainer
@@ -427,22 +428,40 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle)
             .background(container)
             .clickable(onClick = mix.onOpen)
     ) {
-        if (flag != null) {
-            GenreFlagBackground(flag = flag, modifier = Modifier.fillMaxSize())
-        }
         when (visual) {
-            is HomeMixVisual.Genre -> SmartImage(
-                model = visual.illustration,
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(content),
-                contentScale = ContentScale.Crop,
-                placeHolderBackgroundColor = Color.Transparent,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 18.dp, y = 18.dp)
-                    .size(118.dp)
-                    .alpha(if (flag != null) 0.35f else 0.55f)
-            )
+            is HomeMixVisual.Genre -> when {
+                // The flag as a playful sticker in the corner, like the artist photo on artist mixes.
+                flag != null -> {
+                    val shape = decorationShapes[index % decorationShapes.size]
+                    GenreFlagBackground(
+                        flag = flag,
+                        crossXFraction = 0.36f,
+                        crossYFraction = 0.5f,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 22.dp, y = 22.dp)
+                            .size(128.dp)
+                            .clip(shape)
+                    )
+                }
+                visual.illustration == R.drawable.rounded_library_music_24 -> DecorationBlob(
+                    content,
+                    decorationShapes[index % decorationShapes.size],
+                    Modifier.align(Alignment.BottomEnd)
+                )
+                else -> SmartImage(
+                    model = visual.illustration,
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(content),
+                    contentScale = ContentScale.Crop,
+                    placeHolderBackgroundColor = Color.Transparent,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 18.dp, y = 18.dp)
+                        .size(118.dp)
+                        .alpha(0.55f)
+                )
+            }
             is HomeMixVisual.Artist -> {
                 val shape = decorationShapes[(index + 1) % decorationShapes.size]
                 if (visual.imageModel != null) {
@@ -472,18 +491,23 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle)
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // A soft shadow keeps white text readable where it crosses a flag's cross.
-            val textShadow = if (flag != null) Shadow(Color.Black.copy(alpha = 0.4f), Offset(0f, 2f), 10f) else null
+            // The wide display font breaks long words mid-word ("Ferdinan d"), so long words get a smaller size.
+            val longestWord = remember(mix.title) { mix.title.split(' ').maxOfOrNull { it.length } ?: 0 }
+            val scale = when {
+                longestWord >= 11 -> 0.7f
+                longestWord >= 9 -> 0.82f
+                else -> 1f
+            }
             Text(
                 text = mix.title,
-                style = titleStyle.copy(shadow = textShadow),
+                style = titleStyle.copy(fontSize = titleStyle.fontSize * scale, lineHeight = titleStyle.lineHeight * scale),
                 color = content,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = mix.subtitle,
-                style = MaterialTheme.typography.labelMedium.copy(shadow = textShadow),
+                style = MaterialTheme.typography.labelMedium,
                 color = content.copy(alpha = 0.85f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -520,8 +544,22 @@ private fun DecorationBlob(color: Color, shape: Shape, modifier: Modifier) {
     )
 }
 
-/** Same id the library uses for a genre, so a mix card gets the same colour as the genre card in Search. */
-private fun genreThemeId(genreName: String): String =
+/**
+ * Instrument illustration for a genre. Exact names come first (and custom icons), then the keyword
+ * lookup, then each word on its own, so "Swedish Indie" finds the indie icon instead of the generic note.
+ */
+fun genreIllustration(genre: String, customIcons: Map<String, Int>): Any {
+    val generic = R.drawable.rounded_library_music_24
+    GenreIconProvider.getGenreImageResource(genre, customIcons).let { if (it != generic) return it }
+    keywordGenreImageResource(genre).let { if (it != generic) return it }
+    genre.split(' ', '-', '/', ',').map { it.trim() }.filter { it.isNotEmpty() }.forEach { word ->
+        GenreIconProvider.getGenreImageResource(word).let { if (it != generic) return it }
+    }
+    return generic
+}
+
+/** Same id the library uses for a genre: the mix card gets the Search card's colour and opens the same genre page. */
+fun genreLibraryId(genreName: String): String =
     genreName.lowercase().replace(" ", "_").replace("/", "_")
 
 /** National flags for genres like "Swedish Indie" or "Svensk pop". */
@@ -556,7 +594,12 @@ enum class GenreFlag(
 
 /** Nordic cross (or the Dutch tricolour) drawn to fill a portrait card, cross offset to the left like the real flag. */
 @Composable
-private fun GenreFlagBackground(flag: GenreFlag, modifier: Modifier) {
+fun GenreFlagBackground(
+    flag: GenreFlag,
+    modifier: Modifier,
+    crossXFraction: Float = 0.30f,
+    crossYFraction: Float = 0.56f
+) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -567,9 +610,9 @@ private fun GenreFlagBackground(flag: GenreFlag, modifier: Modifier) {
             return@Canvas
         }
         drawRect(flag.background)
-        val bar = h * 0.17f
-        val crossX = w * 0.30f
-        val crossY = h * 0.56f - bar / 2f
+        val bar = minOf(w, h) * 0.18f
+        val crossX = w * crossXFraction - bar / 2f
+        val crossY = h * crossYFraction - bar / 2f
         drawRect(flag.cross, topLeft = Offset(crossX, 0f), size = androidx.compose.ui.geometry.Size(bar, h))
         drawRect(flag.cross, topLeft = Offset(0f, crossY), size = androidx.compose.ui.geometry.Size(w, bar))
         flag.innerCross?.let { inner ->

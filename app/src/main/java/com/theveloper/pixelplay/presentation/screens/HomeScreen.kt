@@ -80,14 +80,14 @@ import com.theveloper.pixelplay.data.stats.StatsTimeRange
 import com.theveloper.pixelplay.presentation.components.home.GenreFlag
 import com.theveloper.pixelplay.presentation.components.home.HomeMixCard
 import com.theveloper.pixelplay.presentation.components.home.HomeMixVisual
-import com.theveloper.pixelplay.presentation.utils.GenreIconProvider
-import com.theveloper.pixelplay.presentation.screens.search.components.getGenreImageResource as keywordGenreImageResource
 import com.theveloper.pixelplay.presentation.components.home.HomeMixesRow
 import com.theveloper.pixelplay.presentation.components.home.HomeRecentlyPlayedRow
 import com.theveloper.pixelplay.presentation.components.home.HomeRediscoverSection
 import com.theveloper.pixelplay.presentation.components.home.HomeStatsCard
 import com.theveloper.pixelplay.presentation.components.home.HomeTopArtistsRow
 import com.theveloper.pixelplay.presentation.components.home.HomeYourMixCard
+import com.theveloper.pixelplay.presentation.components.home.genreIllustration
+import com.theveloper.pixelplay.presentation.components.home.genreLibraryId
 import com.theveloper.pixelplay.presentation.components.home.topGenreNames
 import com.theveloper.pixelplay.presentation.viewmodel.HomeViewModel
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -317,14 +317,11 @@ fun HomeScreen(
                         subtitle = genreMixSubtitle,
                         visual = HomeMixVisual.Genre(
                             genreName = genre,
-                            illustration = GenreIconProvider.getGenreImageResource(genre, customGenreIcons).let { icon ->
-                                // Exact names only know "Pop", not "Swedish Pop"; fall back to the keyword lookup.
-                                if (icon == R.drawable.rounded_library_music_24) keywordGenreImageResource(genre) else icon
-                            },
+                            illustration = genreIllustration(genre, customGenreIcons),
                             flag = GenreFlag.forGenre(genre)
                         ),
                         onOpen = {
-                            navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(genre, "UTF-8")))
+                            navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(genreLibraryId(genre), "UTF-8")))
                         },
                         onPlay = {
                             scope.launch {
