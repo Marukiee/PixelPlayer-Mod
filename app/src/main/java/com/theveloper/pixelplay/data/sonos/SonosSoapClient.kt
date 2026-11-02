@@ -47,6 +47,8 @@ class SonosSoapClient(
         val request = Request.Builder()
             .url("http://$host${service.controlPath}")
             .header("SOAPACTION", "\"${service.urn}#$action\"")
+            // Speakers close the socket after each answer; reusing it stalls the next call.
+            .header("Connection", "close")
             .post(body.toRequestBody(XML_MEDIA_TYPE))
             .build()
         val (code, text) = try {
@@ -63,7 +65,7 @@ class SonosSoapClient(
 
     /** Fetches `GET http://host/path`, used for the device description. */
     suspend fun get(host: String, path: String): String = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url("http://$host$path").build()
+        val request = Request.Builder().url("http://$host$path").header("Connection", "close").build()
         try {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) throw SonosException("GET $path: ${response.code}", response.code)

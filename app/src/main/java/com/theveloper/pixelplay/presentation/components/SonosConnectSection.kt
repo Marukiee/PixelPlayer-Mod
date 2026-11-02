@@ -1,6 +1,17 @@
 package com.theveloper.pixelplay.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.material3.MotionScheme
+import androidx.compose.runtime.key
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -129,15 +140,22 @@ internal fun LazyListScope.sonosDeviceItems(
                     text = stringResource(R.string.sonos_section_title),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
-                Text(
-                    text = when {
-                        isScanning && groups.isEmpty() -> stringResource(R.string.sonos_searching)
-                        groups.isEmpty() -> stringResource(R.string.sonos_none_found)
-                        else -> stringResource(R.string.sonos_tap_hint)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                val hint = when {
+                    isScanning && groups.isEmpty() -> stringResource(R.string.sonos_searching)
+                    groups.isEmpty() -> stringResource(R.string.sonos_none_found)
+                    else -> stringResource(R.string.sonos_tap_hint)
+                }
+                AnimatedContent(
+                    targetState = hint,
+                    transitionSpec = { fadeIn(sonosMotion.defaultEffectsSpec()) togetherWith fadeOut(sonosMotion.fastEffectsSpec()) },
+                    label = "sonosHint"
+                ) { text ->
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             IconButton(
                 onClick = onRefresh,
@@ -148,10 +166,19 @@ internal fun LazyListScope.sonosDeviceItems(
                 ),
                 modifier = Modifier.clip(RoundedCornerShape(16.dp))
             ) {
-                if (isScanning) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.sonos_refresh))
+                AnimatedContent(
+                    targetState = isScanning,
+                    transitionSpec = {
+                        (fadeIn(sonosMotion.defaultEffectsSpec()) + scaleIn(sonosMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
+                            (fadeOut(sonosMotion.fastEffectsSpec()) + scaleOut(sonosMotion.fastSpatialSpec(), targetScale = 0.6f))
+                    },
+                    label = "sonosRefreshIcon"
+                ) { scanning ->
+                    if (scanning) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.sonos_refresh))
+                    }
                 }
             }
         }
@@ -172,10 +199,18 @@ internal fun LazyListScope.sonosDeviceItems(
             isSelected = isActive,
             isBusy = isActive && session?.isConnecting == true,
             onClick = { onSelectGroup(group) },
-            modifier = Modifier.animateItem()
+            modifier = Modifier.animateItem(
+                fadeInSpec = sonosMotion.defaultEffectsSpec(),
+                placementSpec = sonosMotion.defaultSpatialSpec(),
+                fadeOutSpec = sonosMotion.fastEffectsSpec()
+            )
         )
     }
 }
+
+/** Material 3 Expressive motion, the same scheme the player sheet and range chips use. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private val sonosMotion = MotionScheme.expressive()
 
 /** Same look as the Cast device rows: tonal pill, rotating scallop behind the active icon. */
 @Composable
@@ -188,8 +223,16 @@ private fun OutputRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-    val onContainer = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    val containerColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        animationSpec = sonosMotion.defaultEffectsSpec(),
+        label = "outputRowContainer"
+    )
+    val onContainer by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        animationSpec = sonosMotion.defaultEffectsSpec(),
+        label = "outputRowContent"
+    )
     val scallopShape = remember { RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f) }
     val rotation by rememberInfiniteTransition(label = "sonosRowRotation").animateFloat(
         initialValue = 0f,
@@ -199,7 +242,7 @@ private fun OutputRow(
     )
     val backgroundScale by animateFloatAsState(
         targetValue = if (isSelected) 1.16f else 1f,
-        animationSpec = tween(450, easing = FastOutSlowInEasing),
+        animationSpec = sonosMotion.defaultSpatialSpec(),
         label = "sonosRowScale"
     )
     Surface(
@@ -234,15 +277,24 @@ private fun OutputRow(
                         )
                         .background(onContainer.copy(alpha = 0.12f), if (isSelected) scallopShape else CircleShape)
                 )
-                if (isBusy) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = onContainer,
-                        strokeWidth = 2.5.dp,
-                        strokeCap = StrokeCap.Round
-                    )
-                } else {
-                    Icon(icon, contentDescription = null, tint = onContainer, modifier = Modifier.size(24.dp))
+                AnimatedContent(
+                    targetState = isBusy,
+                    transitionSpec = {
+                        (fadeIn(sonosMotion.defaultEffectsSpec()) + scaleIn(sonosMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
+                            (fadeOut(sonosMotion.fastEffectsSpec()) + scaleOut(sonosMotion.fastSpatialSpec(), targetScale = 0.6f))
+                    },
+                    label = "outputRowIcon"
+                ) { busy ->
+                    if (busy) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = onContainer,
+                            strokeWidth = 2.5.dp,
+                            strokeCap = StrokeCap.Round
+                        )
+                    } else {
+                        Icon(icon, contentDescription = null, tint = onContainer, modifier = Modifier.size(24.dp))
+                    }
                 }
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
@@ -255,7 +307,16 @@ private fun OutputRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                BadgeChip(text = status, icon = R.drawable.rounded_wifi_24, contentColor = onContainer)
+                AnimatedContent(
+                    targetState = status,
+                    transitionSpec = {
+                        (fadeIn(sonosMotion.defaultEffectsSpec()) + slideInVertically(sonosMotion.defaultSpatialSpec()) { it / 2 }) togetherWith
+                            (fadeOut(sonosMotion.fastEffectsSpec()) + slideOutVertically(sonosMotion.fastSpatialSpec()) { -it / 2 })
+                    },
+                    label = "outputRowStatus"
+                ) { text ->
+                    BadgeChip(text = text, icon = R.drawable.rounded_wifi_24, contentColor = onContainer)
+                }
             }
         }
     }
@@ -291,7 +352,7 @@ internal fun SonosActiveCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow))
+                .animateContentSize(sonosMotion.defaultSpatialSpec())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -314,75 +375,103 @@ internal fun SonosActiveCard(
                             .background(onContainer.copy(alpha = 0.12f), iconShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (state.isConnecting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(34.dp),
-                                color = onContainer,
-                                trackColor = onContainer.copy(alpha = 0.2f),
-                                strokeWidth = 4.dp,
-                                strokeCap = StrokeCap.Round
-                            )
-                        } else {
-                            Icon(
-                                imageVector = if (state.group.members.size > 1) Icons.Rounded.SpeakerGroup else Icons.Rounded.Speaker,
-                                contentDescription = null,
-                                tint = onContainer
-                            )
+                        val grouped = state.group.members.size > 1
+                        AnimatedContent(
+                            targetState = if (state.isConnecting) 0 else if (grouped) 2 else 1,
+                            transitionSpec = {
+                                (fadeIn(sonosMotion.defaultEffectsSpec()) + scaleIn(sonosMotion.defaultSpatialSpec(), initialScale = 0.5f)) togetherWith
+                                    (fadeOut(sonosMotion.fastEffectsSpec()) + scaleOut(sonosMotion.fastSpatialSpec(), targetScale = 0.5f))
+                            },
+                            label = "sonosCardIcon"
+                        ) { kind ->
+                            if (kind == 0) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(34.dp),
+                                    color = onContainer,
+                                    trackColor = onContainer.copy(alpha = 0.2f),
+                                    strokeWidth = 4.dp,
+                                    strokeCap = StrokeCap.Round
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (kind == 2) Icons.Rounded.SpeakerGroup else Icons.Rounded.Speaker,
+                                    contentDescription = null,
+                                    tint = onContainer
+                                )
+                            }
                         }
                     }
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = state.group.displayName,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = onContainer,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = when {
-                            state.isConnecting -> stringResource(R.string.sonos_connecting)
-                            else -> stringResource(R.string.sonos_section_title) + " • " +
-                                stringResource(if (state.isPlaying) R.string.sonos_playing else R.string.sonos_paused)
+                    AnimatedContent(
+                        targetState = state.group.displayName,
+                        transitionSpec = {
+                            (fadeIn(sonosMotion.defaultEffectsSpec()) + slideInVertically(sonosMotion.defaultSpatialSpec()) { it / 3 }) togetherWith
+                                (fadeOut(sonosMotion.fastEffectsSpec()) + slideOutVertically(sonosMotion.fastSpatialSpec()) { -it / 3 }) using
+                                SizeTransform(clip = false) { _, _ -> sonosMotion.defaultSpatialSpec() }
                         },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = onContainer,
-                        maxLines = 1
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-                        Button(
-                            onClick = onDisconnect,
-                            enabled = !state.isConnecting,
-                            shape = RoundedCornerShape(50),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                            ),
-                            modifier = Modifier.height(46.dp)
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(22.dp),
-                                painter = painterResource(R.drawable.rounded_mimo_disconnect_24),
-                                contentDescription = stringResource(R.string.cast_disconnect)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.cast_disconnect))
-                        }
-                        Button(
-                            onClick = onOpenGroup,
-                            enabled = !state.isConnecting,
-                            shape = RoundedCornerShape(50),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = onContainer,
-                                contentColor = MaterialTheme.colorScheme.tertiaryContainer
-                            ),
-                            modifier = Modifier.height(46.dp)
-                        ) {
-                            Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.sonos_group_button))
-                        }
+                        label = "sonosCardTitle"
+                    ) { name ->
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = onContainer,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
+                    val status = when {
+                        state.isConnecting -> stringResource(R.string.sonos_connecting)
+                        else -> stringResource(R.string.sonos_section_title) + " • " +
+                            stringResource(if (state.isPlaying) R.string.sonos_playing else R.string.sonos_paused)
+                    }
+                    AnimatedContent(
+                        targetState = status,
+                        transitionSpec = { fadeIn(sonosMotion.defaultEffectsSpec()) togetherWith fadeOut(sonosMotion.fastEffectsSpec()) },
+                        label = "sonosCardStatus"
+                    ) { text ->
+                        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = onContainer, maxLines = 1)
+                    }
+                }
+            }
+
+            // Full width so neither label gets cut off, also in Dutch.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onDisconnect,
+                    enabled = !state.isConnecting,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                ) {
+                    Icon(
+                        modifier = Modifier.size(22.dp),
+                        painter = painterResource(R.drawable.rounded_mimo_disconnect_24),
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.cast_disconnect), maxLines = 1)
+                }
+                Button(
+                    onClick = onOpenGroup,
+                    enabled = !state.isConnecting,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = onContainer,
+                        contentColor = MaterialTheme.colorScheme.tertiaryContainer
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                ) {
+                    Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.sonos_group_button), maxLines = 1)
                 }
             }
 
@@ -395,17 +484,26 @@ internal fun SonosActiveCard(
             )
             AnimatedVisibility(
                 visible = grouped,
-                enter = expandVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-                exit = shrinkVertically(spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
+                enter = expandVertically(sonosMotion.defaultSpatialSpec()) + fadeIn(sonosMotion.defaultEffectsSpec()),
+                exit = shrinkVertically(sonosMotion.fastSpatialSpec()) + fadeOut(sonosMotion.fastEffectsSpec())
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     state.group.members.forEach { speaker ->
-                        VolumeRow(
-                            label = speaker.name,
-                            value = state.speakerVolumes[speaker.uuid],
-                            onValueChange = { onSpeakerVolume(speaker.uuid, it) },
-                            prominent = false
-                        )
+                        key(speaker.uuid) {
+                            // A room that joins slides open instead of popping in.
+                            val appear = remember { MutableTransitionState(false).apply { targetState = true } }
+                            AnimatedVisibility(
+                                visibleState = appear,
+                                enter = expandVertically(sonosMotion.defaultSpatialSpec()) + fadeIn(sonosMotion.defaultEffectsSpec())
+                            ) {
+                                VolumeRow(
+                                    label = speaker.name,
+                                    value = state.speakerVolumes[speaker.uuid],
+                                    onValueChange = { onSpeakerVolume(speaker.uuid, it) },
+                                    prominent = false
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -544,11 +642,21 @@ internal fun SonosGroupSheet(
 
 @Composable
 private fun GroupSpeakerRow(speaker: SonosSpeaker, checked: Boolean, locked: Boolean, onToggle: () -> Unit) {
-    val container by androidx.compose.animation.animateColorAsState(
+    val container by animateColorAsState(
         targetValue = if (checked) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        animationSpec = sonosMotion.defaultEffectsSpec(),
         label = "groupRowColor"
     )
-    val onContainer = if (checked) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+    val onContainer by animateColorAsState(
+        targetValue = if (checked) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
+        animationSpec = sonosMotion.defaultEffectsSpec(),
+        label = "groupRowContent"
+    )
+    val checkFill by animateColorAsState(
+        targetValue = if (checked) MaterialTheme.colorScheme.primary else onContainer.copy(alpha = 0.12f),
+        animationSpec = sonosMotion.fastEffectsSpec(),
+        label = "groupCheckFill"
+    )
     val checkScale by animateFloatAsState(
         targetValue = if (checked) 1f else 0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
@@ -583,13 +691,7 @@ private fun GroupSpeakerRow(speaker: SonosSpeaker, checked: Boolean, locked: Boo
             Box(
                 modifier = Modifier
                     .size(28.dp)
-                    .background(
-                        if (checked) MaterialTheme.colorScheme.primary else Color.Transparent,
-                        CircleShape
-                    )
-                    .then(
-                        if (checked) Modifier else Modifier.background(onContainer.copy(alpha = 0.12f), CircleShape)
-                    ),
+                    .background(checkFill, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

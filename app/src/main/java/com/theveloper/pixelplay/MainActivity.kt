@@ -226,9 +226,6 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         LogUtils.d(this, "onCreate")
-        lifecycleScope.launch {
-            userPreferencesRepository.sonosVolumeKeysFlow.collect { sonosVolumeKeys = it }
-        }
         val splashScreen = installSplashScreen()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
@@ -244,6 +241,10 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         super.onCreate(savedInstanceState)
+        // After super.onCreate: Hilt injects the fields there.
+        lifecycleScope.launch {
+            userPreferencesRepository.sonosVolumeKeysFlow.collect { sonosVolumeKeys = it }
+        }
 
         // MD3 Optimization: Release Splash Screen immediately to render UI skeleton.
         // Data loading is handled via optimistic UI and smooth transitions.

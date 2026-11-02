@@ -2,6 +2,10 @@ package com.theveloper.pixelplay.presentation.components
 
 import android.Manifest
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -50,6 +54,14 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -371,6 +383,10 @@ fun CastBottomSheet(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 12.dp
     ) {
+        // The sheet is its own window, so the activity never sees the volume keys while it is open.
+        val sonosVolumeKeys by sonosViewModel.volumeKeys.collectAsStateWithLifecycle()
+        val keyFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { runCatching { keyFocus.requestFocus() } }
         // AQUÍ APLICAMOS EL FIX: Anulamos la fábrica de overscroll para todo lo que esté aquí adentro
         CompositionLocalProvider(
             LocalOverscrollFactory provides null
@@ -378,6 +394,21 @@ fun CastBottomSheet(
             Box(
                 modifier = Modifier
                     .padding(bottom = 18.dp)
+                    .focusRequester(keyFocus)
+                    .focusable()
+                    .onPreviewKeyEvent { event ->
+                        val delta = when (event.key) {
+                            Key.VolumeUp -> 2
+                            Key.VolumeDown -> -2
+                            else -> 0
+                        }
+                        if (delta == 0 || !sonosVolumeKeys || sonosSession == null) {
+                            false
+                        } else {
+                            if (event.type == KeyEventType.KeyDown) sonosViewModel.adjustVolume(delta)
+                            true
+                        }
+                    }
             ) {
                 if (missingPermissions.isNotEmpty()) {
                     CastPermissionStep(
@@ -686,6 +717,17 @@ private fun CastSheetContent(
         heightAnimationEnabled = true
     }
 
+    // Picking a Sonos room in Devices slides over to Controls, where its volume lives.
+    val onSonos = sonosHero != null
+    var wasOnSonos by remember { mutableStateOf(onSonos) }
+    LaunchedEffect(onSonos) {
+        if (onSonos && !wasOnSonos && pagerState.currentPage != 0) {
+            delay(350)
+            pagerState.animateScrollToPage(0)
+        }
+        wasOnSonos = onSonos
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -860,14 +902,25 @@ private fun CastControlsTabContent(
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        if (heroOverride != null) {
-            heroOverride()
-        } else {
-            ActiveDeviceHero(
-                device = state.activeDevice,
-                onDisconnect = onDisconnect,
-                onVolumeChange = onVolumeChange
-            )
+        // Material fade through between the phone card and the Sonos card.
+        AnimatedContent(
+            targetState = heroOverride,
+            contentKey = { it != null },
+            transitionSpec = {
+                (fadeIn(tween(220, delayMillis = 90)) + scaleIn(tween(220, delayMillis = 90), initialScale = 0.92f)) togetherWith
+                    fadeOut(tween(90)) using SizeTransform(clip = false)
+            },
+            label = "activeDeviceHero"
+        ) { hero ->
+            if (hero != null) {
+                hero()
+            } else {
+                ActiveDeviceHero(
+                    device = state.activeDevice,
+                    onDisconnect = onDisconnect,
+                    onVolumeChange = onVolumeChange
+                )
+            }
         }
 
         Column(

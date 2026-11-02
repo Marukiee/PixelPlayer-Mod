@@ -35,3 +35,13 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 - Likes overleven back-up, herstel en herscan (koppeling op bestandsnaam en tags)
 - Likes worden naar Navidrome gesynchroniseerd, met controle in Instellingen
 - Navidrome-nummers optioneel buiten de bibliotheek houden
+
+**Sonos**
+- Afspelen op Sonos via de verbindknop in de speler: kies een ruimte en de muziek gaat erheen
+- De speakers halen de nummers zelf van Navidrome; de hele wachtrij staat op de Sonos, dus hij speelt door als je telefoon uit is
+- De telefoon speelt stil mee, zodat melding, vergrendelscherm, swipes en wachtrij gewoon werken
+- Groeperen zoals in de Sonos-app (vinkjes per ruimte), groepsvolume en volume per speaker
+- Wijzigingen in de Sonos-app (volgende, pauze) volgt de telefoon; speelt de speaker iets anders, dan stopt de koppeling
+- Volumeknoppen regelen de Sonos zolang de app open is
+- Instellingen > Sonos: hoeveel nummers op Navidrome staan, overslaan of stoppen bij nummers die alleen op je telefoon staan
+- Werkt alleen als de Sonos je Navidrome-server kan bereiken (adres op je thuisnetwerk, niet via Tailscale)

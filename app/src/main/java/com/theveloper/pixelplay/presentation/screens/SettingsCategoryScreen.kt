@@ -22,6 +22,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.material3.MotionScheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.togetherWith
@@ -3106,6 +3108,7 @@ private fun PaletteRegenerateSongSheetContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SonosSettingsBlock() {
     val sonosViewModel: SonosViewModel = hiltViewModel()
@@ -3123,8 +3126,11 @@ private fun SonosSettingsBlock() {
             .fillMaxWidth()
             .padding(bottom = 10.dp)
     ) {
+        val motion = remember { MotionScheme.expressive() }
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier
+                .animateContentSize(motion.defaultSpatialSpec())
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -3147,14 +3153,26 @@ private fun SonosSettingsBlock() {
                 info.problem == SonosSourceProblem.NO_SONGS || info.total == 0 -> stringResource(R.string.sonos_problem_no_songs)
                 else -> stringResource(R.string.settings_sonos_source_count, info.playable, info.total)
             }
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onTertiaryContainer
+            AnimatedContent(
+                targetState = body,
+                transitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
+                label = "sonosSourceBody"
+            ) { text ->
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
+            val share = if (info != null && info.total > 0) info.playable.toFloat() / info.total else 0f
+            val animatedShare by animateFloatAsState(
+                targetValue = share,
+                animationSpec = motion.slowSpatialSpec(),
+                label = "sonosSourceShare"
             )
             if (info != null && info.problem == null && info.total > 0) {
                 LinearProgressIndicator(
-                    progress = { info.playable.toFloat() / info.total },
+                    progress = { animatedShare },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)

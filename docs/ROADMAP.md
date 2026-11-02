@@ -4,7 +4,7 @@
 
 Volgorde gekozen door Mark (2026-11-02):
 
-1. [ ] Sonos: afspelen via Navidrome, met groeperen en volume per speaker
+1. [x] Sonos: afspelen via Navidrome, met groeperen en volume per speaker (0.7.5-mod.9)
 2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
 3. [ ] Spotify: te kopen-lijst
 4. [ ] Spotify: nieuwe releases
@@ -58,7 +58,20 @@ Beperkingen: afspelen van Spotify-audio in PixelPlayer kan niet, alleen de Spoti
 
 ## Sonos
 
-Wens van Mark (2026-11-02): vanuit PixelPlayer naar zijn Sonos-speakers spelen, met groeperen, waarbij de Sonos de muziek van zijn Navidrome-server haalt.
+Gebouwd in 0.7.5-mod.9. Hoe het werkt:
+
+- De telefoon blijft de baas over de wachtrij en speelt stil mee: het geluid wordt in de audio-sink op 0 gezet (`SonosAudioGate`, `MutingAudioSink`), zonder audiofocus en zonder crossfade. Daardoor werken melding, vergrendelscherm, swipes en luisterstatistieken gewoon.
+- `SonosController` stuurt elke actie van de telefoon door (afspelen, pauze, volgende, spoelen, wachtrij) en zet de komende 100 nummers op de Sonos-wachtrij. De Sonos is leidend voor de positie; wat in de Sonos-app gebeurt, volgt de telefoon.
+- `SonosTrackResolver` koppelt nummers aan de Navidrome-cache (titel, artiest, album, duur). Hi-res (boven 48 kHz) en Opus of DSD vraagt hij als MP3 320 op, omdat Sonos die niet afspeelt.
+- Getest op de emulator tegen een echte Navidrome en een nep-Sonos met drie speakers. Nog niet getest op echte Sonos-hardware.
+
+Nog na te lopen thuis (alleen met echte speakers):
+
+- Of de Sonos de Navidrome stream-URL zonder extensie accepteert (DIDL met protocolInfo wordt meegestuurd).
+- Hoe snel het reageert. De emulator doet 1 seconde per verbinding door zijn netwerknabootsing; op wifi hoort dat milliseconden te zijn.
+- Volumeknoppen werken alleen als de app open is. Op het vergrendelscherm vraagt dat een media-sessie van het type "remote", later eventueel.
+
+Oorspronkelijke wens van Mark (2026-11-02): vanuit PixelPlayer naar zijn Sonos-speakers spelen, met groeperen, waarbij de Sonos de muziek van zijn Navidrome-server haalt.
 
 - **Kan, zonder cloud:** Sonos-speakers zijn lokaal te bedienen via UPnP.
   - Vinden via SSDP.

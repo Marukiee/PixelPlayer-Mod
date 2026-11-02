@@ -69,6 +69,7 @@ class SonosViewModel @Inject constructor(
     fun connect(groupId: String) = controller.connect(groupId)
     fun switchToPhone() = controller.switchToPhone()
     fun setGroupVolume(volume: Int) = controller.setGroupVolume(volume)
+    fun adjustVolume(delta: Int) = controller.adjustGroupVolume(delta)
     fun setSpeakerVolume(uuid: String, volume: Int) = controller.setSpeakerVolume(uuid, volume)
     fun setGroupMembers(groupId: String, memberUuids: Set<String>) =
         controller.setGroupMembers(groupId, memberUuids)

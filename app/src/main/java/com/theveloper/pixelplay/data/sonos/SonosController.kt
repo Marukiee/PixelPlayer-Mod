@@ -13,6 +13,7 @@ import com.theveloper.pixelplay.R
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.service.player.DualPlayerEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -90,6 +91,8 @@ class SonosController @Inject constructor(
         /** Local player events before this moment were caused by us following the Sonos. */
         var followUntil = 0L
         var skipStreak = 0
+        /** The phone is skipping a song that is not on Navidrome; the Sonos must not restart. */
+        var skipping = false
         var pendingJump = false
         var pollJob: Job? = null
         var syncJob: Job? = null
@@ -261,7 +264,14 @@ class SonosController @Inject constructor(
     fun setGroupVolume(volume: Int) {
         val s = active ?: return
         val v = volume.coerceIn(0, 100)
-        _session.update { it?.copy(groupVolume = v) }
+        _session.update { state ->
+            // The rooms follow the group slider right away; the next refresh brings the exact values.
+            val delta = v - (state?.groupVolume ?: v)
+            state?.copy(
+                groupVolume = v,
+                speakerVolumes = state.speakerVolumes.mapValues { (it.value + delta).coerceIn(0, 100) }
+            )
+        }
         sendVolume {
             soap.call(
                 s.group.coordinator.host, SonosService.GROUP_RENDERING_CONTROL, "SetGroupVolume",
@@ -317,7 +327,9 @@ class SonosController @Inject constructor(
             } else {
                 emptyMap()
             }
-            if (active === s) _session.update { it?.copy(groupVolume = group, speakerVolumes = speakers) }
+            // Drop the answer if the user moved a volume while it was on its way.
+            val stale = SystemClock.elapsedRealtime() - lastVolumeChangeAt < 2_000
+            if (active === s && !stale) _session.update { it?.copy(groupVolume = group, speakerVolumes = speakers) }
         }
     }
 
@@ -333,6 +345,11 @@ class SonosController @Inject constructor(
                 return
             }
             if (isFollowing(s)) return
+            if (s.skipping) {
+                s.skipping = false
+                scheduleSync(s, jump = false)
+                return
+            }
             scheduleSync(s, jump = true)
         }
 
@@ -541,8 +558,10 @@ class SonosController @Inject constructor(
         if (skipUnavailableSongs && s.skipStreak < MAX_SKIP_STREAK && player.hasNextMediaItem()) {
             if (s.skipStreak == 0) toast(context.getString(R.string.sonos_msg_skipped, title))
             s.skipStreak++
-            // A normal skip: the resulting transition triggers the next sync.
+            // The resulting transition triggers the next sync, without restarting the Sonos.
+            s.skipping = true
             player.seekToNextMediaItem()
+            s.skipping = false
         } else {
             s.skipStreak = 0
             followLocal(s) { it.pause() }
@@ -595,7 +614,8 @@ class SonosController @Inject constructor(
         _session.update { it?.copy(isPlaying = transport == "PLAYING" || transport == "TRANSITIONING") }
 
         val settled = now() - s.lastResetAt > TAKEOVER_GRACE_MS
-        if (tick % 5 == 0 && settled) {
+        // A track outside our queue usually means the TV or another app took over: check right away.
+        if (settled && (tick % 2 == 0 || index !in s.queue.indices)) {
             val media = avt(s, "GetMediaInfo")["CurrentURI"].orEmpty()
             if (media != s.group.queueUri) {
                 endSession(R.string.sonos_msg_taken_over, s.group.coordinator.name, pauseLocal = true)
@@ -657,6 +677,8 @@ class SonosController @Inject constructor(
         soap.call(s.group.coordinator.host, SonosService.AV_TRANSPORT, action, "InstanceID" to 0, *args)
 
     private fun report(error: Throwable) {
+        // A newer volume or sync request replaced this one; that is not a failure.
+        if (error is CancellationException) return
         Timber.tag(TAG).w(error, "Sonos command failed")
         val detail = (error as? SonosException)?.upnpCode?.let { "UPnP $it" } ?: error.message.orEmpty()
         toast(context.getString(R.string.sonos_msg_failed, detail))
