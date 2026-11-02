@@ -8,6 +8,8 @@
 - [ ] Spotify: nieuwe releases
 - [ ] Spotify: afspeellijsten importeren
 - [ ] Spotify en PixelPlayer: luisterstatistieken samenvoegen
+- [ ] Sonos: afspelen via Navidrome, met groeperen en volume per speaker
+- [ ] PixelPlayerOSS: fixes overnemen of overstappen (Mark beslist)
 
 ## Hele app in het Nederlands vertalen
 
@@ -51,6 +53,32 @@ Wens: Spotify- en PixelPlayer-luistergedrag samen, zodat de Wrapped bij stats.fm
 - Afspeellijst exporteren naar Spotify, om te delen.
 
 Beperkingen: afspelen van Spotify-audio in PixelPlayer kan niet, alleen de Spotify-app bedienen. Aanbevelingen en "gerelateerde artiesten" zijn sinds eind 2024 dicht voor nieuwe apps.
+
+## Sonos
+
+Wens van Mark (2026-11-02): vanuit PixelPlayer naar zijn Sonos-speakers spelen, met groeperen, waarbij de Sonos de muziek van zijn Navidrome-server haalt.
+
+- **Kan, zonder cloud:** Sonos-speakers zijn lokaal te bedienen via UPnP.
+  - Vinden via SSDP.
+  - Groepen uitlezen via ZoneGroupTopology.
+  - Groeperen door een speaker aan de coördinator te koppelen (`x-rincon:<id>`), losmaken met BecomeCoordinatorOfStandaloneGroup.
+  - Groepsvolume via GroupRenderingControl, volume per speaker via RenderingControl.
+- **Afspelen via Navidrome:** lokaal nummer koppelen aan het Navidrome-ID (`NavidromeSongMatcher` bestaat al), en de stream-URL op de Sonos-wachtrij zetten met AddURIToQueue. Dan speelt de Sonos de hele wachtrij zelf af, ook als de telefoon of app uit is. In juli speelde de eerste versie per nummer en schoof de app door; dat stopt als de app dicht is.
+- **Bediening:** de speakers komen in het bestaande verbinden-scherm (de cast-knop), met kaarten per speaker, groepchips, volumeschuifjes en een balkje "Speelt op Woonkamer + Keuken" in de speler. Afspelen, pauzeren, volgende en spoelen gaan naar de Sonos zolang je verbonden bent. Positie en status komen via polling of UPnP-events (GENA). Animaties met springs zoals elders in de mod.
+- **Geschiedenis:** in juli is er al een eerste versie gebouwd (vinden, afspelen, volume) en daarna op verzoek weggehaald. Die stond niet in git; het ontwerp staat in `notities/pixelplayer-project.md`.
+- **Testen:** alleen op Marks telefoon in zijn thuisnetwerk. De emulator ziet geen speakers op het netwerk.
+- **Omvang:** groot, meerdere sessies.
+
+## PixelPlayerOSS
+
+`PixelPlayerHQ/PixelPlayerOSS` is de officiële Google-vrije versie, onderhouden door @lostf1sh.
+
+- Zonder Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, Play-billing, Firebase, Crashlytics en Google Play-diensten. Wel Navidrome/Jellyfin en de rest van de speler.
+- Veel actiever dan de gewone versie (die staat sinds juni stil): op 2026-11-01 nog fixes, zoals stil afspelen na shuffle en prestaties van Daily Mix, statistieken en Jellyfin. Release v0.4.0 op 2026-10-17, ook op F-Droid.
+- Andere pakketnaam (`com.lostf1sh.pixelplayeross`): een overstap betekent een aparte app, je likes overzetten via een back-up, en alle mod-wijzigingen opnieuw inbouwen op die code. Chromecast valt dan weg; Sonos werkt niet via Cast, dus dat raakt de Sonos-plannen niet.
+- Twee wegen:
+  1. Bij de huidige basis blijven en losse fixes uit OSS overnemen.
+  2. Overstappen op OSS als nieuwe basis. Groot werk, maar daarna profiteer je van hun updates.
 
 ## Technisch, om later uit te zoeken
 
