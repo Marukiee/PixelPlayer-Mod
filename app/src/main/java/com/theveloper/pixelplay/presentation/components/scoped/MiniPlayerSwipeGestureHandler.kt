@@ -2,10 +2,8 @@ package com.theveloper.pixelplay.presentation.components.scoped
 
 import android.view.View
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -23,24 +21,21 @@ import com.theveloper.pixelplay.presentation.utils.AppHapticsConfig
 import com.theveloper.pixelplay.presentation.utils.LocalAppHapticsConfig
 import com.theveloper.pixelplay.presentation.utils.performAppCompatHapticFeedback
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
 import kotlin.math.tanh
 
 private const val TRACK_SWIPE_THRESHOLD_DP = 56f
-private const val MAX_VISUAL_DRAG_DP = 120f
+private const val MAX_VISUAL_DRAG_DP = 72f
 private const val FLING_VELOCITY_DP_PER_SECOND = 900f
 private const val FLING_MIN_DRAG_DP = 16f
-private const val SWAP_EXIT_MS = 140
-private const val SWAP_ENTER_FADE_MS = 200
 
 /**
  * Horizontal swipe on the collapsed mini-player to change tracks, with the same feel as the
- * swipe-to-queue rows: the card follows the finger with growing resistance, ticks when it crosses
- * the threshold, and on release either swaps tracks (the card slides out, then the new one springs
- * in from the other side) or springs back. Swipe left = next, swipe right = previous.
+ * swipe-to-queue rows: the card follows the finger part of the way with growing resistance, ticks
+ * when it crosses the threshold, and on release bounces back to its place, changing the track when
+ * the swipe went far or fast enough. Swipe left = next, swipe right = previous.
  */
 internal class MiniPlayerSwipeGestureHandler(
     private val scope: CoroutineScope,
@@ -58,19 +53,11 @@ internal class MiniPlayerSwipeGestureHandler(
     /** Horizontal offset of the mini-player card, read in its graphicsLayer. */
     val offsetX = Animatable(0f)
 
-    /** Card alpha multiplier; dips while the tracks swap. */
-    val alpha = Animatable(1f)
-
     private val velocityTracker = VelocityTracker()
     private var accumulatedDragX = 0f
     private var isInCommitZone = false
-    private var swapJob: Job? = null
-
-    private val isSwapping: Boolean
-        get() = swapJob?.isActive == true
 
     fun onDragStart() {
-        if (isSwapping) return
         accumulatedDragX = 0f
         isInCommitZone = false
         velocityTracker.resetTracking()
@@ -78,7 +65,6 @@ internal class MiniPlayerSwipeGestureHandler(
     }
 
     fun onHorizontalDrag(change: PointerInputChange, dragAmount: Float) {
-        if (isSwapping) return
         velocityTracker.addPosition(change.uptimeMillis, change.position)
         accumulatedDragX += dragAmount
 
@@ -99,7 +85,6 @@ internal class MiniPlayerSwipeGestureHandler(
     }
 
     fun onDragEnd() {
-        if (isSwapping) return
         val velocityX = velocityTracker.calculateVelocity().x
         val dragDirection = sign(accumulatedDragX).toInt()
         val flung = abs(velocityX) >= flingVelocityPx &&
@@ -109,45 +94,26 @@ internal class MiniPlayerSwipeGestureHandler(
         accumulatedDragX = 0f
         isInCommitZone = false
 
-        if (direction == 0) {
-            springBack()
-            return
-        }
-
-        performAppCompatHapticFeedback(hapticView, appHapticsConfig, HapticFeedbackConstantsCompat.GESTURE_END)
-        swapJob = scope.launch {
-            launch { alpha.animateTo(0f, tween(SWAP_EXIT_MS)) }
-            offsetX.animateTo(
-                targetValue = direction * maxVisualPx * 1.6f,
-                animationSpec = tween(SWAP_EXIT_MS, easing = FastOutLinearInEasing)
-            )
+        if (direction != 0) {
+            performAppCompatHapticFeedback(hapticView, appHapticsConfig, HapticFeedbackConstantsCompat.GESTURE_END)
             if (direction < 0) onSwipeToNext() else onSwipeToPrevious()
-            offsetX.snapTo(-direction * maxVisualPx)
-            launch { alpha.animateTo(1f, tween(SWAP_ENTER_FADE_MS)) }
-            offsetX.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            )
         }
+        bounceBack()
     }
 
     fun onDragCancel() {
-        if (isSwapping) return
         accumulatedDragX = 0f
         isInCommitZone = false
-        springBack()
+        bounceBack()
     }
 
-    private fun springBack() {
+    private fun bounceBack() {
         scope.launch {
             offsetX.animateTo(
                 targetValue = 0f,
                 animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMedium
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
                 )
             )
         }

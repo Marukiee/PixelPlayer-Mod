@@ -645,7 +645,7 @@ fun UnifiedPlayerSheetV2(
                             .graphicsLayer {
                                 scaleX = miniAppearScale
                                 scaleY = visualOvershootScaleY.value * miniAppearScale
-                                alpha = miniReadyAlpha * miniPlayerSwipeGestureHandler.alpha.value
+                                alpha = miniReadyAlpha
                                 translationX = miniPlayerSwipeGestureHandler.offsetX.value
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             }
