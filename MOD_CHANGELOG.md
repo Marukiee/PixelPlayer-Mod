@@ -1,11 +1,11 @@
-- Mini-speler: swipen trekt de speler een stukje mee en hij bounct terug, ook als het nummer wisselt; de schaduw blijft staan
-- Terug-gebaar rondt sneller af
+- Nieuwe homepage: Your Mix als compacte kaart, Recent gespeeld als rij hoezen, Mixen voor jou (Daily Mix, genre- en artiest-mixen), je artiesten van de week, Herontdekken en een kleine statistiekkaart
+- Teksten op de homepage in het Engels of Nederlands, naar de taal van je telefoon
 
 Ook in deze versie (sinds 0.7.5-mod.1):
-- Terug-gebaar weer zoals vroeger: het scherm schuift als kaart met je vinger mee
+- Mini-speler: swipen trekt de speler een stukje mee en hij bounct terug
+- Terug-gebaar weer zoals vroeger en sneller afgerond
 - Back-up met likes importeren werkt weer
 - Zoeken zonder accenten en apostrofs: `hakan hellstrom` vindt Håkan Hellström
-- Zoeken op meerdere woorden werkt weer
 - Lang drukken op volgende of vorige spoelt door
 - Kwaliteitslabels in lijsten, uit te zetten in Instellingen
 - Meerdere genres per nummer (losse GENRE-velden)
