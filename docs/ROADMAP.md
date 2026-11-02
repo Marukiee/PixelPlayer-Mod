@@ -4,9 +4,12 @@
 
 Volgorde gekozen door Mark (2026-11-02):
 
-1. [x] Sonos: afspelen via Navidrome, met groeperen en volume per speaker (0.7.5-mod.9)
-   - [ ] Mark test thuis op zijn echte speakers
-   - [ ] Daarna: animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
+1. [x] Sonos: afspelen via Navidrome, met groeperen en volume per speaker (0.7.5-mod.9, thuisadres in mod.10)
+   - [x] Mark test thuis op zijn echte speakers: werkt (2026-11-02)
+   - [ ] Volumeknoppen buiten de app regelen de Sonos, en het volume verschijnt in het eiland van Drip (zie "Sonos-volume" hieronder)
+   - [ ] Volumeschuif in beeld als je in de app op de volumeknoppen drukt
+   - [ ] Vanaf die volumeschuif ook het volume van de andere speakers in de groep regelen
+   - [ ] Animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
 2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
 3. [ ] Spotify: te kopen-lijst
 4. [ ] Spotify: nieuwe releases
@@ -66,13 +69,19 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 - `SonosController` stuurt elke actie van de telefoon door (afspelen, pauze, volgende, spoelen, wachtrij) en zet de komende 100 nummers op de Sonos-wachtrij. De Sonos is leidend voor de positie; wat in de Sonos-app gebeurt, volgt de telefoon.
 - `SonosTrackResolver` koppelt nummers aan de Navidrome-cache (titel, artiest, album, duur). Hi-res (boven 48 kHz) en Opus of DSD vraagt hij als MP3 320 op, omdat Sonos die niet afspeelt.
 - Thuisadres (0.7.5-mod.10): de app gebruikt het Navidrome-inlogadres (bij Mark Tailscale, `100.86.14.39`), de speakers krijgen het adres uit Instellingen > Sonos (`http://192.168.1.157:4533`, maruks-server). `SonosTrackResolver.rebase` zet het begin van de stream- en hoes-URL om.
-- Getest op de emulator tegen een echte Navidrome en een nep-Sonos met drie speakers. Nog niet getest op echte Sonos-hardware.
+- Getest op de emulator tegen een echte Navidrome en een nep-Sonos met drie speakers, en door Mark thuis op zijn echte speakers: werkt (2026-11-02).
 
-Nog na te lopen thuis (alleen met echte speakers):
+### Sonos-volume (wens van Mark, 2026-11-02, nog niet bouwen)
 
-- Of de Sonos de Navidrome stream-URL zonder extensie accepteert (DIDL met protocolInfo wordt meegestuurd).
-- Hoe snel het reageert. De emulator doet 1 seconde per verbinding door zijn netwerknabootsing; op wifi hoort dat milliseconden te zijn.
-- Volumeknoppen werken alleen als de app open is. Op het vergrendelscherm vraagt dat een media-sessie van het type "remote", later eventueel.
+Nu regelen de volumeknoppen de Sonos alleen zolang de app open is (`MainActivity.dispatchKeyEvent` en het verbinden-scherm), en je ziet dan weinig.
+
+1. **Buiten de app, zichtbaar in Drip.** Volumeknoppen moeten ook met de app op de achtergrond of het scherm uit de Sonos regelen.
+   - Kan door de media-sessie op "remote" te zetten. Media3 laat dat via `DeviceInfo` met `PLAYBACK_TYPE_REMOTE` en een volume van 0 tot 100, met `setDeviceVolume` en `increaseDeviceVolume` en `decreaseDeviceVolume` doorgestuurd naar `SonosController`.
+   - Let op: de sessiespeler wisselt bij crossfade (`publishMediaSessionPlayer`), maar crossfade staat uit zolang Sonos speelt. Een `ForwardingPlayer` om de sessiespeler heen moet dus alleen tijdens Sonos de afstandsbediening tonen.
+   - Android stuurt de volumeknoppen dan naar de sessie en toont zijn eigen volumebalk voor afstandsbediening.
+   - **Drip** (eigen dynamic island, repo `Marukiee/Drip`) moet dat volume tonen. Een remote-sessie verandert het mediavolume van de telefoon niet, dus Drip moet het volume van de actieve sessie lezen (`MediaController.getPlaybackInfo()`, type remote) en laten zien. Mark vindt het goed om de Drip-sessie een bericht te sturen als daar iets voor gebouwd moet worden.
+2. **In de app een volumeschuif.** Bij de volumeknoppen in de app verschijnt een Material 3 Expressive volumeschuif met de groepsnaam, die vanzelf weer verdwijnt.
+3. **Ook de andere speakers.** Vanaf die schuif uitklappen naar een schuif per speaker in de groep, zoals op de Sonos-kaart in het verbinden-scherm.
 
 Oorspronkelijke wens van Mark (2026-11-02): vanuit PixelPlayer naar zijn Sonos-speakers spelen, met groeperen, waarbij de Sonos de muziek van zijn Navidrome-server haalt.
 
