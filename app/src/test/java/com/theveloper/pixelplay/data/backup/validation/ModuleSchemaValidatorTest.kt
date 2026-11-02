@@ -30,9 +30,32 @@ class ModuleSchemaValidatorTest {
     @Test
     fun `non-array module fails validation`() {
         val payload = """{"key": "value"}"""
-        val result = validator.validate(BackupSection.FAVORITES, payload)
+        val result = validator.validate(BackupSection.LYRICS, payload)
         assertTrue(result is BackupValidationResult.Invalid)
         assertTrue((result as BackupValidationResult.Invalid).fatalErrors.any { it.code == "NOT_ARRAY" })
+    }
+
+    @Test
+    fun `favorites object with metadata passes validation`() {
+        val payload = """
+            {"favorites": [
+              {"songId": 378, "isFavorite": true, "timestamp": 1786398668965,
+               "title": "Slå mig hårt i ansiktet (Live)", "artist": "Thomas Stenström",
+               "album": "Live på Zinkensdamm", "duration": 483640, "fileName": "26.flac"},
+              {"songId": 460, "isFavorite": true, "timestamp": 1779093637066,
+               "title": null, "artist": null, "album": null, "duration": 0, "fileName": null}
+            ]}
+        """.trimIndent()
+        val result = validator.validate(BackupSection.FAVORITES, payload)
+        assertTrue(result.isValid())
+    }
+
+    @Test
+    fun `favorites object without favorites array fails validation`() {
+        val payload = """{"key": "value"}"""
+        val result = validator.validate(BackupSection.FAVORITES, payload)
+        assertTrue(result is BackupValidationResult.Invalid)
+        assertTrue((result as BackupValidationResult.Invalid).fatalErrors.any { it.code == "INVALID_FAVORITES_PAYLOAD" })
     }
 
     @Test

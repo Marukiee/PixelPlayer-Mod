@@ -45,6 +45,28 @@ class ModuleSchemaValidator @Inject constructor(
             }
         }
 
+        // Favorites are exported as {"favorites": [...]} with title/artist/fileName per entry,
+        // so likes survive rescans; older backups are a bare array and take the path below.
+        if (section == BackupSection.FAVORITES && jsonElement.isJsonObject) {
+            val favorites = jsonElement.asJsonObject.get("favorites")?.takeIf { it.isJsonArray }?.asJsonArray
+            if (favorites == null) {
+                errors.add(
+                    ValidationError(
+                        "INVALID_FAVORITES_PAYLOAD",
+                        "Module '${section.key}' should be a JSON array or an object with a favorites array.",
+                        module = section.key
+                    )
+                )
+                return BackupValidationResult.Invalid(errors)
+            }
+            if (favorites.size() > MAX_ENTRIES_PER_MODULE) {
+                errors.add(ValidationError("TOO_MANY_ENTRIES", "Module '${section.key}' has ${favorites.size()} entries (max $MAX_ENTRIES_PER_MODULE).", module = section.key))
+                return BackupValidationResult.Invalid(errors)
+            }
+            validateFavorites(favorites, errors)
+            return if (errors.isNotEmpty()) BackupValidationResult.Invalid(errors) else BackupValidationResult.Valid
+        }
+
         // Most modules are JSON arrays
         if (section != BackupSection.QUICK_FILL && section != BackupSection.EQUALIZER) {
             if (!jsonElement.isJsonArray) {
