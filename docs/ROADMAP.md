@@ -4,7 +4,10 @@
 
 - [ ] Hele app in het Nederlands vertalen
 - [ ] Tweede variant van de crash na herstarten van de telefoon
-- [ ] Spotify-koppeling, gericht op FLAC kopen: eerst de te kopen-lijst (keuze van Mark, 2026-11-02)
+- [ ] Spotify: te kopen-lijst (eerst)
+- [ ] Spotify: nieuwe releases
+- [ ] Spotify: afspeellijsten importeren
+- [ ] Spotify en PixelPlayer: luisterstatistieken samenvoegen
 
 ## Hele app in het Nederlands vertalen
 
@@ -16,16 +19,38 @@ Zat al in de juli-versie en in upstream. Na een herstart start Android de app vi
 
 ## Spotify-koppeling
 
-Doel: Spotify gebruiken om te ontdekken, en zoveel mogelijk zelf als FLAC kopen. Dit kan via de Spotify Web API, met inloggen via PKCE (geen geheime sleutel in de app). Mark moet daarvoor één keer een gratis app aanmaken op developer.spotify.com. Ideeën:
+Doel: Spotify gebruiken om te ontdekken, en zoveel mogelijk zelf als FLAC kopen. Dit kan via de Spotify Web API, met inloggen via PKCE (geen geheime sleutel in de app). Mark moet daarvoor één keer een gratis app aanmaken op developer.spotify.com, en daarna op zijn telefoon inloggen om te testen. Alles komt in de grote ronde (keuze van Mark, 2026-11-02).
 
-1. **Te kopen-lijst (komt als eerste):** Spotify-likes en -afspeellijsten vergelijken met de eigen bibliotheek (op ISRC als dat in de tags staat, anders op artiest en titel). Wat ontbreekt, komt op een lijst met knoppen naar Qobuz, Bandcamp en 7digital.
-2. **Nieuwe releases:** albums van artiesten uit je bibliotheek, of die je op Spotify volgt, die je nog niet hebt. Als lijst of melding.
-3. **Afspeellijsten importeren:** een Spotify-afspeellijst wordt een PixelPlayer-afspeellijst met de nummers die je hebt; de rest gaat naar de te kopen-lijst.
-4. **Likes synchroniseren:** een like in PixelPlayer wordt ook op Spotify bewaard, en andersom.
-5. **Afspeellijst exporteren** naar Spotify, om te delen.
-6. **Statistieken:** je Spotify-top en -geschiedenis erbij.
+### 1. Te kopen-lijst (komt als eerste)
 
-Beperkingen: afspelen van Spotify-audio in PixelPlayer kan niet, alleen de Spotify-app bedienen. Aanbevelingen en "gerelateerde artiesten" zijn sinds eind 2024 dicht voor nieuwe apps. Voor nieuwe releases kan ook MusicBrainz of ListenBrainz, zonder account.
+- Spotify-nummers vergelijken met de eigen bibliotheek (op ISRC als dat in de tags staat, anders op artiest en titel). Wat ontbreekt, komt op de lijst.
+- **Bronnen:** beslist Mark later. Opties zijn Liked Songs, eigen afspeellijsten, gevolgde afspeellijsten en opgeslagen albums.
+- **Winkels:** Qobuz, Bandcamp, 7digital en HDtracks. Mark wil per nummer zien waar het het goedkoopst is. Let op: deze winkels hebben geen open prijs-API (Qobuz en 7digital alleen voor partners, Bandcamp en HDtracks helemaal niet). Prijzen ophalen betekent hun zoekpagina's uitlezen, en dat kan breken als ze hun site wijzigen. Terugval: knoppen die direct de zoekpagina per winkel openen.
+- **Plek:** allebei. Een kleine sectie "Nog te kopen" op de homepage, plus het volledige scherm in de bibliotheek.
+
+### 2. Nieuwe releases
+
+Albums van artiesten uit de bibliotheek, of die Mark op Spotify volgt, die hij nog niet heeft. Als lijst of melding, gekoppeld aan de te kopen-lijst. Kan ook via MusicBrainz of ListenBrainz, zonder account.
+
+### 3. Afspeellijsten importeren
+
+Een Spotify-afspeellijst wordt een PixelPlayer-afspeellijst met de nummers die Mark heeft; de rest gaat naar de te kopen-lijst.
+
+### 4. Luisterstatistieken samenvoegen
+
+Wens: Spotify- en PixelPlayer-luistergedrag samen, zodat de Wrapped bij stats.fm klopt.
+
+- **stats.fm:** importeert volgens de eigen documentatie alleen luistergeschiedenis van Spotify en Apple Music (met stats.fm Plus), niet van Last.fm of andere spelers. PixelPlayer-luisterbeurten kunnen er dus niet officieel in, en ook niet in Spotify Wrapped zelf: Spotify heeft geen API om luisterbeurten toe te voegen.
+- **Wat wel kan, in PixelPlayer:** Spotify's "uitgebreide streaminggeschiedenis" (JSON-export uit de Spotify-privacy-instellingen) importeren, plus via de API de recent gespeelde nummers bijhouden. PixelPlayer toont dan gecombineerde statistieken en een eigen jaaroverzicht in Wrapped-stijl.
+- **Alternatief:** Last.fm als gezamenlijke plek. Spotify scrobbelt van zichzelf naar Last.fm, en PixelPlayer kan dat met upstream-PR #2563. Last.fm heeft eigen jaaroverzichten.
+- **Experiment, onzeker:** PixelPlayer-luisterbeurten omzetten naar het Spotify-exportformaat en die in stats.fm importeren. Dat wordt niet ondersteund, kan geweigerd worden en kan tegen de voorwaarden van stats.fm ingaan; eerst navragen voordat dit gebouwd wordt.
+
+### Later
+
+- Likes synchroniseren tussen PixelPlayer en Spotify.
+- Afspeellijst exporteren naar Spotify, om te delen.
+
+Beperkingen: afspelen van Spotify-audio in PixelPlayer kan niet, alleen de Spotify-app bedienen. Aanbevelingen en "gerelateerde artiesten" zijn sinds eind 2024 dicht voor nieuwe apps.
 
 ## Technisch, om later uit te zoeken
 
