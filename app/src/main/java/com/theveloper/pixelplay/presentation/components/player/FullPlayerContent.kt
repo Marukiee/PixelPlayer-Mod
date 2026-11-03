@@ -110,6 +110,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.SpeakerGroup
+import com.theveloper.pixelplay.presentation.components.SonosPlayingBars
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.derivedStateOf
@@ -771,14 +773,15 @@ fun FullPlayerContent(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val sonosName = sonosSession?.group?.displayName
+                            val sonosShortName = sonosSession?.group?.shortName
+                            val isSonosGroup = (sonosSession?.group?.members?.size ?: 1) > 1
                             val sonosConnecting = sonosSession?.isConnecting == true
-                            val showCastLabel = isCastConnecting || (isRemotePlaybackActive && selectedRouteName != null) || sonosName != null
+                            val showCastLabel = isCastConnecting || (isRemotePlaybackActive && selectedRouteName != null) || sonosShortName != null
                             val isBluetoothActive =
                                 isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && !isRemotePlaybackActive && !isCastConnecting &&
-                                    sonosName == null
+                                    sonosShortName == null
                             val castIconPainter = when {
-                                sonosName != null -> painterResource(R.drawable.rounded_speaker_24)
+                                sonosShortName != null -> painterResource(R.drawable.rounded_speaker_24)
                                 isCastConnecting || isRemotePlaybackActive -> painterResource(R.drawable.rounded_cast_24)
                                 isBluetoothActive -> painterResource(R.drawable.rounded_bluetooth_24)
                                 else -> painterResource(R.drawable.rounded_mobile_speaker_24)
@@ -843,7 +846,7 @@ fun FullPlayerContent(
                                             AnimatedContent(
                                                 targetState = when {
                                                     isCastConnecting || sonosConnecting -> stringResource(R.string.player_connecting)
-                                                    sonosName != null -> sonosName
+                                                    sonosShortName != null -> sonosShortName
                                                     isRemotePlaybackActive && selectedRouteName != null -> selectedRouteName
                                                     else -> ""
                                                 },
@@ -873,13 +876,21 @@ fun FullPlayerContent(
                                                             color = playerAccentColor
                                                         )
                                                     }
-                                                    if ((isRemotePlaybackActive && !isCastConnecting) || (sonosName != null && !sonosConnecting)) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(8.dp)
-                                                                .clip(CircleShape)
-                                                                .background(LocalMaterialTheme.current.onTertiaryContainer)
-                                                        )
+                                                    if ((isRemotePlaybackActive && !isCastConnecting) || (sonosShortName != null && !sonosConnecting)) {
+                                                        if (sonosShortName != null) {
+                                                            SonosPlayingBars(
+                                                                playing = sonosSession?.isPlaying == true,
+                                                                color = playerAccentColor,
+                                                                modifier = Modifier.size(14.dp, 12.dp)
+                                                            )
+                                                        } else {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(8.dp)
+                                                                    .clip(CircleShape)
+                                                                    .background(LocalMaterialTheme.current.onTertiaryContainer)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }

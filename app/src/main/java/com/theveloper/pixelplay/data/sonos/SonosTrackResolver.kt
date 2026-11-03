@@ -221,6 +221,10 @@ class SonosTrackResolver @Inject constructor(
                 append("<dc:title>").append(e(title)).append("</dc:title>")
                 append("<dc:creator>").append(e(artist)).append("</dc:creator>")
                 append("<upnp:album>").append(e(album)).append("</upnp:album>")
+                if (!artUri.isNullOrBlank()) {
+                    val speakerArt = "/getaa?s=1&u=" + java.net.URLEncoder.encode(uri, "UTF-8")
+                    append("<upnp:albumArtURI>").append(e(speakerArt)).append("</upnp:albumArtURI>")
+                }
                 if (!artUri.isNullOrBlank()) append("<upnp:albumArtURI>").append(e(artUri)).append("</upnp:albumArtURI>")
                 append("<upnp:class>object.item.audioItem.musicTrack</upnp:class>")
                 append("<res protocolInfo=\"http-get:*:").append(mimeType).append(":*\"")
