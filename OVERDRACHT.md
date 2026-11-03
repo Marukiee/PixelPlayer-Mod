@@ -115,8 +115,6 @@ Waar: `SonosTrackResolver.kt`, functie `buildDidl` (companion object).
 
 ### 4. Uitbrengen als 0.7.5-mod.11
 **Status: nog doen.** Vraag Mark eerst of het uit mag.
-
-1. Ga in `gradle.properties` naar `APP_VERSION_NAME=0.7.5-mod.11` en `APP_VERSION_CODE=20`.
 2. Vervang in `MOD_CHANGELOG.md` de bovenste regels (vóór "Ook in deze versie") door een korte lijst voor mod.11:
    - Elke regel kort.
    - Schrijf nooit dat iets niet getest is.

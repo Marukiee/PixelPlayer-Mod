@@ -20,8 +20,8 @@ Volgorde gekozen door Mark (2026-11-02):
      - [x] Indeling: Devices toont alle apparaten plus wifi en Bluetooth; Controls alleen de bediening van het apparaat dat speelt
      - [x] Devices-paneel scrolt soepeler (de draaiende vorm liet elke rij elk frame opnieuw opbouwen)
      - [x] Foto's bij Your artists this week in plaats van initialen
-     - [ ] Speaker-pil in de speler mooier: korte naam ("Marks kamer +1"), icoon in een vorm, bewegende balkjes in plaats van het stipje
-     - [ ] Hoesjes in de Sonos-app: hoes via de speaker zelf (`/getaa?s=1&u=<stream-URL>`) met de Navidrome-URL als tweede; alleen te controleren op Marks echte speakers
+     - [x] Speaker-pil in de speler mooier: korte naam ("Marks kamer +1"), icoon in een vorm, bewegende balkjes in plaats van het stipje
+     - [x] Hoesjes in de Sonos-app: hoes via de speaker zelf (`/getaa?s=1&u=<stream-URL>`) met de Navidrome-URL als tweede; alleen te controleren op Marks echte speakers
      - [x] Hoes in de Drip-pil: lag aan Drip (koos de mediasessie van de Sonos-app). Opgelost aan de Drip-kant, komt in de volgende Drip-release; PixelPlayer hoeft niets
      - [ ] Bouwen, testen op de emulator (Navidrome plus nep-Sonos), uitbrengen als 0.7.5-mod.11
 2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
