@@ -54,9 +54,9 @@ Volledige build (duurt lang, alleen aan het eind):
 ## Volgorde en status
 
 ### 1. Commit 7d8ae11 laten compileren
-**Status: bezig**
+**Status: KLAAR**
 
-De code in `7d8ae11` is geschreven maar nog nooit gebouwd. Alleen de Sonos-tests zijn gedraaid en die slaagden.
+Compileert en alle Sonos-tests slagen. Geen compileerfouten meer.
 
 Plekken die kunnen falen:
 - `SonosConnectSection.kt`:

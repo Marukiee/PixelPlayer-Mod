@@ -831,15 +831,27 @@ fun FullPlayerContent(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Start
                                 ) {
-                                    Icon(
-                                        painter = castIconPainter,
-                                        contentDescription = when {
-                                            isCastConnecting || isRemotePlaybackActive -> stringResource(R.string.player_cd_cast)
-                                            isBluetoothActive -> stringResource(R.string.player_cd_bluetooth)
-                                            else -> stringResource(R.string.player_cd_local_playback)
-                                        },
-                                        tint = playerAccentColor
-                                    )
+                                    if (isSonosGroup) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.SpeakerGroup,
+                                            contentDescription = when {
+                                                isCastConnecting || isRemotePlaybackActive -> stringResource(R.string.player_cd_cast)
+                                                isBluetoothActive -> stringResource(R.string.player_cd_bluetooth)
+                                                else -> stringResource(R.string.player_cd_local_playback)
+                                            },
+                                            tint = playerAccentColor
+                                        )
+                                    } else {
+                                        Icon(
+                                            painter = castIconPainter,
+                                            contentDescription = when {
+                                                isCastConnecting || isRemotePlaybackActive -> stringResource(R.string.player_cd_cast)
+                                                isBluetoothActive -> stringResource(R.string.player_cd_bluetooth)
+                                                else -> stringResource(R.string.player_cd_local_playback)
+                                            },
+                                            tint = playerAccentColor
+                                        )
+                                    }
                                     AnimatedVisibility(visible = showCastLabel) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Spacer(Modifier.width(8.dp))

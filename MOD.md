@@ -45,3 +45,7 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 - Volumeknoppen regelen de Sonos zolang de app open is
 - Instellingen > Sonos: hoeveel nummers op Navidrome staan, overslaan of stoppen bij nummers die alleen op je telefoon staan
 - Thuisadres voor Sonos: gebruikt de app Navidrome via Tailscale, dan krijgen alleen de speakers het adres op je thuisnetwerk
+- Menu met drie puntjes: hier afspelen, toevoegen aan wat speelt, ruimtes groeperen, groep opheffen, hier stoppen
+- Dempknop bij het groepsvolume
+- Speaker-pil toont korte naam en groepsicoon; bewegende balkjes in plaats van stipje voor Sonos
+- Hoesjes via de speaker zelf met /getaa pad

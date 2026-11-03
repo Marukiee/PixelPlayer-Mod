@@ -1,9 +1,12 @@
-- Thuisadres voor Sonos (Instellingen > Sonos): de app blijft Tailscale gebruiken, de speakers krijgen je thuisadres
-- Verbinden met Sonos werkt ook als er net een nummer speelt dat niet op Navidrome staat
-- Afspelen op Sonos: kies een ruimte bij de verbindknop in de speler, de speakers spelen vanaf Navidrome
-- Groeperen met vinkjes zoals in de Sonos-app, groepsvolume en volume per speaker
-- De hele wachtrij staat op de Sonos, dus hij speelt door als je telefoon uit is
-- Volumeknoppen regelen de Sonos; nieuw scherm Instellingen > Sonos
+- Overzetten naar Sonos gaat verder op dezelfde plek
+- Speakers staan al klaar als je Verbinden opent
+- Groepsvolume zoals de Sonos-app, dempknop
+- Drie puntjes bij een ruimte: groeperen, opheffen, toevoegen
+- Devices toont alle apparaten, Controls het apparaat dat speelt
+- Soepeler scrollen, nettere speaker-pil in de speler
+- Foto's bij Your artists this week
+- Hoesjes via de speaker zelf met /getaa pad
+- Speaker-pil toont groepsicoon en bewegende balkjes voor Sonos
 
 Ook in deze versie (sinds 0.7.5-mod.1):
 - Your Mix-kaart opent de hele lijst, vlaggen als sticker op de genrekleur
