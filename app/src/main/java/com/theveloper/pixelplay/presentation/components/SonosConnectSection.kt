@@ -29,8 +29,11 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.material3.MotionScheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
-import androidx.compose.animation.animateContentSize
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -61,8 +64,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -121,21 +122,22 @@ import com.theveloper.pixelplay.utils.shapes.RoundedStarShape
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
 /** "This phone" at the top of the Devices tab, to bring the music back from Sonos or Cast. */
-internal fun LazyListScope.thisPhoneItem(selected: Boolean, onSelect: () -> Unit) {
-    item(key = "sonosThisPhone") {
-        OutputRow(
-            title = stringResource(R.string.sonos_this_phone),
-            status = stringResource(if (selected) R.string.cast_status_connected else R.string.cast_status_available),
-            icon = Icons.Rounded.PhoneAndroid,
-            isSelected = selected,
-            isBusy = false,
-            onClick = onSelect
-        )
-    }
+@Composable
+internal fun ThisPhoneRow(selected: Boolean, onSelect: () -> Unit) {
+    OutputRow(
+        title = stringResource(R.string.sonos_this_phone),
+        status = stringResource(if (selected) R.string.cast_status_connected else R.string.cast_status_available),
+        icon = Icons.Rounded.PhoneAndroid,
+        isSelected = selected,
+        isBusy = false,
+        onClick = onSelect,
+        modifier = Modifier.padding(bottom = DeviceRowSpacing)
+    )
 }
 
 /** The Sonos rooms, below the Cast devices in the Devices tab. */
-internal fun LazyListScope.sonosDeviceItems(
+@Composable
+internal fun SonosDeviceSection(
     groups: List<SonosGroup>,
     session: SonosSessionState?,
     isScanning: Boolean,
@@ -146,66 +148,64 @@ internal fun LazyListScope.sonosDeviceItems(
     onStop: () -> Unit,
     onRefresh: () -> Unit
 ) {
-    item(key = "sonosHeader") {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp, bottom = DeviceRowSpacing),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.sonos_section_title),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-                val hint = when {
-                    isScanning && groups.isEmpty() -> stringResource(R.string.sonos_searching)
-                    groups.isEmpty() -> stringResource(R.string.sonos_none_found)
-                    else -> stringResource(R.string.sonos_tap_hint)
-                }
-                AnimatedContent(
-                    targetState = hint,
-                    transitionSpec = { fadeIn(sonosMotion.defaultEffectsSpec()) togetherWith fadeOut(sonosMotion.fastEffectsSpec()) },
-                    label = "sonosHint"
-                ) { text ->
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            Text(
+                text = stringResource(R.string.sonos_section_title),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            )
+            val hint = when {
+                isScanning && groups.isEmpty() -> stringResource(R.string.sonos_searching)
+                groups.isEmpty() -> stringResource(R.string.sonos_none_found)
+                else -> stringResource(R.string.sonos_tap_hint)
             }
-            IconButton(
-                onClick = onRefresh,
-                enabled = !isScanning,
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                ),
-                modifier = Modifier.clip(RoundedCornerShape(16.dp))
-            ) {
-                AnimatedContent(
-                    targetState = isScanning,
-                    transitionSpec = {
-                        (fadeIn(sonosMotion.defaultEffectsSpec()) + scaleIn(sonosMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
-                            (fadeOut(sonosMotion.fastEffectsSpec()) + scaleOut(sonosMotion.fastSpatialSpec(), targetScale = 0.6f))
-                    },
-                    label = "sonosRefreshIcon"
-                ) { scanning ->
-                    if (scanning) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.sonos_refresh))
-                    }
+            AnimatedContent(
+                targetState = hint,
+                transitionSpec = { fadeIn(sonosMotion.defaultEffectsSpec()) togetherWith fadeOut(sonosMotion.fastEffectsSpec()) },
+                label = "sonosHint"
+            ) { text ->
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        IconButton(
+            onClick = onRefresh,
+            enabled = !isScanning,
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            modifier = Modifier.clip(RoundedCornerShape(16.dp))
+        ) {
+            AnimatedContent(
+                targetState = isScanning,
+                transitionSpec = {
+                    (fadeIn(sonosMotion.defaultEffectsSpec()) + scaleIn(sonosMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
+                        (fadeOut(sonosMotion.fastEffectsSpec()) + scaleOut(sonosMotion.fastSpatialSpec(), targetScale = 0.6f))
+                },
+                label = "sonosRefreshIcon"
+            ) { scanning ->
+                if (scanning) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.sonos_refresh))
                 }
             }
         }
     }
-    items(groups, key = { "sonos_${it.coordinatorUuid}" }) { group ->
+    AnimatedRows(items = groups, key = { "sonos_${it.coordinatorUuid}" }, spacing = DeviceRowSpacing) { group ->
         val isActive = session?.group?.coordinatorUuid == group.coordinatorUuid
         val status = when {
             isActive && session?.isConnecting == true -> stringResource(R.string.sonos_connecting)
@@ -221,11 +221,6 @@ internal fun LazyListScope.sonosDeviceItems(
             isSelected = isActive,
             isBusy = isActive && session?.isConnecting == true,
             onClick = { onSelectGroup(group) },
-            modifier = Modifier.animateItem(
-                fadeInSpec = sonosMotion.defaultEffectsSpec(),
-                placementSpec = sonosMotion.defaultSpatialSpec(),
-                fadeOutSpec = sonosMotion.fastEffectsSpec()
-            ),
             trailing = { tint ->
                 SonosRowMenu(
                     group = group,
@@ -242,6 +237,62 @@ internal fun LazyListScope.sonosDeviceItems(
         )
     }
 }
+
+internal val DeviceRowSpacing = 16.dp
+
+/**
+ * A list whose rows slide open and shut instead of popping: a row that leaves stays until
+ * it has closed, so whatever holds the list shrinks in one smooth movement.
+ * The spacing belongs to the row, or a closed row would still leave a gap behind.
+ */
+@Composable
+internal fun <T> AnimatedRows(
+    items: List<T>,
+    key: (T) -> Any,
+    spacing: Dp = 0.dp,
+    content: @Composable (T) -> Unit
+) {
+    val currentKeys = items.map(key).toSet()
+    val closed = remember { mutableStateListOf<Any>() }
+    val rendered = remember { arrayOf<List<T>>(emptyList()) }
+    val firstPass = remember { booleanArrayOf(true) }
+    val rows = items.toMutableList()
+    rendered[0].forEachIndexed { index, old ->
+        val oldKey = key(old)
+        if (oldKey !in currentKeys && oldKey !in closed) rows.add(index.coerceAtMost(rows.size), old)
+    }
+    SideEffect {
+        rendered[0] = rows
+        firstPass[0] = false
+    }
+    LaunchedEffect(currentKeys) { closed.removeAll(currentKeys) }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        rows.forEach { row ->
+            val rowKey = key(row)
+            key(rowKey) {
+                // Rows that are there when the list first shows do not animate in.
+                val visibility = remember { MutableTransitionState(firstPass[0]) }
+                visibility.targetState = rowKey in currentKeys
+                AnimatedVisibility(
+                    visibleState = visibility,
+                    enter = expandVertically(RowSizeSpec) + fadeIn(sonosMotion.defaultEffectsSpec()),
+                    exit = shrinkVertically(RowSizeSpec) + fadeOut(sonosMotion.fastEffectsSpec())
+                ) {
+                    Box(modifier = Modifier.padding(bottom = spacing)) { content(row) }
+                }
+                if (visibility.isIdle && !visibility.currentState) {
+                    LaunchedEffect(Unit) { closed += rowKey }
+                }
+            }
+        }
+    }
+}
+
+/** No bounce on heights: the sheet follows them, and two springs bouncing together look like a stutter. */
+private val RowSizeSpec = spring<IntSize>(
+    dampingRatio = Spring.DampingRatioNoBouncy,
+    stiffness = Spring.StiffnessLow
+)
 
 /** Material 3 Expressive motion, the same scheme the player sheet and range chips use. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -338,34 +389,31 @@ internal fun BoxScope.DeviceIconBackdrop(active: Boolean, color: Color) {
 }
 
 /**
- * Three bars that dance while the speakers play and settle when they pause, in place of
- * a plain dot. The heights change in the draw phase only.
+ * Three dancing bars for a speaker that is playing. They only exist while it plays, so they
+ * never rest as three dots. The heights change in the draw phase only.
  */
 @Composable
-internal fun SonosPlayingBars(playing: Boolean, color: Color, modifier: Modifier = Modifier) {
+internal fun SpeakerPlayingBars(color: Color, modifier: Modifier = Modifier) {
     val bars = remember { List(3) { Animatable(0.35f) } }
-    LaunchedEffect(playing) {
+    LaunchedEffect(Unit) {
         bars.forEachIndexed { i, bar ->
             launch {
-                if (!playing) {
-                    bar.animateTo(0.35f, sonosMotion.fastSpatialSpec())
-                    return@launch
-                }
                 delay(i * 120L)
                 while (true) {
-                    bar.animateTo(Random.nextDouble(0.55, 1.0).toFloat(), tween(Random.nextInt(240, 420)))
-                    bar.animateTo(Random.nextDouble(0.2, 0.5).toFloat(), tween(Random.nextInt(240, 420)))
+                    bar.animateTo(Random.nextDouble(0.6, 1.0).toFloat(), tween(Random.nextInt(240, 420)))
+                    bar.animateTo(Random.nextDouble(0.3, 0.55).toFloat(), tween(Random.nextInt(240, 420)))
                 }
             }
         }
     }
-    Canvas(modifier = modifier.size(width = 14.dp, height = 12.dp)) {
-        val barWidth = size.width / 5f
+    Canvas(modifier = modifier) {
+        val barWidth = size.width / 4.2f
+        val gap = (size.width - barWidth * 3) / 2
         bars.forEachIndexed { i, bar ->
             val height = size.height * bar.value
             drawRoundRect(
                 color = color,
-                topLeft = Offset(i * 2 * barWidth, size.height - height),
+                topLeft = Offset(i * (barWidth + gap), (size.height - height) / 2),
                 size = Size(barWidth, height),
                 cornerRadius = CornerRadius(barWidth / 2f)
             )
@@ -406,7 +454,6 @@ private fun OutputRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Min)
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -495,29 +542,21 @@ internal fun SonosActiveCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(sonosMotion.defaultSpatialSpec())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // No intrinsic height here: it would hold on to the old two-line title and end in a jump.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .width(62.dp),
+                        .size(62.dp)
+                        .background(onContainer.copy(alpha = 0.12f), iconShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(62.dp)
-                            .background(onContainer.copy(alpha = 0.12f), iconShape),
-                        contentAlignment = Alignment.Center
-                    ) {
                         val grouped = state.group.members.size > 1
                         AnimatedContent(
                             targetState = if (state.isConnecting) 0 else if (grouped) 2 else 1,
@@ -543,7 +582,6 @@ internal fun SonosActiveCard(
                                 )
                             }
                         }
-                    }
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AnimatedContent(
@@ -627,30 +665,17 @@ internal fun SonosActiveCard(
                 muted = state.isMuted,
                 onToggleMute = onToggleMute.takeIf { !state.isConnecting }
             )
-            AnimatedVisibility(
-                visible = grouped,
-                enter = expandVertically(sonosMotion.defaultSpatialSpec()) + fadeIn(sonosMotion.defaultEffectsSpec()),
-                exit = shrinkVertically(sonosMotion.fastSpatialSpec()) + fadeOut(sonosMotion.fastEffectsSpec())
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    state.group.members.forEach { speaker ->
-                        key(speaker.uuid) {
-                            // A room that joins slides open instead of popping in.
-                            val appear = remember { MutableTransitionState(false).apply { targetState = true } }
-                            AnimatedVisibility(
-                                visibleState = appear,
-                                enter = expandVertically(sonosMotion.defaultSpatialSpec()) + fadeIn(sonosMotion.defaultEffectsSpec())
-                            ) {
-                                VolumeRow(
-                                    label = speaker.name,
-                                    value = state.speakerVolumes[speaker.uuid],
-                                    onValueChange = { onSpeakerVolume(speaker.uuid, it) },
-                                    prominent = false
-                                )
-                            }
-                        }
-                    }
-                }
+            AnimatedRows(
+                items = if (grouped) state.group.members else emptyList(),
+                key = { it.uuid },
+                spacing = 10.dp
+            ) { speaker ->
+                VolumeRow(
+                    label = speaker.name,
+                    value = state.speakerVolumes[speaker.uuid],
+                    onValueChange = { onSpeakerVolume(speaker.uuid, it) },
+                    prominent = false
+                )
             }
         }
     }

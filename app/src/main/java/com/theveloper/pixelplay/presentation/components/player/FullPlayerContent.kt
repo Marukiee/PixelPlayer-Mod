@@ -7,9 +7,14 @@ import android.net.Uri
 import com.theveloper.pixelplay.data.model.Lyrics
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -111,7 +116,7 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.SpeakerGroup
-import com.theveloper.pixelplay.presentation.components.SonosPlayingBars
+import com.theveloper.pixelplay.presentation.components.SpeakerPlayingBars
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.derivedStateOf
@@ -161,6 +166,18 @@ private const val PREVIOUS_TRACK_RESTART_THRESHOLD_MS = 10_000L
 private const val SKIP_COMMAND_GUARD_MS = 96L
 
 private enum class SkipDirection { PREVIOUS, NEXT }
+
+/** Where the music comes out, for the pill in the top bar. */
+private enum class PlayerOutputIcon(@DrawableRes val drawable: Int) {
+    Speaker(R.drawable.rounded_speaker_24),
+    SpeakerGroup(R.drawable.rounded_speaker_24),
+    Cast(R.drawable.rounded_cast_24),
+    Bluetooth(R.drawable.rounded_bluetooth_24),
+    Phone(R.drawable.rounded_mobile_speaker_24)
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private val playerMotion = MotionScheme.expressive()
 
 private suspend fun validateLyricsImport(
     context: Context,
@@ -717,7 +734,12 @@ fun FullPlayerContent(
                     ),
                     title = {
                         if (!isCastConnecting) {
-                            AnimatedVisibility(visible = (!isRemotePlaybackActive)) {
+                            // The speaker pill says where the music plays, so it takes the title's room.
+                            AnimatedVisibility(
+                                visible = !isRemotePlaybackActive && sonosSession == null,
+                                enter = fadeIn(playerMotion.defaultEffectsSpec()),
+                                exit = fadeOut(playerMotion.fastEffectsSpec())
+                            ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         modifier = Modifier.padding(start = 18.dp),
@@ -773,56 +795,52 @@ fun FullPlayerContent(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val sonosShortName = sonosSession?.group?.shortName
-                            val isSonosGroup = (sonosSession?.group?.members?.size ?: 1) > 1
+                            val sonosGroup = sonosSession?.group
                             val sonosConnecting = sonosSession?.isConnecting == true
-                            val showCastLabel = isCastConnecting || (isRemotePlaybackActive && selectedRouteName != null) || sonosShortName != null
+                            val showCastLabel = isCastConnecting || (isRemotePlaybackActive && selectedRouteName != null) || sonosGroup != null
                             val isBluetoothActive =
                                 isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && !isRemotePlaybackActive && !isCastConnecting &&
-                                    sonosShortName == null
-                            val castIconPainter = when {
-                                sonosShortName != null -> painterResource(R.drawable.rounded_speaker_24)
-                                isCastConnecting || isRemotePlaybackActive -> painterResource(R.drawable.rounded_cast_24)
-                                isBluetoothActive -> painterResource(R.drawable.rounded_bluetooth_24)
-                                else -> painterResource(R.drawable.rounded_mobile_speaker_24)
+                                    sonosGroup == null
+                            val outputIcon = when {
+                                sonosGroup != null && sonosGroup.members.size > 1 -> PlayerOutputIcon.SpeakerGroup
+                                sonosGroup != null -> PlayerOutputIcon.Speaker
+                                isCastConnecting || isRemotePlaybackActive -> PlayerOutputIcon.Cast
+                                isBluetoothActive -> PlayerOutputIcon.Bluetooth
+                                else -> PlayerOutputIcon.Phone
                             }
-                            val castCornersExpanded = 50.dp
-                            val castCornersCompact = 6.dp
-                            val castTopStart = castCornersExpanded
-                            val castTopEnd by animateDpAsState(
-                                targetValue = if (showCastLabel) castCornersExpanded else castCornersCompact,
-                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                            )
-                            val castBottomStart = castCornersExpanded
-                            val castBottomEnd by animateDpAsState(
-                                targetValue = if (showCastLabel) castCornersExpanded else castCornersCompact,
-                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                            )
-                            val castContainerColor = playerOnAccentColor.copy(alpha = 0.7f)
+                            // Bars in the icon's place while the speakers play; the speaker itself when paused.
+                            val showPlayingBars = when {
+                                sonosGroup != null -> sonosSession?.isPlaying == true && !sonosConnecting
+                                else -> isRemotePlaybackActive && !isCastConnecting && isPlayingProvider()
+                            }
+                            val pillLabel = when {
+                                isCastConnecting || sonosConnecting -> stringResource(R.string.player_connecting)
+                                sonosGroup != null -> sonosGroup.coordinator.name
+                                isRemotePlaybackActive && selectedRouteName != null -> selectedRouteName
+                                else -> ""
+                            }
+                            val extraRooms = if (sonosConnecting) 0 else (sonosGroup?.members?.size ?: 1) - 1
+                            // One half of a segmented pair with the options button next to it, like the top bar in Android's own players.
                             Box(
                                 modifier = Modifier
                                     .height(42.dp)
                                     .align(Alignment.CenterVertically)
-                                    .animateContentSize(
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                                            stiffness = Spring.StiffnessLow
-                                        )
-                                    )
-                                    .widthIn(
-                                        min = 50.dp,
-                                        max = if (showCastLabel) 190.dp else 58.dp
-                                    )
                                     .clip(
                                         RoundedCornerShape(
-                                            topStart = castTopStart.coerceAtLeast(0.dp),
-                                            topEnd = castTopEnd.coerceAtLeast(0.dp),
-                                            bottomStart = castBottomStart.coerceAtLeast(0.dp),
-                                            bottomEnd = castBottomEnd.coerceAtLeast(0.dp)
+                                            topStart = 50.dp,
+                                            topEnd = 6.dp,
+                                            bottomStart = 50.dp,
+                                            bottomEnd = 6.dp
                                         )
                                     )
-                                    .background(castContainerColor)
-                                    .clickable { onShowCastClicked() },
+                                    .background(playerOnAccentColor.copy(alpha = 0.7f))
+                                    .clickable { onShowCastClicked() }
+                                    // Outside the clip's content so the whole pill stretches and settles, not just what is in it.
+                                    .animateContentSize(playerMotion.defaultSpatialSpec())
+                                    .widthIn(
+                                        min = 50.dp,
+                                        max = if (showCastLabel) 210.dp else 58.dp
+                                    ),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Row(
@@ -831,55 +849,83 @@ fun FullPlayerContent(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Start
                                 ) {
-                                    if (isSonosGroup) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.SpeakerGroup,
-                                            contentDescription = when {
-                                                isCastConnecting || isRemotePlaybackActive -> stringResource(R.string.player_cd_cast)
-                                                isBluetoothActive -> stringResource(R.string.player_cd_bluetooth)
-                                                else -> stringResource(R.string.player_cd_local_playback)
-                                            },
-                                            tint = playerAccentColor
-                                        )
-                                    } else {
-                                        Icon(
-                                            painter = castIconPainter,
-                                            contentDescription = when {
-                                                isCastConnecting || isRemotePlaybackActive -> stringResource(R.string.player_cd_cast)
-                                                isBluetoothActive -> stringResource(R.string.player_cd_bluetooth)
-                                                else -> stringResource(R.string.player_cd_local_playback)
-                                            },
-                                            tint = playerAccentColor
-                                        )
+                                    AnimatedContent(
+                                        targetState = if (showPlayingBars) null else outputIcon,
+                                        transitionSpec = {
+                                            (fadeIn(playerMotion.defaultEffectsSpec()) + scaleIn(playerMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
+                                                (fadeOut(playerMotion.fastEffectsSpec()) + scaleOut(playerMotion.fastSpatialSpec(), targetScale = 0.6f))
+                                        },
+                                        modifier = Modifier.size(24.dp),
+                                        contentAlignment = Alignment.Center,
+                                        label = "castButtonIcon"
+                                    ) { icon ->
+                                        val description = when {
+                                            sonosGroup != null -> stringResource(R.string.sonos_playing_on, sonosGroup.displayName)
+                                            isCastConnecting || isRemotePlaybackActive -> stringResource(R.string.player_cd_cast)
+                                            isBluetoothActive -> stringResource(R.string.player_cd_bluetooth)
+                                            else -> stringResource(R.string.player_cd_local_playback)
+                                        }
+                                        when (icon) {
+                                            null -> SpeakerPlayingBars(
+                                                color = playerAccentColor,
+                                                modifier = Modifier
+                                                    .size(width = 18.dp, height = 16.dp)
+                                                    .semantics { contentDescription = description }
+                                            )
+                                            PlayerOutputIcon.SpeakerGroup -> Icon(
+                                                imageVector = Icons.Rounded.SpeakerGroup,
+                                                contentDescription = description,
+                                                tint = playerAccentColor
+                                            )
+                                            else -> Icon(
+                                                painter = painterResource(icon.drawable),
+                                                contentDescription = description,
+                                                tint = playerAccentColor
+                                            )
+                                        }
                                     }
-                                    AnimatedVisibility(visible = showCastLabel) {
+                                    // The pill's own size animation moves the width, so this only fades.
+                                    AnimatedVisibility(
+                                        visible = showCastLabel,
+                                        enter = fadeIn(playerMotion.defaultEffectsSpec()),
+                                        exit = fadeOut(playerMotion.fastEffectsSpec())
+                                    ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Spacer(Modifier.width(8.dp))
                                             AnimatedContent(
-                                                targetState = when {
-                                                    isCastConnecting || sonosConnecting -> stringResource(R.string.player_connecting)
-                                                    sonosShortName != null -> sonosShortName
-                                                    isRemotePlaybackActive && selectedRouteName != null -> selectedRouteName
-                                                    else -> ""
-                                                },
+                                                targetState = pillLabel to extraRooms,
                                                 transitionSpec = {
-                                                    fadeIn(animationSpec = tween(150)) togetherWith fadeOut(animationSpec = tween(120))
+                                                    fadeIn(playerMotion.defaultEffectsSpec()) togetherWith fadeOut(playerMotion.fastEffectsSpec()) using
+                                                        SizeTransform(clip = false) { _, _ -> snap() }
                                                 },
                                                 label = "castButtonLabel"
-                                            ) { label ->
+                                            ) { (label, extra) ->
                                                 Row(
-                                                    modifier = Modifier.padding(end = 16.dp),
+                                                    modifier = Modifier.padding(end = 14.dp),
                                                     verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                 ) {
                                                     Text(
                                                         text = label,
-                                                        style = MaterialTheme.typography.labelMedium,
+                                                        style = MaterialTheme.typography.labelLarge,
                                                         color = playerAccentColor,
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis,
                                                         modifier = Modifier.weight(1f, fill = false)
                                                     )
+                                                    // Its own chip, so a long room name can never cut the count off.
+                                                    if (extra > 0) {
+                                                        Text(
+                                                            text = "+$extra",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = playerAccentColor,
+                                                            maxLines = 1,
+                                                            modifier = Modifier
+                                                                .background(playerAccentColor.copy(alpha = 0.14f), CircleShape)
+                                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
                                                     AnimatedVisibility(visible = isCastConnecting || sonosConnecting) {
                                                         CircularProgressIndicator(
                                                             modifier = Modifier
@@ -887,22 +933,6 @@ fun FullPlayerContent(
                                                             strokeWidth = 2.dp,
                                                             color = playerAccentColor
                                                         )
-                                                    }
-                                                    if ((isRemotePlaybackActive && !isCastConnecting) || (sonosShortName != null && !sonosConnecting)) {
-                                                        if (sonosShortName != null) {
-                                                            SonosPlayingBars(
-                                                                playing = sonosSession?.isPlaying == true,
-                                                                color = playerAccentColor,
-                                                                modifier = Modifier.size(14.dp, 12.dp)
-                                                            )
-                                                        } else {
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .size(8.dp)
-                                                                    .clip(CircleShape)
-                                                                    .background(LocalMaterialTheme.current.onTertiaryContainer)
-                                                            )
-                                                        }
                                                     }
                                                 }
                                             }

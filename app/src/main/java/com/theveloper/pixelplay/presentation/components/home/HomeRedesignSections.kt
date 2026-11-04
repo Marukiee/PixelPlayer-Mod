@@ -16,6 +16,9 @@ import androidx.compose.ui.layout.ContentScale
 import com.theveloper.pixelplay.ui.theme.GenreThemeUtils
 import com.theveloper.pixelplay.ui.theme.LocalPixelPlayDarkTheme
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -321,11 +324,12 @@ fun HomeRecentlyPlayedRow(
             itemsIndexed(items, key = { _, item -> item.song.id }, contentType = { _, _ -> "recent_cover" }) { index, item ->
                 val song = item.song
                 val coverShape = coverShapes[index % coverShapes.size]
-                // No rounded clip on the whole item: its bottom corner cut off the first letter of the artist.
+                // The ripple stays inside the cover's shape, or holding an item shows a grey box around its text.
+                val interaction = remember { MutableInteractionSource() }
                 Column(
                     modifier = Modifier
                         .width(132.dp)
-                        .clickable { onSongClick(song) }
+                        .clickable(interactionSource = interaction, indication = null) { onSongClick(song) }
                 ) {
                     Box {
                         SmartImage(
@@ -336,6 +340,7 @@ fun HomeRecentlyPlayedRow(
                             modifier = Modifier
                                 .size(132.dp)
                                 .clip(coverShape)
+                                .indication(interaction, ripple())
                         )
                         if (song.id == currentSongId) {
                             Box(
@@ -676,11 +681,18 @@ fun HomeTopArtistsRow(
             itemsIndexed(artists, key = { _, artist -> artist.name }, contentType = { _, _ -> "top_artist" }) { index, artist ->
                 val artistId = artist.artistId
                 val artistShape = artistShapes[index % artistShapes.size]
+                val interaction = remember { MutableInteractionSource() }
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .width(84.dp)
-                        .then(if (artistId != null) Modifier.clickable { onArtistClick(artistId) } else Modifier)
+                        .then(
+                            if (artistId != null) {
+                                Modifier.clickable(interactionSource = interaction, indication = null) { onArtistClick(artistId) }
+                            } else {
+                                Modifier
+                            }
+                        )
                 ) {
                     if (artist.imageModel != null) {
                         SmartImage(
@@ -691,13 +703,15 @@ fun HomeTopArtistsRow(
                             modifier = Modifier
                                 .size(84.dp)
                                 .clip(artistShape)
+                                .indication(interaction, ripple())
                         )
                     } else {
                         Box(
                             modifier = Modifier
                                 .size(84.dp)
                                 .clip(artistShape)
-                                .background(colors.secondaryContainer),
+                                .background(colors.secondaryContainer)
+                                .indication(interaction, ripple()),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

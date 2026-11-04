@@ -84,6 +84,7 @@ class SonosController @Inject constructor(
     private var active: ActiveSession? = null
     private var observedPlayer: Player? = null
     private var volumeJob: Job? = null
+    private var pendingVolume: (suspend () -> Unit)? = null
     private var lastVolumeChangeAt = 0L
     /** Each room's volume at the start of the current group volume change. */
     private var volumeShares: Map<String, Int>? = null
@@ -382,12 +383,21 @@ class SonosController @Inject constructor(
         return true
     }
 
+    /**
+     * Sends only the newest volume, one at a time: a call that is already on its way cannot be
+     * taken back, so sending the next one alongside it could let the older value win.
+     */
     private fun sendVolume(block: suspend () -> Unit) {
         lastVolumeChangeAt = SystemClock.elapsedRealtime()
-        volumeJob?.cancel()
+        pendingVolume = block
+        if (volumeJob?.isActive == true) return
         volumeJob = scope.launch {
             delay(90)
-            runCatching { block() }.onFailure(::report)
+            while (true) {
+                val next = pendingVolume ?: break
+                pendingVolume = null
+                runCatching { next() }.onFailure(::report)
+            }
         }
     }
 
@@ -581,6 +591,7 @@ class SonosController @Inject constructor(
     private suspend fun fullReset(s: ActiveSession, current: SonosTrack, upcoming: List<SonosTrack>, local: LocalState) {
         s.lastResetAt = now()
         s.lastTrackCommandAt = now()
+        releaseOtherSource(s)
         avt(s, "RemoveAllTracksFromQueue")
         s.queue.clear()
         addToQueue(s, current)
@@ -599,6 +610,18 @@ class SonosController @Inject constructor(
             s.alignOnPlay = phoneAt > 1_500 && !preSeeked
         }
         appendTracks(s, upcoming)
+    }
+
+    /**
+     * Spotify Connect grabs a speaker back within a second when it loses it while playing, but
+     * lets go when it was paused first. Measured on real speakers, so pause whatever else is on.
+     */
+    private suspend fun releaseOtherSource(s: ActiveSession) {
+        if (avt(s, "GetMediaInfo")["CurrentURI"].orEmpty() == s.group.queueUri) return
+        val state = avt(s, "GetTransportInfo")["CurrentTransportState"]
+        if (state != "PLAYING" && state != "TRANSITIONING") return
+        runCatching { avt(s, "Pause") }
+        delay(RELEASE_SOURCE_MS)
     }
 
     /**
@@ -837,8 +860,9 @@ class SonosController @Inject constructor(
         private const val DRIFT_LIMIT_MS = 2_500L
         private const val WARM_UP_INTERVAL_MS = 60_000L
         private const val PLAY_START_TIMEOUT_MS = 4_000L
-        /** How long a speaker typically needs from Play to sound; the pre-seek aims that far ahead. */
-        private const val START_LEAD_MS = 700L
+        /** How long a speaker needs from Play to sound (measured: 0,5 to 0,6 s); the pre-seek aims that far ahead. */
+        private const val START_LEAD_MS = 550L
+        private const val RELEASE_SOURCE_MS = 300L
         private const val SEEK_LEAD_MS = 250L
         private const val ALIGN_TOLERANCE_MS = 1_200L
         /** Volume changes closer together than this count as one drag or run of key presses. */

@@ -1,14 +1,21 @@
+- Sonos neemt het nu ook over als Spotify op de speaker speelt
+- Speaker-pil in de speler sluit aan op de puntjes, met balkjes tijdens het spelen en een `+1` voor de groep
+- Verbinden-paneel krimpt soepel als speakers weggaan
+- Geen grijze box meer als je iets op de homepage vasthoudt
+
+Ook in deze versie (sinds 0.7.5-mod.1):
 - Overzetten naar Sonos gaat verder op dezelfde plek
 - Speakers staan al klaar als je Verbinden opent
 - Groepsvolume zoals de Sonos-app, dempknop
 - Drie puntjes bij een ruimte: groeperen, opheffen, toevoegen
 - Devices toont alle apparaten, Controls het apparaat dat speelt
-- Soepeler scrollen, nettere speaker-pil in de speler
+- Soepeler scrollen in het verbinden-paneel
 - Foto's bij Your artists this week
-- Hoesjes via de speaker zelf met /getaa pad
-- Speaker-pil toont groepsicoon en bewegende balkjes voor Sonos
-
-Ook in deze versie (sinds 0.7.5-mod.1):
+- Thuisadres voor Sonos (Instellingen > Sonos): de app blijft Tailscale gebruiken, de speakers krijgen je thuisadres
+- Afspelen op Sonos: kies een ruimte bij de verbindknop in de speler, de speakers spelen vanaf Navidrome
+- Groeperen met vinkjes zoals in de Sonos-app, groepsvolume en volume per speaker
+- De hele wachtrij staat op de Sonos, dus hij speelt door als je telefoon uit is
+- Volumeknoppen regelen de Sonos; nieuw scherm Instellingen > Sonos
 - Your Mix-kaart opent de hele lijst, vlaggen als sticker op de genrekleur
 - Genrepagina's met een kop met instrument of vlag
 - Bovenbalk opgeschoond, speelsere vormen, Recently Played met collage

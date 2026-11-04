@@ -50,10 +50,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -62,7 +66,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -448,9 +451,9 @@ fun CastBottomSheet(
                             }
                         },
                         extraDeviceCount = if (sonosEnabled) 1 + sonosGroups.size else 0,
-                        leadingDeviceItems = {
+                        leadingDevices = {
                             if (sonosEnabled) {
-                                thisPhoneItem(
+                                ThisPhoneRow(
                                     selected = currentSonos == null && !isRemoteSession,
                                     onSelect = {
                                         when {
@@ -461,14 +464,14 @@ fun CastBottomSheet(
                                 )
                             }
                         },
-                        extraDeviceItems = {
+                        extraDevices = {
                             if (sonosEnabled) {
-                                sonosDeviceItems(
+                                SonosDeviceSection(
                                     groups = sonosGroups,
                                     session = currentSonos,
                                     isScanning = sonosScanning,
                                     onSelectGroup = { group ->
-                                        if (currentSonos?.group?.coordinatorUuid == group.coordinatorUuid) return@sonosDeviceItems
+                                        if (currentSonos?.group?.coordinatorUuid == group.coordinatorUuid) return@SonosDeviceSection
                                         if (isRemoteSession) {
                                             playerViewModel.disconnect()
                                             sheetScope.launch {
@@ -701,8 +704,8 @@ private fun CastSheetContent(
     startWithControls: Boolean = true,
     sonosHero: (@Composable () -> Unit)? = null,
     extraDeviceCount: Int = 0,
-    leadingDeviceItems: LazyListScope.() -> Unit = {},
-    extraDeviceItems: LazyListScope.() -> Unit = {}
+    leadingDevices: @Composable () -> Unit = {},
+    extraDevices: @Composable () -> Unit = {}
 ) {
     val allConnectivityOff = !state.wifiEnabled && !state.isBluetoothEnabled
     val configuration = LocalConfiguration.current
@@ -781,8 +784,10 @@ private fun CastSheetContent(
                 .fillMaxWidth()
                 .heightIn(max = maxPagerHeight)
                 .animateContentSize(
+                    // A spring keeps its speed when the target moves, so it follows the rows smoothly;
+                    // a tween would restart on every frame of their animation.
                     animationSpec = if (heightAnimationEnabled) {
-                        tween(durationMillis = 280, easing = FastOutSlowInEasing)
+                        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
                     } else {
                         snap()
                     },
@@ -799,12 +804,8 @@ private fun CastSheetContent(
                 when (page) {
                     0 -> CastControlsTabContent(
                         state = state,
-                        allConnectivityOff = allConnectivityOff,
                         onDisconnect = onDisconnect,
                         onVolumeChange = onVolumeChange,
-                        onTurnOnWifi = onTurnOnWifi,
-                        onOpenBluetoothSettings = onOpenBluetoothSettings,
-                        onRefresh = onRefresh,
                         bottomSpacing = 20.dp,
                         heroOverride = sonosHero,
                     )
@@ -818,8 +819,8 @@ private fun CastSheetContent(
                         onRefresh = onRefresh,
                         maxContentHeight = maxPagerHeight,
                         extraDeviceCount = extraDeviceCount,
-                        leadingDeviceItems = leadingDeviceItems,
-                        extraDeviceItems = extraDeviceItems,
+                        leadingDevices = leadingDevices,
+                        extraDevices = extraDevices,
                     )
                 }
             }
@@ -896,12 +897,8 @@ private fun CastSheetContent(
 @Composable
 private fun CastControlsTabContent(
     state: CastSheetUiState,
-    allConnectivityOff: Boolean,
     onDisconnect: () -> Unit,
     onVolumeChange: (Float) -> Unit,
-    onTurnOnWifi: () -> Unit,
-    onOpenBluetoothSettings: () -> Unit,
-    onRefresh: () -> Unit,
     bottomSpacing: Dp,
     heroOverride: (@Composable () -> Unit)? = null,
 ) {
@@ -986,86 +983,86 @@ private fun CastDevicesTabContent(
     onRefresh: () -> Unit,
     maxContentHeight: Dp,
     extraDeviceCount: Int = 0,
-    leadingDeviceItems: LazyListScope.() -> Unit = {},
-    extraDeviceItems: LazyListScope.() -> Unit = {},
+    leadingDevices: @Composable () -> Unit = {},
+    extraDevices: @Composable () -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
 
-    LazyColumn(
+    // A plain column, not a LazyColumn: a lazy list snaps to its new height right away, which
+    // cuts off the rows still sliding up. There are only a few rows, so nothing is lost.
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = maxContentHeight)
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 20.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 20.dp)
     ) {
         // With every radio off there is nothing to pick yet, so the switches come first.
         if (allConnectivityOff) {
-            item(key = "connectivity") {
-                ConnectivitySection(state, allConnectivityOff = true, onTurnOnWifi, onOpenBluetoothSettings)
-            }
-        }
-        if (!allConnectivityOff) {
-            item(key = "deviceSectionHeader") {
-                DeviceSectionHeader(
-                    modifier = Modifier.fillMaxWidth(),
-                    hasDevices = state.devices.isNotEmpty(),
-                        onRefresh = onRefresh
-                )
-            }
-
-            item(key = "refreshIndicator") {
-                AnimatedVisibility(
-                    visible = state.isRefreshing,
-                    enter = fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)),
-                    exit = fadeOut(animationSpec = tween(180)),
-                    label = "refreshIndicator"
-                ) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp)),
-                        color = colors.primary,
-                        trackColor = colors.primary.copy(alpha = 0.12f)
-                    )
-                }
-            }
-        }
-
-        leadingDeviceItems()
-
-        if (state.isScanning && state.devices.isEmpty() && extraDeviceCount == 0) {
-            item(key = "scanningPlaceholder") {
-                ScanningPlaceholderList()
-            }
-        } else if (state.devices.isEmpty()) {
-            if (extraDeviceCount == 0) {
-                item(key = "emptyDevices") {
-                    EmptyDeviceState()
-                }
-            }
+            ConnectivitySection(
+                state = state,
+                allConnectivityOff = true,
+                onTurnOnWifi = onTurnOnWifi,
+                onOpenBluetoothSettings = onOpenBluetoothSettings,
+                modifier = Modifier.padding(bottom = DeviceRowSpacing)
+            )
         } else {
-            items(state.devices, key = { it.id }) { device ->
-                CastDeviceRow(
-                    device = device,
-                    onSelect = { onSelectDevice(device.id) },
-                    onDisconnect = onDisconnect
+            DeviceSectionHeader(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = DeviceRowSpacing),
+                hasDevices = state.devices.isNotEmpty(),
+                onRefresh = onRefresh
+            )
+            AnimatedVisibility(
+                visible = state.isRefreshing,
+                enter = expandVertically() + fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)),
+                exit = shrinkVertically() + fadeOut(animationSpec = tween(180)),
+                label = "refreshIndicator"
+            ) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .padding(bottom = DeviceRowSpacing)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp)),
+                    color = colors.primary,
+                    trackColor = colors.primary.copy(alpha = 0.12f)
                 )
             }
         }
 
-        extraDeviceItems()
+        leadingDevices()
+
+        AnimatedVisibility(
+            visible = state.devices.isEmpty() && extraDeviceCount == 0,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut(),
+            label = "noDevices"
+        ) {
+            Box(modifier = Modifier.padding(bottom = DeviceRowSpacing)) {
+                if (state.isScanning) ScanningPlaceholderList() else EmptyDeviceState()
+            }
+        }
+
+        AnimatedRows(items = state.devices, key = { it.id }, spacing = DeviceRowSpacing) { device ->
+            CastDeviceRow(
+                device = device,
+                onSelect = { onSelectDevice(device.id) },
+                onDisconnect = onDisconnect
+            )
+        }
+
+        extraDevices()
 
         if (!allConnectivityOff) {
-            item(key = "connectivity") {
-                ConnectivitySection(
-                    state = state,
-                    allConnectivityOff = false,
-                    onTurnOnWifi = onTurnOnWifi,
-                    onOpenBluetoothSettings = onOpenBluetoothSettings,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
+            ConnectivitySection(
+                state = state,
+                allConnectivityOff = false,
+                onTurnOnWifi = onTurnOnWifi,
+                onOpenBluetoothSettings = onOpenBluetoothSettings,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
@@ -1743,12 +1740,9 @@ private fun CastDeviceRow(
         color = containerColor,
         tonalElevation = 2.dp
     ) {
-        // Usamos Row con IntrinsicSize.Min para que la altura se adapte al contenido de texto
-        // pero permita que el icono se centre verticalmente de forma real.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Min)
                 .padding(12.dp), // Padding uniforme en los 4 lados
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)

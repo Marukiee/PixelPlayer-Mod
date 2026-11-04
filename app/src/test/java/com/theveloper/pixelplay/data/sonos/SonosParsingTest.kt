@@ -173,26 +173,6 @@ class SonosParsingTest {
         assertThat(SonosController.groupVolumeTargets(mapOf("a" to 0, "b" to 0), 12)).isEqualTo(mapOf("a" to 12, "b" to 12))
     }
 
-    @Test
-    fun buildDidl_containsRelativeAlbumArtUriForSpeaker() {
-        val url = "http://10.0.0.5:4533/rest/stream.view?u=mark&t=abc&id=42"
-        val didl = SonosTrackResolver.buildDidl(
-            itemId = "pixelplay-42",
-            title = "Test song",
-            artist = "Test artist",
-            album = "Test album",
-            artUri = "http://10.0.0.5:4533/image/42/cover.jpg",
-            uri = url,
-            mimeType = "audio/flac",
-            durationMs = 180_000
-        )
-        // First albumArtURI is the relative /getaa URL with encoded stream URI.
-        assertThat(didl).contains("/getaa?s=1")
-        assertThat(didl).contains("u=http%3A%2F%2F10.0.0.5%3A4533%2Frest%2Fstream.view")
-        // Second albumArtURI is the original Navidrome URL.
-        assertThat(didl).contains("<upnp:albumArtURI>http://10.0.0.5:4533/image/42/cover.jpg</upnp:albumArtURI>")
-    }
-
     private fun entity(id: String, title: String, artist: String, album: String, durationMs: Long) = NavidromeSongEntity(
         id = id,
         navidromeId = id,

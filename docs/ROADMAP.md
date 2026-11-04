@@ -10,20 +10,9 @@ Volgorde gekozen door Mark (2026-11-02):
    - [ ] Volumeschuif in beeld als je in de app op de volumeknoppen drukt
    - [ ] Vanaf die volumeschuif ook het volume van de andere speakers in de groep regelen
    - [ ] Animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
-   - [ ] **Ronde mod.11** (wensen van Mark, 2026-11-02). Wat afgevinkt is, staat in commit `7d8ae11` op `mark-mod`, maar is nog niet gebouwd of getest. Mark heeft gevraagd te wachten tot hij zegt dat ik verder mag.
-     - [x] Overzetten van telefoon naar speaker gaat verder op dezelfde plek, met zo min mogelijk vertraging (vooruit spoelen vóór Play, daarna gelijkzetten zodra de speaker speelt)
-     - [x] Speakers staan al klaar voordat je Connect opent (bewaarde ruimtes plus zoeken op de achtergrond)
-     - [x] Groeperen-paneel schuift weg met animatie bij Klaar
-     - [x] Groepsvolume zoals de Sonos-app: elke speaker houdt zijn aandeel, dus de luide gaat sneller omlaag dan de zachte (50 en 10 naar groep 20 geeft 33 en 7)
-     - [x] Dempknop bij het groepsvolume
-     - [x] Drie puntjes bij een ruimte: hier afspelen, toevoegen aan wat speelt, ruimtes groeperen, groep opheffen, hier stoppen
-     - [x] Indeling: Devices toont alle apparaten plus wifi en Bluetooth; Controls alleen de bediening van het apparaat dat speelt
-     - [x] Devices-paneel scrolt soepeler (de draaiende vorm liet elke rij elk frame opnieuw opbouwen)
-     - [x] Foto's bij Your artists this week in plaats van initialen
-     - [x] Speaker-pil in de speler mooier: korte naam ("Marks kamer +1"), icoon in een vorm, bewegende balkjes in plaats van het stipje
-     - [x] Hoesjes in de Sonos-app: hoes via de speaker zelf (`/getaa?s=1&u=<stream-URL>`) met de Navidrome-URL als tweede; alleen te controleren op Marks echte speakers
-     - [x] Hoes in de Drip-pil: lag aan Drip (koos de mediasessie van de Sonos-app). Opgelost aan de Drip-kant, komt in de volgende Drip-release; PixelPlayer hoeft niets
-     - [ ] Bouwen, testen op de emulator (Navidrome plus nep-Sonos), uitbrengen als 0.7.5-mod.11
+   - [x] **Ronde mod.11 en mod.12** (wensen van Mark, 2026-11-02 en 2026-11-04): overzetten op dezelfde plek, speakers vooraf klaar, groepsvolume zoals de Sonos-app, dempknop, drie puntjes, nieuwe indeling, soepel scrollen en krimpen, artiestfoto's, speaker-pil, Spotify overnemen, geen grijze box op de homepage
+   - [x] Hoes in de Drip-pil: lag aan Drip (koos de mediasessie van de Sonos-app). Opgelost aan de Drip-kant; PixelPlayer hoeft niets
+   - [ ] Hoesjes in de Sonos-app (zie "Hoesjes in de Sonos-app" hieronder): Mark wil eigen hoezen, geen Deezer
 2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
 3. [ ] Spotify: te kopen-lijst
 4. [ ] Spotify: nieuwe releases
@@ -84,6 +73,22 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 - `SonosTrackResolver` koppelt nummers aan de Navidrome-cache (titel, artiest, album, duur). Hi-res (boven 48 kHz) en Opus of DSD vraagt hij als MP3 320 op, omdat Sonos die niet afspeelt.
 - Thuisadres (0.7.5-mod.10): de app gebruikt het Navidrome-inlogadres (bij Mark Tailscale, `100.86.14.39`), de speakers krijgen het adres uit Instellingen > Sonos (`http://192.168.1.157:4533`, maruks-server). `SonosTrackResolver.rebase` zet het begin van de stream- en hoes-URL om.
 - Getest op de emulator tegen een echte Navidrome en een nep-Sonos met drie speakers, en door Mark thuis op zijn echte speakers: werkt (2026-11-02).
+- Spotify (0.7.5-mod.12): gemeten op de speakers. Speelt Spotify Connect (`x-sonos-vli:`) en zet je de wachtrij erop, dan pakt Spotify de speaker binnen 0,6 seconde terug. Pauzeer je eerst en wacht je 300 ms, dan laat Spotify los. Daarna kost overzetten ongeveer 0,6 seconde (Seek terwijl gestopt werkt meteen, Play tot geluid 0,5 tot 0,6 seconde).
+
+### Hoesjes in de Sonos-app (open)
+
+Gemeten op Marks echte speakers en de Sonos-app (Android) op 2026-11-04:
+
+- **http (Navidrome thuis):** de app toont geen hoes en vraagt hem niet eens op; een testserver kreeg geen verzoek, ook niet van de speaker.
+- **Openbare https (Deezer-link):** werkt meteen.
+- **https via Tailscale (`tailscale serve`, geldig certificaat):** geen hoes en geen verzoek, ook niet toen de telefoon de naam kon opzoeken ("Use Tailscale DNS" aan). De telefoon haalt de hoes dus niet zelf op; waarschijnlijk doet de Sonos-cloud dat, en die kan alleen bij openbare adressen.
+- **`/getaa?s=1&u=<stream-URL>` op de speaker:** 404 voor http-streams. Gebouwd in mod.11 en in mod.12 weer weggehaald, want de app pakt de eerste hoes in de lijst.
+- **Hoes in de metadata (`data:image/jpeg;base64`):** de speaker weigert dat (UPnP 804, te lang, al bij 15 kB).
+
+Wat overblijft:
+
+1. **Tailscale Funnel op maruks-server, alleen voor het hoes-pad** (`tailscale funnel --bg --set-path=/rest/getCoverArt.view http://localhost:4533/rest/getCoverArt.view`). Eigen hoezen, maar dat pad wordt openbaar, en de link bevat het Subsonic-token. Eerst testen met een testplaatje of hij dan wel wordt opgehaald en door wie. Daarna een instelling "adres voor hoesjes" en `SonosTrackResolver.rebase` gebruiken.
+2. **Deezer** (`search/album`, `cover_xl`): werkte in de test en is simpel, maar Mark wil dit liever niet.
 
 ### Sonos-volume (wens van Mark, 2026-11-02, nog niet bouwen)
 

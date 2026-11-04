@@ -47,5 +47,6 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 - Thuisadres voor Sonos: gebruikt de app Navidrome via Tailscale, dan krijgen alleen de speakers het adres op je thuisnetwerk
 - Menu met drie puntjes: hier afspelen, toevoegen aan wat speelt, ruimtes groeperen, groep opheffen, hier stoppen
 - Dempknop bij het groepsvolume
-- Speaker-pil toont korte naam en groepsicoon; bewegende balkjes in plaats van stipje voor Sonos
-- Hoesjes via de speaker zelf met /getaa pad
+- Groepsvolume zoals de Sonos-app: elke speaker houdt zijn aandeel, dus de luide gaat sneller omlaag dan de zachte
+- Speelt Spotify op de speaker, dan pauzeert de app dat eerst, anders pakt Spotify de speaker meteen terug
+- De pil in de speler toont de ruimte met `+1` voor de groep, en bewegende balkjes tijdens het spelen
