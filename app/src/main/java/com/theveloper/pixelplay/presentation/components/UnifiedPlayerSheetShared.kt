@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -81,7 +83,8 @@ internal enum class PlayerOutputIcon(@DrawableRes val drawable: Int) {
     SpeakerGroup(R.drawable.rounded_speaker_24),
     Cast(R.drawable.rounded_cast_24),
     Bluetooth(R.drawable.rounded_bluetooth_24),
-    Phone(R.drawable.rounded_mobile_speaker_24);
+    // A plain speaker, like Spotify; the colour and the pill's label say when it is not the phone.
+    Phone(R.drawable.rounded_speaker_24);
 
     val isPhone: Boolean get() = this == Phone
 
@@ -204,8 +207,8 @@ internal fun MiniPlayerContentInternal(
         }
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Like Spotify: plain icons, and the output icon stands out when the music is not on this
-        // phone. A coloured circle, because album colours can make two icon colours look alike.
+        // Like Spotify, the output icon stands out when the music is not on this phone. With a
+        // coloured circle, because album colours can make two icon colours look alike.
         val isElsewhere = !output.isPhone
         val iconTint = LocalMaterialTheme.current.onPrimaryContainer
         val outputContainer by animateColorAsState(
@@ -245,16 +248,25 @@ internal fun MiniPlayerContentInternal(
                     icon = icon,
                     contentDescription = stringResource(R.string.player_cd_choose_output),
                     tint = outputTint,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(6.dp))
 
+        // The one filled control, so the main action stands out. Round when paused, a softer
+        // square while playing, like the play buttons on the homepage.
+        val playCorner by animateDpAsState(
+            targetValue = if (isPlaying) 13.dp else 20.dp,
+            animationSpec = miniPlayerMotion.defaultSpatialSpec(),
+            label = "miniPlayCorner"
+        )
         Box(
             modifier = Modifier
                 .size(40.dp)
+                .clip(RoundedCornerShape(playCorner))
+                .background(LocalMaterialTheme.current.primary)
                 .clickable(
                     interactionSource = playPauseInteraction,
                     indication = miniPlayerIndication,
@@ -268,10 +280,12 @@ internal fun MiniPlayerContentInternal(
             Icon(
                 imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = if (isPlaying) "Pausar" else "Reproducir",
-                tint = iconTint,
-                modifier = Modifier.size(32.dp)
+                tint = LocalMaterialTheme.current.onPrimary,
+                modifier = Modifier.size(24.dp)
             )
         }
+
+        Spacer(modifier = Modifier.width(2.dp))
 
         Box(
             modifier = Modifier

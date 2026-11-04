@@ -52,7 +52,13 @@ import com.theveloper.pixelplay.data.preferences.EqualizerPreferencesRepository
 import com.theveloper.pixelplay.data.preferences.ThemePreferencesRepository
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.repository.MusicRepository
+import androidx.core.os.bundleOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.theveloper.pixelplay.data.service.player.DualPlayerEngine
+import com.theveloper.pixelplay.data.service.player.SonosAudioGate
+import com.theveloper.pixelplay.data.sonos.SonosController
+import com.theveloper.pixelplay.data.sonos.SonosSessionPlayer
 import com.theveloper.pixelplay.data.service.player.TransitionController
 import com.theveloper.pixelplay.ui.glancewidget.PlayerActions
 import com.theveloper.pixelplay.utils.AlbumArtUtils
@@ -168,6 +174,9 @@ class MusicService : MediaLibraryService() {
     @Inject
     lateinit var listeningStatsTracker: ListeningStatsTracker
     @Inject
+    lateinit var sonosController: SonosController
+
+    @Inject
     @AppScope
     lateinit var appScope: CoroutineScope
 
@@ -257,6 +266,7 @@ class MusicService : MediaLibraryService() {
 
     companion object {
         private const val TAG = "MusicService_PixelPlay"
+        private const val DRIP_REMOTE_NAME = "nl.markmaaktmedia.drip.REMOTE_NAME"
 
         /** Also used by [LocalOnlyMediaNotificationProvider]; the IDs must stay in sync. */
         const val NOTIFICATION_ID = 101
@@ -342,10 +352,10 @@ class MusicService : MediaLibraryService() {
 
     private fun publishMediaSessionPlayer(player: Player, logMessage: String) {
         val session = mediaSession ?: return
-        val oldPlayer = session.player
+        val oldPlayer = (session.player as? SonosSessionPlayer)?.wrapped ?: session.player
         if (oldPlayer !== player) {
             oldPlayer.removeListener(playerListener)
-            session.player = player
+            session.player = SonosSessionPlayer(player, sonosController)
             player.addListener(playerListener)
         }
 
@@ -891,10 +901,22 @@ class MusicService : MediaLibraryService() {
             }
         }
 
-        mediaSession = MediaLibrarySession.Builder(this, engine.masterPlayer, callback)
+        mediaSession = MediaLibrarySession.Builder(this, SonosSessionPlayer(engine.masterPlayer, sonosController), callback)
             .setSessionActivity(getOpenAppPendingIntent())
             .setBitmapLoader(CoilBitmapLoader(this, serviceScope))
             .build()
+
+        serviceScope.launch {
+            sonosController.remoteVolume.collect {
+                (mediaSession?.player as? SonosSessionPlayer)?.onSonosVolumeChanged()
+            }
+        }
+        serviceScope.launch {
+            // Drip shows this name with the volume in its island.
+            sonosController.remoteVolume.map { it?.group?.displayName }.distinctUntilChanged().collect { name ->
+                mediaSession?.setSessionExtras(name?.let { bundleOf(DRIP_REMOTE_NAME to it) } ?: Bundle.EMPTY)
+            }
+        }
 
         val localOnlyProvider = LocalOnlyMediaNotificationProvider(this).also {
             it.setSmallIcon(R.drawable.monochrome_player)
@@ -1492,6 +1514,8 @@ class MusicService : MediaLibraryService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        // The speakers play on, so the session stays for the notification and the volume keys.
+        if (SonosAudioGate.isMuted) return
         val player = mediaSession?.player
         val allowBackground = keepPlayingInBackground
 
@@ -1532,7 +1556,7 @@ class MusicService : MediaLibraryService() {
         engine.removeTransitionDisplayPlayerListener(transitionDisplayPlayerListener)
         engine.removeTransitionFinishedListener(transitionFinishedListener)
         engine.setOnPlayerAboutToBeReleasedListener {}
-        mediaSession?.player?.removeListener(playerListener)
+        (mediaSession?.player as? SonosSessionPlayer)?.wrapped?.removeListener(playerListener)
         engine.masterPlayer.removeListener(playerListener)
 
         mediaSession?.run {

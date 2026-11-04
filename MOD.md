@@ -42,7 +42,8 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 - De telefoon speelt stil mee, zodat melding, vergrendelscherm, swipes en wachtrij gewoon werken
 - Groeperen zoals in de Sonos-app (vinkjes per ruimte), groepsvolume en volume per speaker
 - Wijzigingen in de Sonos-app (volgende, pauze) volgt de telefoon; speelt de speaker iets anders, dan stopt de koppeling
-- Volumeknoppen regelen de Sonos zolang de app open is
+- Volumeknoppen regelen de Sonos, ook buiten de app
+- App gesloten terwijl de Sonos speelt: bij openen pakt hij de sessie vanzelf weer op, zonder dat de muziek stopt
 - Instellingen > Sonos: hoeveel nummers op Navidrome staan, overslaan of stoppen bij nummers die alleen op je telefoon staan
 - Thuisadres voor Sonos: gebruikt de app Navidrome via Tailscale, dan krijgen alleen de speakers het adres op je thuisnetwerk
 - Menu met drie puntjes: hier afspelen, toevoegen aan wat speelt, ruimtes groeperen, groep opheffen, hier stoppen

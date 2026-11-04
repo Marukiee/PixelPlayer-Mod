@@ -6,7 +6,8 @@ Volgorde gekozen door Mark (2026-11-02):
 
 1. [x] Sonos: afspelen via Navidrome, met groeperen en volume per speaker (0.7.5-mod.9, thuisadres in mod.10)
    - [x] Mark test thuis op zijn echte speakers: werkt (2026-11-02)
-   - [ ] Volumeknoppen buiten de app regelen de Sonos, en het volume verschijnt in het eiland van Drip (zie "Sonos-volume" hieronder)
+   - [x] Volumeknoppen buiten de app regelen de Sonos, en het volume verschijnt in het eiland van Drip (0.7.5-mod.13, `SonosSessionPlayer`)
+   - [x] App gesloten terwijl de Sonos speelt: bij openen pakt hij de sessie vanzelf weer op (0.7.5-mod.13, `resumeSavedSession`)
    - [ ] Volumeschuif in beeld als je in de app op de volumeknoppen drukt
    - [ ] Vanaf die volumeschuif ook het volume van de andere speakers in de groep regelen
    - [ ] Animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
@@ -73,6 +74,8 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 - `SonosTrackResolver` koppelt nummers aan de Navidrome-cache (titel, artiest, album, duur). Hi-res (boven 48 kHz) en Opus of DSD vraagt hij als MP3 320 op, omdat Sonos die niet afspeelt.
 - Thuisadres (0.7.5-mod.10): de app gebruikt het Navidrome-inlogadres (bij Mark Tailscale, `100.86.14.39`), de speakers krijgen het adres uit Instellingen > Sonos (`http://192.168.1.157:4533`, maruks-server). `SonosTrackResolver.rebase` zet het begin van de stream- en hoes-URL om.
 - Getest op de emulator tegen een echte Navidrome en een nep-Sonos met drie speakers, en door Mark thuis op zijn echte speakers: werkt (2026-11-02).
+- Terugverbinden (0.7.5-mod.13): het coördinator-id en de wachtrij staan in SharedPreferences. Bij het starten dempt de app eerst, vraagt de speaker wat hij speelt, en pakt de sessie op als die nog op onze wachtrij staat (spelend, of gepauzeerd en minder dan 12 uur oud). De speaker krijgt daarbij geen commando's; de telefoon volgt hem. Wegvegen uit Recent stopt de service niet zolang Sonos actief is.
+- Volume buiten de app (0.7.5-mod.13): `SonosSessionPlayer` om de sessiespeler meldt een remote device (0 tot 100) en stuurt de knoppen door naar het groepsvolume. Uit te zetten met dezelfde instelling als de volumeknoppen in de app.
 - Spotify (0.7.5-mod.12): gemeten op de speakers. Staat Spotify Connect op de speaker (`x-sonos-vli:`) en zet je de wachtrij erop, dan pakt Spotify hem binnen 0,6 seconde terug, ook als Spotify al op pauze stond. Een Pause-commando vooraf plus 300 ms wachten lost dat op. `holdSpeaker` kijkt daarna nog even of Spotify echt weg is, want een Play of Seek die op Spotify belandt, zet Spotify weer aan of blijft hangen. Daarna kost overzetten ongeveer 0,6 seconde (Seek terwijl gestopt werkt meteen, Play tot geluid 0,5 tot 0,6 seconde).
 
 ### Hoesjes in de Sonos-app (open)
@@ -90,7 +93,7 @@ Wat overblijft:
 1. **Tailscale Funnel op maruks-server, alleen voor het hoes-pad** (`tailscale funnel --bg --set-path=/rest/getCoverArt.view http://localhost:4533/rest/getCoverArt.view`). Eigen hoezen, maar dat pad wordt openbaar, en de link bevat het Subsonic-token. Eerst testen met een testplaatje of hij dan wel wordt opgehaald en door wie. Daarna een instelling "adres voor hoesjes" en `SonosTrackResolver.rebase` gebruiken.
 2. **Deezer** (`search/album`, `cover_xl`): werkte in de test en is simpel, maar Mark wil dit liever niet.
 
-### Sonos-volume (wens van Mark, 2026-11-02, nog niet bouwen)
+### Sonos-volume (punt 1 gebouwd in 0.7.5-mod.13, punt 2 en 3 nog niet)
 
 Nu regelen de volumeknoppen de Sonos alleen zolang de app open is (`MainActivity.dispatchKeyEvent` en het verbinden-scherm), en je ziet dan weinig.
 

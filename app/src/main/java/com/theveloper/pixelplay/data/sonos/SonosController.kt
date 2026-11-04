@@ -32,6 +32,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import org.json.JSONArray
+import org.json.JSONObject
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -105,6 +110,7 @@ class SonosController @Inject constructor(
     private val soap = SonosSoapClient()
     private val discovery = SonosDiscovery(context, soap)
     private val commandMutex = Mutex()
+    private val prefs = context.getSharedPreferences("sonos", Context.MODE_PRIVATE)
 
     private val _groups = MutableStateFlow<List<SonosGroup>>(emptyList())
     val groups: StateFlow<List<SonosGroup>> = _groups.asStateFlow()
@@ -114,6 +120,13 @@ class SonosController @Inject constructor(
 
     private val _session = MutableStateFlow<SonosSessionState?>(null)
     val session: StateFlow<SonosSessionState?> = _session.asStateFlow()
+
+    private val volumeKeysEnabled = MutableStateFlow(true)
+
+    /** The session, when the phone's volume keys should work on it. See [SonosSessionPlayer]. */
+    val remoteVolume: StateFlow<SonosSessionState?> = _session
+        .combine(volumeKeysEnabled) { state, keys -> state?.takeIf { keys && !it.isConnecting } }
+        .stateIn(scope, SharingStarted.Eagerly, null)
 
     private var skipUnavailableSongs = true
     private var sonosEnabled = true
@@ -143,6 +156,8 @@ class SonosController @Inject constructor(
         /** The speaker could not seek while paused; put it on the phone's spot when it starts playing. */
         var alignOnPlay = false
         var pendingJump = false
+        /** Picked up again after the app was closed: the phone follows the speaker until it has caught up. */
+        var resumedUntil = 0L
         val speakerOffset = SpeakerOffsetEstimate()
         var pollJob: Job? = null
         var syncJob: Job? = null
@@ -160,8 +175,12 @@ class SonosController @Inject constructor(
     init {
         // Rooms from the last search show up right away; a fresh search runs in the background.
         _groups.value = discovery.cachedGroups()
+        scope.launch { resumeSavedSession() }
         scope.launch {
             userPreferencesRepository.sonosSkipUnavailableFlow.collect { skipUnavailableSongs = it }
+        }
+        scope.launch {
+            userPreferencesRepository.sonosVolumeKeysFlow.collect { volumeKeysEnabled.value = it }
         }
         scope.launch {
             userPreferencesRepository.sonosEnabledFlow.collect { enabled ->
@@ -258,6 +277,63 @@ class SonosController @Inject constructor(
 
     // ─── Session ──────────────────────────────────────────────────────────
 
+    private fun saveSession(s: ActiveSession) {
+        prefs.edit().putString(
+            KEY_SESSION,
+            JSONObject()
+                .put("coordinator", s.group.coordinatorUuid)
+                .put("at", System.currentTimeMillis())
+                .put("queue", JSONArray(s.queue.map { it.mediaId }))
+                .toString()
+        ).apply()
+    }
+
+    private fun clearSavedSession() {
+        prefs.edit().remove(KEY_SESSION).apply()
+    }
+
+    /**
+     * The app was closed or killed while the speakers kept going: picks the session up again,
+     * and the phone follows the speaker from there. Starts by muting, because the queue the
+     * app restores may start playing before the speakers have answered.
+     */
+    private suspend fun resumeSavedSession() {
+        val saved = prefs.getString(KEY_SESSION, null)
+            ?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return
+        engine.setRemoteOutputActive(true)
+        val group = _groups.value.firstOrNull { it.coordinatorUuid == saved.optString("coordinator") }
+        val nrTracks = group?.let { speakerQueueLength(it, saved.optLong("at")) }
+        if (group == null || nrTracks == null || resolver.prepare() != null) {
+            clearSavedSession()
+            if (active == null) engine.setRemoteOutputActive(false)
+            return
+        }
+        val ids = saved.optJSONArray("queue")?.let { array -> List(array.length()) { array.optString(it) } }.orEmpty()
+        val resolved = resolver.resolve(ids)
+        // Something else was connected to in the meantime.
+        if (active != null) return
+        val s = ActiveSession(group)
+        s.queue += ids.mapNotNull { resolved[it] }.take(nrTracks)
+        s.lastResetAt = 1L
+        s.resumedUntil = now() + RESUME_GRACE_MS
+        active = s
+        _session.value = SonosSessionState(group, isConnecting = false)
+        attachTo(engine.masterPlayer)
+        refreshVolumes(s)
+        startPolling(s)
+    }
+
+    /** How many songs are on the speaker's queue, or null when the speaker is not ours any more. */
+    private suspend fun speakerQueueLength(group: SonosGroup, savedAt: Long): Int? = runCatching {
+        val host = group.coordinator.host
+        val media = soap.callQuick(host, SonosService.AV_TRANSPORT, "GetMediaInfo", "InstanceID" to 0)
+        if (media["CurrentURI"] != group.queueUri) return null
+        val state = soap.callQuick(host, SonosService.AV_TRANSPORT, "GetTransportInfo", "InstanceID" to 0)["CurrentTransportState"]
+        val recent = System.currentTimeMillis() - savedAt < RESUME_PAUSED_WITHIN_MS
+        val goesOn = state == "PLAYING" || state == "TRANSITIONING" || (state == "PAUSED_PLAYBACK" && recent)
+        if (goesOn) media["NrTracks"]?.toIntOrNull() else null
+    }.getOrNull()
+
     fun connect(groupId: String) {
         val group = _groups.value.firstOrNull { it.id == groupId } ?: return
         val previous = active
@@ -312,6 +388,7 @@ class SonosController @Inject constructor(
         val s = active ?: return
         stopJobs(s)
         active = null
+        clearSavedSession()
         detach()
         restorePhone(pauseLocal)
         resolver.clearSession()
@@ -492,6 +569,7 @@ class SonosController @Inject constructor(
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
             val s = active ?: return
+            if (isFollowing(s)) return
             if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) scheduleSync(s, jump = false)
         }
 
@@ -536,7 +614,7 @@ class SonosController @Inject constructor(
         observedPlayer = null
     }
 
-    private fun isFollowing(s: ActiveSession) = now() < s.followUntil
+    private fun isFollowing(s: ActiveSession) = now() < s.followUntil || now() < s.resumedUntil
 
     private inline fun followLocal(s: ActiveSession, block: (Player) -> Unit) {
         s.followUntil = now() + FOLLOW_GRACE_MS
@@ -723,6 +801,7 @@ class SonosController @Inject constructor(
                 "NumberOfTracks" to existing.size - same
             )
             s.queue.subList(index + 1 + same, s.queue.size).clear()
+            saveSession(s)
         }
         appendTracks(s, wanted.drop(same))
     }
@@ -752,6 +831,7 @@ class SonosController @Inject constructor(
             "EnqueueAsNext" to 0
         )
         s.queue += track
+        saveSession(s)
     }
 
     private suspend fun applyPlayState(s: ActiveSession, playing: Boolean) {
@@ -851,6 +931,7 @@ class SonosController @Inject constructor(
         }
         val local = readLocal() ?: return
         val sonosId = s.queue[index].mediaId
+        if (local.currentMediaId == sonosId) s.resumedUntil = 0L
         if (local.currentMediaId != sonosId) {
             if (busy) return
             val localIndex = s.queue.indexOfFirst { it.mediaId == local.currentMediaId }
@@ -941,6 +1022,10 @@ class SonosController @Inject constructor(
         /** A lyric line that is this far off is just noticeable. */
         private const val SYNC_LIMIT_MS = 250L
         private const val WARM_UP_INTERVAL_MS = 60_000L
+        private const val KEY_SESSION = "session"
+        private const val RESUME_GRACE_MS = 20_000L
+        /** A speaker that is on pause only counts as still in use for this long. */
+        private const val RESUME_PAUSED_WITHIN_MS = 12 * 60 * 60 * 1000L
         private const val PLAY_START_TIMEOUT_MS = 4_000L
         /** How long a speaker needs from Play to sound (measured: 0,5 to 0,6 s); the pre-seek aims that far ahead. */
         private const val START_LEAD_MS = 550L

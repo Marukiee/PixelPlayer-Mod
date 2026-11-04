@@ -8,7 +8,7 @@
 
 ## Status
 
-De ronde mod.11 is af en uitgebracht als `0.7.5-mod.12`. De open punten staan in `docs/ROADMAP.md`, bovenaan. Daar staat ook wat al is geprobeerd voor de hoesjes in de Sonos-app; gebruik geen `/getaa`, dat geeft 404.
+De ronde mod.11 is af; de laatste versie is `0.7.5-mod.13`. De open punten staan in `docs/ROADMAP.md`, bovenaan. Daar staat ook wat al is geprobeerd voor de hoesjes in de Sonos-app; gebruik geen `/getaa`, dat geeft 404.
 
 ## Waar alles staat
 
@@ -64,6 +64,5 @@ Volledige build (duurt lang, alleen aan het eind):
 ## Niet doen zonder akkoord
 
 Deze staan op `docs/ROADMAP.md`, maar Mark heeft er nog geen akkoord voor gegeven:
-- volumeknoppen buiten de app via een externe mediasessie (voor Drip)
 - een volumeschuif in beeld bij de volumeknoppen
 - animaties in de hele app nalopen

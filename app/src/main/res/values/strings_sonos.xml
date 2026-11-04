@@ -48,7 +48,7 @@
     <string name="settings_sonos_unavailable_skip">Skip</string>
     <string name="settings_sonos_unavailable_stop">Stop</string>
     <string name="settings_sonos_volume_keys_title">Volume buttons control Sonos</string>
-    <string name="settings_sonos_volume_keys_subtitle">The phone\'s volume keys change the group volume while the app is open</string>
+    <string name="settings_sonos_volume_keys_subtitle">The phone\'s volume keys change the group volume, also outside the app</string>
     <string name="settings_sonos_speakers_section">Speakers</string>
     <string name="settings_sonos_enabled_title">Show Sonos in Connect</string>
     <string name="settings_sonos_enabled_subtitle">Find speakers on your Wi-Fi automatically</string>

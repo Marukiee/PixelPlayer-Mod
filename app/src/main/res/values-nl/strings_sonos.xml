@@ -48,7 +48,7 @@
     <string name="settings_sonos_unavailable_skip">Overslaan</string>
     <string name="settings_sonos_unavailable_stop">Stoppen</string>
     <string name="settings_sonos_volume_keys_title">Volumeknoppen bedienen Sonos</string>
-    <string name="settings_sonos_volume_keys_subtitle">De volumeknoppen van je telefoon regelen het groepsvolume zolang de app open is</string>
+    <string name="settings_sonos_volume_keys_subtitle">De volumeknoppen van je telefoon regelen het groepsvolume, ook buiten de app</string>
     <string name="settings_sonos_speakers_section">Speakers</string>
     <string name="settings_sonos_enabled_title">Sonos tonen bij Verbinden</string>
     <string name="settings_sonos_enabled_subtitle">Speakers op je wifi vanzelf vinden</string>
