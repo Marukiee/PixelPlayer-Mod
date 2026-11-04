@@ -31,12 +31,18 @@ class LocalOnlyMediaNotificationProvider(
         actionFactory: MediaNotification.ActionFactory,
         callback: MediaNotification.Provider.Callback,
     ): MediaNotification {
+        // The delegate delivers the cover later through the callback, under its own ID. That one needs
+        // our ID as well: Android drops a foreground notification whose ID changes, and the media card
+        // in the quick settings falls back to its resume state until the next update.
         val notification = delegate.createNotification(
             mediaSession,
             customLayout,
-            actionFactory,
-            callback
-        )
+            actionFactory
+        ) { updated -> callback.onNotificationChanged(localOnly(updated)) }
+        return localOnly(notification)
+    }
+
+    private fun localOnly(notification: MediaNotification): MediaNotification {
         val localOnlyNotification = runCatching {
             Notification.Builder.recoverBuilder(context, notification.notification)
                 .setLocalOnly(true)

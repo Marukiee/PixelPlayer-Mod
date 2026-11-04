@@ -1,10 +1,11 @@
+- Mediakaart in het snelle paneel verdwijnt niet meer even als je naar het volgende nummer gaat
+
+Ook in deze versie (sinds 0.7.5-mod.1):
 - Pauzeknop werkt nu ook als je net hebt geskipt, en de Sonos start niet meer elk nummer tijdens het skippen
 - Android-mediakaart toont je speaker in plaats van This phone
 - Verbinden-paneel sluit met een korte veeg omlaag
 - Made for you en Your Mix tonen gewoon een pauzeknop als ze spelen
 - Adres voor hoesjes staat standaard ingevuld en is te wijzigen
-
-Ook in deze versie (sinds 0.7.5-mod.1):
 - Mini-speler: play-knop met voortgangsring of gevuld, te kiezen in Instellingen > Appearance
 - Speaker-icoon even groot en even dik als de andere iconen, in dezelfde accentkleur als je op een speaker speelt
 - App gesloten terwijl de Sonos speelt: bij openen pakt hij de speaker vanzelf weer op
