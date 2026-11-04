@@ -25,7 +25,7 @@ You need Android 11 or newer.
 1. Download `PixelPlayer-Mod.apk` from the [latest release](https://github.com/Marukiee/PixelPlayer-Mod/releases/latest) on your phone.
 2. Open it. Android asks once whether the app you open it with (your browser or files app) may install apps from unknown sources. Turn that on, go back and tap Install.
 
-It installs over the original PixelPlayer when that has the same signing key, and keeps your likes, queue and settings. Every release of the mod is signed with the same key, so updates install over the previous one. You can also add the repository to [Obtainium](https://obtainium.imranr.dev).
+Every release of the mod is signed with the same key, so updates install over the previous one and keep your likes, queue and settings. You can also add the repository to [Obtainium](https://obtainium.imranr.dev).
 
 ## License
 
