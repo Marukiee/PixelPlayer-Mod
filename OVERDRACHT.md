@@ -59,7 +59,7 @@ Volledige build (duurt lang, alleen aan het eind):
 - **Sonos-teksten.** Zet ze in `strings_sonos.xml`, niet in `strings.xml`, en altijd in beide talen.
 - **Toasts bij afbreken.** `SonosController.report()` slaat `CancellationException` bewust over. Haal dat niet weg; anders krijg je valse foutmeldingen.
 - **Volume.** `setGroupVolume` neemt de verhouding tussen speakers op bij het begin van een sleepbeweging of reeks toetsdrukken (`volumeShares`, binnen 1,5 seconde). `groupVolumeTargets` heeft een test; verander die rekensom niet.
-- **Overzetten.** `fullReset` pauzeert eerst wat er speelt (anders pakt Spotify de speaker terug), en spoelt daarna vóór Play naar de plek van de telefoon plus 550 ms. Op echte speakers kost dat samen 0,6 seconde.
+- **Overzetten.** `fullReset` pauzeert altijd eerst wat er op de speaker staat, ook als dat al op pauze is (anders pakt Spotify de speaker terug), en spoelt daarna vóór Play naar de plek van de telefoon plus 550 ms. Op echte speakers kost dat samen 0,6 seconde.
 
 ## Niet doen zonder akkoord
 

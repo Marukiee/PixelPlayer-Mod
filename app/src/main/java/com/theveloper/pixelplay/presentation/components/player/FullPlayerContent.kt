@@ -7,10 +7,9 @@ import android.net.Uri
 import com.theveloper.pixelplay.data.model.Lyrics
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import com.theveloper.pixelplay.presentation.components.PlayerOutputGlyph
+import com.theveloper.pixelplay.presentation.components.PlayerOutputIcon
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
@@ -115,8 +114,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Smartphone
-import androidx.compose.material.icons.rounded.SpeakerGroup
-import com.theveloper.pixelplay.presentation.components.SpeakerPlayingBars
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.derivedStateOf
@@ -166,15 +163,6 @@ private const val PREVIOUS_TRACK_RESTART_THRESHOLD_MS = 10_000L
 private const val SKIP_COMMAND_GUARD_MS = 96L
 
 private enum class SkipDirection { PREVIOUS, NEXT }
-
-/** Where the music comes out, for the pill in the top bar. */
-private enum class PlayerOutputIcon(@DrawableRes val drawable: Int) {
-    Speaker(R.drawable.rounded_speaker_24),
-    SpeakerGroup(R.drawable.rounded_speaker_24),
-    Cast(R.drawable.rounded_cast_24),
-    Bluetooth(R.drawable.rounded_bluetooth_24),
-    Phone(R.drawable.rounded_mobile_speaker_24)
-}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val playerMotion = MotionScheme.expressive()
@@ -801,18 +789,11 @@ fun FullPlayerContent(
                             val isBluetoothActive =
                                 isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && !isRemotePlaybackActive && !isCastConnecting &&
                                     sonosGroup == null
-                            val outputIcon = when {
-                                sonosGroup != null && sonosGroup.members.size > 1 -> PlayerOutputIcon.SpeakerGroup
-                                sonosGroup != null -> PlayerOutputIcon.Speaker
-                                isCastConnecting || isRemotePlaybackActive -> PlayerOutputIcon.Cast
-                                isBluetoothActive -> PlayerOutputIcon.Bluetooth
-                                else -> PlayerOutputIcon.Phone
-                            }
-                            // Bars in the icon's place while the speakers play; the speaker itself when paused.
-                            val showPlayingBars = when {
-                                sonosGroup != null -> sonosSession?.isPlaying == true && !sonosConnecting
-                                else -> isRemotePlaybackActive && !isCastConnecting && isPlayingProvider()
-                            }
+                            val outputIcon = PlayerOutputIcon.of(
+                                sonosRooms = sonosGroup?.members?.size,
+                                isCasting = isCastConnecting || isRemotePlaybackActive,
+                                isBluetoothActive = isBluetoothActive
+                            )
                             val pillLabel = when {
                                 isCastConnecting || sonosConnecting -> stringResource(R.string.player_connecting)
                                 sonosGroup != null -> sonosGroup.coordinator.name
@@ -850,13 +831,11 @@ fun FullPlayerContent(
                                     horizontalArrangement = Arrangement.Start
                                 ) {
                                     AnimatedContent(
-                                        targetState = if (showPlayingBars) null else outputIcon,
+                                        targetState = outputIcon,
                                         transitionSpec = {
                                             (fadeIn(playerMotion.defaultEffectsSpec()) + scaleIn(playerMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
                                                 (fadeOut(playerMotion.fastEffectsSpec()) + scaleOut(playerMotion.fastSpatialSpec(), targetScale = 0.6f))
                                         },
-                                        modifier = Modifier.size(24.dp),
-                                        contentAlignment = Alignment.Center,
                                         label = "castButtonIcon"
                                     ) { icon ->
                                         val description = when {
@@ -865,24 +844,7 @@ fun FullPlayerContent(
                                             isBluetoothActive -> stringResource(R.string.player_cd_bluetooth)
                                             else -> stringResource(R.string.player_cd_local_playback)
                                         }
-                                        when (icon) {
-                                            null -> SpeakerPlayingBars(
-                                                color = playerAccentColor,
-                                                modifier = Modifier
-                                                    .size(width = 18.dp, height = 16.dp)
-                                                    .semantics { contentDescription = description }
-                                            )
-                                            PlayerOutputIcon.SpeakerGroup -> Icon(
-                                                imageVector = Icons.Rounded.SpeakerGroup,
-                                                contentDescription = description,
-                                                tint = playerAccentColor
-                                            )
-                                            else -> Icon(
-                                                painter = painterResource(icon.drawable),
-                                                contentDescription = description,
-                                                tint = playerAccentColor
-                                            )
-                                        }
+                                        PlayerOutputGlyph(icon = icon, contentDescription = description, tint = playerAccentColor)
                                     }
                                     // The pill's own size animation moves the width, so this only fades.
                                     AnimatedVisibility(
@@ -917,13 +879,13 @@ fun FullPlayerContent(
                                                     if (extra > 0) {
                                                         Text(
                                                             text = "+$extra",
-                                                            style = MaterialTheme.typography.labelSmall,
+                                                            style = MaterialTheme.typography.labelLarge,
                                                             fontWeight = FontWeight.Bold,
                                                             color = playerAccentColor,
                                                             maxLines = 1,
                                                             modifier = Modifier
                                                                 .background(playerAccentColor.copy(alpha = 0.14f), CircleShape)
-                                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                .padding(horizontal = 7.dp, vertical = 2.dp)
                                                         )
                                                     }
                                                     AnimatedVisibility(visible = isCastConnecting || sonosConnecting) {

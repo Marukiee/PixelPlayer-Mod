@@ -15,6 +15,7 @@
     <string name="sonos_refresh">Search again</string>
     <string name="sonos_tap_hint">Tap a room to play there</string>
     <string name="sonos_playing_on">Playing on %1$s</string>
+    <string name="player_cd_choose_output">Choose where to play</string>
     <string name="sonos_more_options">More options for %1$s</string>
     <string name="sonos_menu_play_here">Play here</string>
     <string name="sonos_menu_add_to_playing">Add to %1$s</string>

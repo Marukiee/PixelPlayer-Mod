@@ -56,7 +56,12 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.util.lerp
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
@@ -692,6 +697,9 @@ private fun missingCastPermissions(context: Context, permissions: List<String>):
     }
 }
 
+/** Switching tabs, by tap or by swipe, at the same calm pace in both directions. */
+private val CastTabSwitchSpec = tween<Float>(durationMillis = 450, easing = FastOutSlowInEasing)
+
 @Composable
 private fun CastSheetContent(
     state: CastSheetUiState,
@@ -721,13 +729,7 @@ private fun CastSheetContent(
         pageCount = { 2 }
     )
     val scope = rememberCoroutineScope()
-    var heightAnimationEnabled by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        withFrameNanos { }
-        withFrameNanos { }
-        heightAnimationEnabled = true
-    }
+    val pageHeights = remember { mutableStateListOf(0, 0) }
 
     // Picking a Sonos room in Devices slides over to Controls, where its volume lives.
     val onSonos = sonosHero != null
@@ -735,7 +737,7 @@ private fun CastSheetContent(
     LaunchedEffect(onSonos) {
         if (onSonos && !wasOnSonos && pagerState.currentPage != 0) {
             delay(350)
-            pagerState.animateScrollToPage(0)
+            pagerState.animateScrollToPage(0, animationSpec = CastTabSwitchSpec)
         }
         wasOnSonos = onSonos
     }
@@ -779,49 +781,63 @@ private fun CastSheetContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // The panel's height follows the swipe between the tabs, the same in both directions.
+        // A pager on its own only shrinks after the page has left, so both pages stay measured
+        // and the height is worked out from how far the swipe is. Rows that open and close
+        // inside a page animate themselves, and this follows them frame by frame.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = maxPagerHeight)
-                .animateContentSize(
-                    // A spring keeps its speed when the target moves, so it follows the rows smoothly;
-                    // a tween would restart on every frame of their animation.
-                    animationSpec = if (heightAnimationEnabled) {
-                        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    val swipe = (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f)
+                    val height = if (pageHeights[0] == 0 || pageHeights[1] == 0) {
+                        placeable.height
                     } else {
-                        snap()
-                    },
-                    alignment = Alignment.TopCenter
-                )
+                        lerp(pageHeights[0], pageHeights[1], swipe)
+                    }
+                    layout(placeable.width, height.coerceIn(constraints.minHeight, constraints.maxHeight)) {
+                        placeable.place(0, 0)
+                    }
+                }
+                .clipToBounds()
         ) {
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
                     .wrapContentHeight()
                     .fillMaxWidth(),
+                beyondViewportPageCount = 1,
+                flingBehavior = PagerDefaults.flingBehavior(
+                    state = pagerState,
+                    snapAnimationSpec = CastTabSwitchSpec
+                ),
                 verticalAlignment = Alignment.Top
             ) { page ->
-                when (page) {
-                    0 -> CastControlsTabContent(
-                        state = state,
-                        onDisconnect = onDisconnect,
-                        onVolumeChange = onVolumeChange,
-                        bottomSpacing = 20.dp,
-                        heroOverride = sonosHero,
-                    )
-                    1 -> CastDevicesTabContent(
-                        state = state,
-                        allConnectivityOff = allConnectivityOff,
-                        onSelectDevice = onSelectDevice,
-                        onDisconnect = onDisconnect,
-                        onTurnOnWifi = onTurnOnWifi,
-                        onOpenBluetoothSettings = onOpenBluetoothSettings,
-                        onRefresh = onRefresh,
-                        maxContentHeight = maxPagerHeight,
-                        extraDeviceCount = extraDeviceCount,
-                        leadingDevices = leadingDevices,
-                        extraDevices = extraDevices,
-                    )
+                Box(modifier = Modifier.onSizeChanged { pageHeights[page] = it.height }) {
+                    when (page) {
+                        0 -> CastControlsTabContent(
+                            state = state,
+                            onDisconnect = onDisconnect,
+                            onVolumeChange = onVolumeChange,
+                            bottomSpacing = 20.dp,
+                            heroOverride = sonosHero,
+                        )
+                        1 -> CastDevicesTabContent(
+                            state = state,
+                            allConnectivityOff = allConnectivityOff,
+                            onSelectDevice = onSelectDevice,
+                            onDisconnect = onDisconnect,
+                            onTurnOnWifi = onTurnOnWifi,
+                            onOpenBluetoothSettings = onOpenBluetoothSettings,
+                            onRefresh = onRefresh,
+                            maxContentHeight = maxPagerHeight,
+                            extraDeviceCount = extraDeviceCount,
+                            leadingDevices = leadingDevices,
+                            extraDevices = extraDevices,
+                        )
+                    }
                 }
             }
         }
@@ -845,7 +861,7 @@ private fun CastSheetContent(
                 selectedIndex = pagerState.currentPage,
                 onClick = {
                     scope.launch {
-                        pagerState.animateScrollToPage(0)
+                        pagerState.animateScrollToPage(0, animationSpec = CastTabSwitchSpec)
                     }
                 },
                 transformOrigin = TransformOrigin(0f, 0.5f)
@@ -871,7 +887,7 @@ private fun CastSheetContent(
                 selectedIndex = pagerState.currentPage,
                 onClick = {
                     scope.launch {
-                        pagerState.animateScrollToPage(1)
+                        pagerState.animateScrollToPage(1, animationSpec = CastTabSwitchSpec)
                     }
                 },
                 transformOrigin = TransformOrigin(1f, 0.5f)

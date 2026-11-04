@@ -73,7 +73,7 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 - `SonosTrackResolver` koppelt nummers aan de Navidrome-cache (titel, artiest, album, duur). Hi-res (boven 48 kHz) en Opus of DSD vraagt hij als MP3 320 op, omdat Sonos die niet afspeelt.
 - Thuisadres (0.7.5-mod.10): de app gebruikt het Navidrome-inlogadres (bij Mark Tailscale, `100.86.14.39`), de speakers krijgen het adres uit Instellingen > Sonos (`http://192.168.1.157:4533`, maruks-server). `SonosTrackResolver.rebase` zet het begin van de stream- en hoes-URL om.
 - Getest op de emulator tegen een echte Navidrome en een nep-Sonos met drie speakers, en door Mark thuis op zijn echte speakers: werkt (2026-11-02).
-- Spotify (0.7.5-mod.12): gemeten op de speakers. Speelt Spotify Connect (`x-sonos-vli:`) en zet je de wachtrij erop, dan pakt Spotify de speaker binnen 0,6 seconde terug. Pauzeer je eerst en wacht je 300 ms, dan laat Spotify los. Daarna kost overzetten ongeveer 0,6 seconde (Seek terwijl gestopt werkt meteen, Play tot geluid 0,5 tot 0,6 seconde).
+- Spotify (0.7.5-mod.12): gemeten op de speakers. Staat Spotify Connect op de speaker (`x-sonos-vli:`) en zet je de wachtrij erop, dan pakt Spotify hem binnen 0,6 seconde terug, ook als Spotify al op pauze stond. Een Pause-commando vooraf plus 300 ms wachten lost dat op. `holdSpeaker` kijkt daarna nog even of Spotify echt weg is, want een Play of Seek die op Spotify belandt, zet Spotify weer aan of blijft hangen. Daarna kost overzetten ongeveer 0,6 seconde (Seek terwijl gestopt werkt meteen, Play tot geluid 0,5 tot 0,6 seconde).
 
 ### Hoesjes in de Sonos-app (open)
 

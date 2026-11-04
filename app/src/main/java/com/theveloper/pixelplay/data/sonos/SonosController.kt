@@ -56,6 +56,43 @@ data class SonosSessionState(
  * the muted phone is moved to the speaker's position and follows changes made in the Sonos app.
  * The Sonos queue holds the upcoming songs, so the music keeps going when the phone is off.
  */
+/**
+ * How far the speaker is ahead of the phone. The speaker only reports whole seconds, so one
+ * reading says the true difference lies somewhere in a window of a second. Readings taken at
+ * different moments within that second overlap in an ever smaller window, which gives the
+ * difference to within a few hundred milliseconds after a handful of polls.
+ */
+internal class SpeakerOffsetEstimate {
+    private var low = Long.MIN_VALUE
+    private var high = Long.MAX_VALUE
+
+    /** Takes one reading; returns the difference once it is known well enough, otherwise null. */
+    fun add(speakerWholeSecondsMs: Long, phoneMs: Long): Long? {
+        val sample = speakerWholeSecondsMs - phoneMs
+        val newLow = maxOf(low, sample)
+        val newHigh = minOf(high, sample + WINDOW_MS)
+        // No overlap: one of the two clocks jumped, so what we had says nothing any more.
+        if (newLow > newHigh) {
+            low = sample
+            high = sample + WINDOW_MS
+        } else {
+            low = newLow
+            high = newHigh
+        }
+        return if (high - low <= MAX_WIDTH_MS) (low + high) / 2 else null
+    }
+
+    fun reset() {
+        low = Long.MIN_VALUE
+        high = Long.MAX_VALUE
+    }
+
+    private companion object {
+        const val WINDOW_MS = 999L
+        const val MAX_WIDTH_MS = 400L
+    }
+}
+
 @Singleton
 @OptIn(UnstableApi::class)
 class SonosController @Inject constructor(
@@ -106,6 +143,7 @@ class SonosController @Inject constructor(
         /** The speaker could not seek while paused; put it on the phone's spot when it starts playing. */
         var alignOnPlay = false
         var pendingJump = false
+        val speakerOffset = SpeakerOffsetEstimate()
         var pollJob: Job? = null
         var syncJob: Job? = null
         var appendJob: Job? = null
@@ -591,16 +629,23 @@ class SonosController @Inject constructor(
     private suspend fun fullReset(s: ActiveSession, current: SonosTrack, upcoming: List<SonosTrack>, local: LocalState) {
         s.lastResetAt = now()
         s.lastTrackCommandAt = now()
-        releaseOtherSource(s)
+        val hadOtherSource = releaseOtherSource(s)
         avt(s, "RemoveAllTracksFromQueue")
         s.queue.clear()
         addToQueue(s, current)
         // A fresh queue starts at its first track, so no TRACK_NR seek is needed.
         avt(s, "SetAVTransportURI", "CurrentURI" to s.group.queueUri, "CurrentURIMetaData" to "")
+        if (hadOtherSource) holdSpeaker(s)
         // Jump ahead by the time the speaker needs to start; the exact alignment follows once it plays.
         val phoneAt = readLocal()?.positionMs ?: local.positionMs
-        val preSeeked = phoneAt > 1_500 &&
-            runCatching { seekSonos(s, phoneAt + if (local.playWhenReady) START_LEAD_MS else 0L) }.isSuccess
+        // A quick call: if the speaker is slow to answer, alignWithPhone fixes the spot once it plays.
+        val preSeeked = phoneAt > 1_500 && runCatching {
+            soap.callQuick(
+                s.group.coordinator.host, SonosService.AV_TRANSPORT, "Seek",
+                "InstanceID" to 0, "Unit" to "REL_TIME",
+                "Target" to SonosSoapClient.msToHms(phoneAt + if (local.playWhenReady) START_LEAD_MS else 0L)
+            )
+        }.isSuccess
         if (local.playWhenReady) {
             s.lastPlayPauseCommandAt = now()
             avt(s, "Play", "Speed" to "1")
@@ -613,15 +658,37 @@ class SonosController @Inject constructor(
     }
 
     /**
-     * Spotify Connect grabs a speaker back within a second when it loses it while playing, but
-     * lets go when it was paused first. Measured on real speakers, so pause whatever else is on.
+     * Spotify Connect grabs a speaker back half a second after losing it, also when it was already
+     * on pause, unless it got a Pause command first (measured on real speakers).
+     * Returns whether something else was on the speaker.
      */
-    private suspend fun releaseOtherSource(s: ActiveSession) {
-        if (avt(s, "GetMediaInfo")["CurrentURI"].orEmpty() == s.group.queueUri) return
-        val state = avt(s, "GetTransportInfo")["CurrentTransportState"]
-        if (state != "PLAYING" && state != "TRANSITIONING") return
+    private suspend fun releaseOtherSource(s: ActiveSession): Boolean {
+        val media = avt(s, "GetMediaInfo")["CurrentURI"].orEmpty()
+        if (media.isEmpty() || media == s.group.queueUri) return false
         runCatching { avt(s, "Pause") }
         delay(RELEASE_SOURCE_MS)
+        return true
+    }
+
+    /**
+     * Makes sure the other source really let go before we start: a Play or Seek that lands on it
+     * would resume Spotify or hang. If it did come back, it gets paused and replaced once more.
+     */
+    private suspend fun holdSpeaker(s: ActiveSession) {
+        repeat(HOLD_ATTEMPTS) {
+            var retaken = false
+            for (check in 1..HOLD_CHECKS) {
+                delay(HOLD_CHECK_MS)
+                if (avt(s, "GetMediaInfo")["CurrentURI"] != s.group.queueUri) {
+                    retaken = true
+                    break
+                }
+            }
+            if (!retaken) return
+            runCatching { avt(s, "Pause") }
+            delay(RELEASE_SOURCE_MS)
+            avt(s, "SetAVTransportURI", "CurrentURI" to s.group.queueUri, "CurrentURIMetaData" to "")
+        }
     }
 
     /**
@@ -751,6 +818,8 @@ class SonosController @Inject constructor(
     private suspend fun pollOnce(s: ActiveSession, tick: Int) {
         val transport = avt(s, "GetTransportInfo")["CurrentTransportState"].orEmpty()
         val position = avt(s, "GetPositionInfo")
+        // Read right away: every further call to the speaker would make the comparison less exact.
+        val phoneAtSample = engine.masterPlayer.currentPosition
         val index = (position["Track"]?.toIntOrNull() ?: 0) - 1
         val trackUri = position["TrackURI"].orEmpty()
         val relMs = SonosSoapClient.hmsToMs(position["RelTime"])
@@ -804,8 +873,18 @@ class SonosController @Inject constructor(
                 followLocal(s) { it.pause() }
             }
         }
-        if (transport == "PLAYING" && local.isPlaying && !busy && abs(relMs - local.positionMs) > DRIFT_LIMIT_MS) {
+        if (transport != "PLAYING" || !local.isPlaying || busy) {
+            s.speakerOffset.reset()
+            return
+        }
+        // The phone keeps the speaker's time closely, because the lyrics and the progress bar run on it.
+        val offset = s.speakerOffset.add(relMs, phoneAtSample)
+        if (abs(relMs - phoneAtSample) > DRIFT_LIMIT_MS) {
             followLocal(s) { it.seekTo(relMs) }
+            s.speakerOffset.reset()
+        } else if (offset != null && abs(offset) > SYNC_LIMIT_MS) {
+            followLocal(s) { it.seekTo(it.currentPosition + offset) }
+            s.speakerOffset.reset()
         }
     }
 
@@ -850,7 +929,8 @@ class SonosController @Inject constructor(
         private const val MAX_UPCOMING = 100
         private const val MAX_SKIP_STREAK = 25
         private const val MAX_POLL_FAILURES = 8
-        private const val POLL_INTERVAL_MS = 1_000L
+        /** Not a whole second, so each poll lands at another moment in the speaker's second; see [SpeakerOffsetEstimate]. */
+        private const val POLL_INTERVAL_MS = 1_130L
         private const val SYNC_DEBOUNCE_MS = 250L
         private const val FOLLOW_GRACE_MS = 1_200L
         private const val TRACK_COMMAND_GRACE_MS = 4_000L
@@ -858,11 +938,17 @@ class SonosController @Inject constructor(
         private const val AUTO_ADVANCE_GRACE_MS = 7_000L
         private const val TAKEOVER_GRACE_MS = 6_000L
         private const val DRIFT_LIMIT_MS = 2_500L
+        /** A lyric line that is this far off is just noticeable. */
+        private const val SYNC_LIMIT_MS = 250L
         private const val WARM_UP_INTERVAL_MS = 60_000L
         private const val PLAY_START_TIMEOUT_MS = 4_000L
         /** How long a speaker needs from Play to sound (measured: 0,5 to 0,6 s); the pre-seek aims that far ahead. */
         private const val START_LEAD_MS = 550L
         private const val RELEASE_SOURCE_MS = 300L
+        /** Spotify came back after 0,5 to 0,6 s in every measurement, so watch a bit longer than that. */
+        private const val HOLD_CHECK_MS = 150L
+        private const val HOLD_CHECKS = 5
+        private const val HOLD_ATTEMPTS = 3
         private const val SEEK_LEAD_MS = 250L
         private const val ALIGN_TOLERANCE_MS = 1_200L
         /** Volume changes closer together than this count as one drag or run of key presses. */

@@ -23,7 +23,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MotionScheme
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import com.theveloper.pixelplay.R
+import androidx.compose.material.icons.outlined.SpeakerGroup
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ColorScheme
@@ -60,14 +75,54 @@ fun getNavigationBarHeight(): Dp {
     return sanitizeNavigationBarBottomInset(insets.calculateBottomPadding())
 }
 
+/** Where the music comes out, with the same icon in the full player's pill and the mini player. */
+internal enum class PlayerOutputIcon(@DrawableRes val drawable: Int) {
+    Speaker(R.drawable.rounded_speaker_24),
+    SpeakerGroup(R.drawable.rounded_speaker_24),
+    Cast(R.drawable.rounded_cast_24),
+    Bluetooth(R.drawable.rounded_bluetooth_24),
+    Phone(R.drawable.rounded_mobile_speaker_24);
+
+    val isPhone: Boolean get() = this == Phone
+
+    companion object {
+        fun of(sonosRooms: Int?, isCasting: Boolean, isBluetoothActive: Boolean): PlayerOutputIcon = when {
+            sonosRooms != null && sonosRooms > 1 -> SpeakerGroup
+            sonosRooms != null -> Speaker
+            isCasting -> Cast
+            isBluetoothActive -> Bluetooth
+            else -> Phone
+        }
+    }
+}
+
+/** Outlined, unlike the filled icons on the device rows in the connect sheet. */
+@Composable
+internal fun PlayerOutputGlyph(
+    icon: PlayerOutputIcon,
+    contentDescription: String?,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    if (icon == PlayerOutputIcon.SpeakerGroup) {
+        Icon(Icons.Outlined.SpeakerGroup, contentDescription, modifier, tint)
+    } else {
+        Icon(painterResource(icon.drawable), contentDescription, modifier, tint)
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private val miniPlayerMotion = MotionScheme.expressive()
+
 @Composable
 internal fun MiniPlayerContentInternal(
     song: Song,
     isPlaying: Boolean,
     isCastConnecting: Boolean,
     isPreparingPlayback: Boolean,
+    output: PlayerOutputIcon,
     onPlayPause: () -> Unit,
-    onPrevious: () -> Unit,
+    onOutputClick: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
     canScroll: Boolean = true
@@ -75,7 +130,7 @@ internal fun MiniPlayerContentInternal(
     val hapticFeedback = LocalHapticFeedback.current
     val controlsEnabled = !isCastConnecting && !isPreparingPlayback
 
-    val previousInteraction = remember { MutableInteractionSource() }
+    val outputInteraction = remember { MutableInteractionSource() }
     val playPauseInteraction = remember { MutableInteractionSource() }
     val nextInteraction = remember { MutableInteractionSource() }
     val miniPlayerIndication = remember { ripple(bounded = false) }
@@ -149,36 +204,57 @@ internal fun MiniPlayerContentInternal(
         }
         Spacer(modifier = Modifier.width(8.dp))
 
+        // Like Spotify: plain icons, and the output icon stands out when the music is not on this
+        // phone. A coloured circle, because album colours can make two icon colours look alike.
+        val isElsewhere = !output.isPhone
+        val iconTint = LocalMaterialTheme.current.onPrimaryContainer
+        val outputContainer by animateColorAsState(
+            targetValue = if (isElsewhere) LocalMaterialTheme.current.tertiary else Color.Transparent,
+            animationSpec = miniPlayerMotion.defaultEffectsSpec(),
+            label = "miniOutputContainer"
+        )
+        val outputTint by animateColorAsState(
+            targetValue = if (isElsewhere) LocalMaterialTheme.current.onTertiary else iconTint,
+            animationSpec = miniPlayerMotion.defaultEffectsSpec(),
+            label = "miniOutputTint"
+        )
         Box(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(LocalMaterialTheme.current.onPrimary)
+                .background(outputContainer)
                 .clickable(
-                    interactionSource = previousInteraction,
-                    indication = miniPlayerIndication,
-                    enabled = controlsEnabled
+                    interactionSource = outputInteraction,
+                    indication = miniPlayerIndication
                 ) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onPrevious()
+                    onOutputClick()
                 },
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Rounded.SkipPrevious,
-                contentDescription = "Anterior",
-                tint = LocalMaterialTheme.current.primary,
-                modifier = Modifier.size(22.dp)
-            )
+            AnimatedContent(
+                targetState = output,
+                transitionSpec = {
+                    (fadeIn(miniPlayerMotion.defaultEffectsSpec()) + scaleIn(miniPlayerMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
+                        (fadeOut(miniPlayerMotion.fastEffectsSpec()) + scaleOut(miniPlayerMotion.fastSpatialSpec(), targetScale = 0.6f))
+                },
+                contentAlignment = Alignment.Center,
+                label = "miniOutputIcon"
+            ) { icon ->
+                PlayerOutputGlyph(
+                    icon = icon,
+                    contentDescription = stringResource(R.string.player_cd_choose_output),
+                    tint = outputTint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(4.dp))
 
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(LocalMaterialTheme.current.primary)
+                .size(40.dp)
                 .clickable(
                     interactionSource = playPauseInteraction,
                     indication = miniPlayerIndication,
@@ -192,18 +268,14 @@ internal fun MiniPlayerContentInternal(
             Icon(
                 imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = if (isPlaying) "Pausar" else "Reproducir",
-                tint = LocalMaterialTheme.current.onPrimary,
-                modifier = Modifier.size(22.dp)
+                tint = iconTint,
+                modifier = Modifier.size(32.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
-
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(LocalMaterialTheme.current.onPrimary)
+                .size(40.dp)
                 .clickable(
                     interactionSource = nextInteraction,
                     indication = miniPlayerIndication,
@@ -214,8 +286,8 @@ internal fun MiniPlayerContentInternal(
             Icon(
                 imageVector = Icons.Rounded.SkipNext,
                 contentDescription = "Siguiente",
-                tint = LocalMaterialTheme.current.primary,
-                modifier = Modifier.size(22.dp)
+                tint = iconTint,
+                modifier = Modifier.size(28.dp)
             )
         }
     }

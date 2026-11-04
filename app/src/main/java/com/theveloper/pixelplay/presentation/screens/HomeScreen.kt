@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import com.theveloper.pixelplay.data.stats.StatsTimeRange
 import com.theveloper.pixelplay.presentation.components.home.GenreFlag
 import com.theveloper.pixelplay.presentation.components.home.HomeMixCard
+import com.theveloper.pixelplay.presentation.components.home.HomePlayback
 import com.theveloper.pixelplay.presentation.components.home.HomeMixVisual
 import com.theveloper.pixelplay.presentation.components.home.HomeMixesRow
 import com.theveloper.pixelplay.presentation.components.home.HomeRecentlyPlayedRow
@@ -279,6 +280,12 @@ fun HomeScreen(
     val isPlaying by remember(playerViewModel.stablePlayerState) {
         playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
+    val currentQueueName by remember(playerViewModel.playerUiState) {
+        playerViewModel.playerUiState.map { it.currentQueueSourceName }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = "")
+    val homePlayback = remember(currentQueueName, isPlaying) {
+        HomePlayback(currentQueueName, isPlaying, playerViewModel::playPause)
+    }
     LaunchedEffect(homeStatsOverview) {
         homeViewModel.updateTopArtists(homeStatsOverview?.topArtists.orEmpty())
     }
@@ -301,6 +308,7 @@ fun HomeScreen(
                         key = "daily_mix",
                         title = dailyMixTitle,
                         subtitle = dailyMixSubtitle,
+                        queueName = dailyMixTitle,
                         visual = HomeMixVisual.Tonal,
                         onOpen = { navController.navigateSafely(Screen.DailyMixScreen.route) },
                         onPlay = {
@@ -315,6 +323,7 @@ fun HomeScreen(
                         key = "genre_$genre",
                         title = genre,
                         subtitle = genreMixSubtitle,
+                        queueName = genre,
                         visual = HomeMixVisual.Genre(
                             genreName = genre,
                             illustration = genreIllustration(genre, customGenreIcons),
@@ -340,6 +349,7 @@ fun HomeScreen(
                         key = "artist_$artistId",
                         title = topLibraryArtist.name,
                         subtitle = artistMixSubtitle,
+                        queueName = topLibraryArtist.name,
                         visual = HomeMixVisual.Artist(topLibraryArtist.imageModel),
                         onOpen = { navController.navigateSafely(Screen.ArtistDetail.createRoute(artistId)) },
                         onPlay = {
@@ -464,6 +474,8 @@ fun HomeScreen(
                             modifier = Modifier.padding(top = 8.dp),
                             songs = yourMixSongs,
                             titleStyle = cardTitleStyle,
+                            playback = homePlayback,
+                            queueName = "Your Mix",
                             onPlay = {
                                 if (usesFallbackHomeMix) {
                                     playerViewModel.shuffleAllSongs(queueName = "Your Mix")
@@ -506,6 +518,7 @@ fun HomeScreen(
                         HomeRecentlyPlayedRow(
                             items = recentlyPlayedSongs,
                             currentSongId = currentSong?.id,
+                            isPlaying = isPlaying,
                             onSongClick = { song ->
                                 if (recentlyPlayedQueue.isNotEmpty()) {
                                     playerViewModel.playSongs(
@@ -527,7 +540,7 @@ fun HomeScreen(
                         key = "made_for_you",
                         contentType = "made_for_you"
                     ) {
-                        HomeMixesRow(mixes = mixCards, titleStyle = mixTitleStyle)
+                        HomeMixesRow(mixes = mixCards, titleStyle = mixTitleStyle, playback = homePlayback)
                     }
                 }
 
@@ -559,6 +572,8 @@ fun HomeScreen(
                             songs = rediscoverSongs,
                             currentSongId = currentSong?.id,
                             isPlaying = isPlaying,
+                            playback = homePlayback,
+                            queueName = "Rediscover",
                             onSongClick = { song ->
                                 playerViewModel.playSongs(rediscoverSongs, song, queueName = "Rediscover")
                             },

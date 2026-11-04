@@ -15,6 +15,27 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import com.theveloper.pixelplay.ui.theme.GenreThemeUtils
 import com.theveloper.pixelplay.ui.theme.LocalPixelPlayDarkTheme
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MotionScheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size as GeometrySize
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.random.Random
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -120,6 +141,96 @@ private fun smoothShape(radius: Dp) = AbsoluteSmoothCornerShape(
     cornerRadiusBL = radius, smoothnessAsPercentBL = 60
 )
 
+/** What plays now, so the play buttons on the homepage can show it. */
+@Immutable
+data class HomePlayback(
+    val queueName: String,
+    val isPlaying: Boolean,
+    val onPlayPause: () -> Unit
+)
+
+private class HomePlayButton(val showBars: Boolean, val onClick: () -> Unit)
+
+/**
+ * A play button that shows its mix is on: bars right after the tap, also while the songs still
+ * load (they go back when nothing starts), and for as long as the mix plays. A second tap pauses.
+ */
+@Composable
+private fun rememberHomePlayButton(queueName: String, playback: HomePlayback, onPlay: () -> Unit): HomePlayButton {
+    var starting by remember(queueName) { mutableStateOf(false) }
+    val isCurrent = playback.queueName == queueName
+    val isOn = isCurrent && playback.isPlaying
+    LaunchedEffect(starting, isOn) {
+        if (!starting) return@LaunchedEffect
+        if (!isOn) delay(START_PENDING_MS)
+        starting = false
+    }
+    return HomePlayButton(showBars = starting || isOn) {
+        if (isCurrent) {
+            playback.onPlayPause()
+        } else {
+            starting = true
+            onPlay()
+        }
+    }
+}
+
+private const val START_PENDING_MS = 4_000L
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private val homeMotion = MotionScheme.expressive()
+
+/** Swaps a button's icon for the dancing bars, with the expressive pop the rest of the app uses. */
+@Composable
+private fun PlayStateIcon(showBars: Boolean, iconSize: Dp, icon: @Composable () -> Unit) {
+    val barsColor = LocalContentColor.current
+    AnimatedContent(
+        targetState = showBars,
+        transitionSpec = {
+            (fadeIn(homeMotion.defaultEffectsSpec()) + scaleIn(homeMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
+                (fadeOut(homeMotion.fastEffectsSpec()) + scaleOut(homeMotion.fastSpatialSpec(), targetScale = 0.6f))
+        },
+        contentAlignment = Alignment.Center,
+        label = "homePlayIcon"
+    ) { bars ->
+        if (bars) {
+            PlayingBars(color = barsColor, modifier = Modifier.size(iconSize))
+        } else {
+            icon()
+        }
+    }
+}
+
+/** Three dancing bars for what is playing now. The heights change in the draw phase only. */
+@Composable
+private fun PlayingBars(color: Color, modifier: Modifier = Modifier) {
+    val bars = remember { List(3) { Animatable(0.35f) } }
+    LaunchedEffect(Unit) {
+        bars.forEachIndexed { i, bar ->
+            launch {
+                delay(i * 120L)
+                while (true) {
+                    bar.animateTo(Random.nextDouble(0.6, 1.0).toFloat(), tween(Random.nextInt(240, 420)))
+                    bar.animateTo(Random.nextDouble(0.3, 0.55).toFloat(), tween(Random.nextInt(240, 420)))
+                }
+            }
+        }
+    }
+    Canvas(modifier = modifier) {
+        val barWidth = size.width / 4.2f
+        val gap = (size.width - barWidth * 3) / 2
+        bars.forEachIndexed { i, bar ->
+            val height = size.height * bar.value
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(i * (barWidth + gap), (size.height - height) / 2),
+                size = GeometrySize(barWidth, height),
+                cornerRadius = CornerRadius(barWidth / 2f)
+            )
+        }
+    }
+}
+
 /** Same layout as the Recently played header: title left, tonal arrow button right. */
 @Composable
 fun HomeSectionHeader(
@@ -127,6 +238,7 @@ fun HomeSectionHeader(
     modifier: Modifier = Modifier,
     actionIcon: ImageVector = Icons.AutoMirrored.Rounded.ArrowForward,
     actionContentDescription: String? = null,
+    actionPlaying: Boolean = false,
     onActionClick: (() -> Unit)? = null
 ) {
     Row(
@@ -157,11 +269,13 @@ fun HomeSectionHeader(
                 ),
                 onClick = onActionClick
             ) {
-                Icon(
-                    imageVector = actionIcon,
-                    contentDescription = actionContentDescription,
-                    modifier = Modifier.size(18.dp)
-                )
+                PlayStateIcon(showBars = actionPlaying, iconSize = 18.dp) {
+                    Icon(
+                        imageVector = actionIcon,
+                        contentDescription = actionContentDescription,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }
@@ -172,6 +286,8 @@ fun HomeSectionHeader(
 fun HomeYourMixCard(
     songs: List<Song>,
     titleStyle: TextStyle,
+    playback: HomePlayback,
+    queueName: String,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
     onSongClick: (Song) -> Unit,
@@ -224,18 +340,26 @@ fun HomeYourMixCard(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val playButton = rememberHomePlayButton(queueName, playback, onPlay)
                 Button(
-                    onClick = onPlay,
+                    onClick = playButton.onClick,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.primary,
                         contentColor = colors.onPrimary
                     ),
                     contentPadding = PaddingValues(start = 16.dp, end = 20.dp),
-                    modifier = Modifier.height(48.dp)
+                    modifier = Modifier
+                        .height(48.dp)
+                        .animateContentSize(homeMotion.defaultSpatialSpec())
                 ) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
+                    PlayStateIcon(showBars = playButton.showBars, iconSize = 22.dp) {
+                        Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
+                    }
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.home_play), fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(if (playButton.showBars) R.string.home_playing else R.string.home_play),
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
                 FilledIconButton(
                     onClick = onShuffle,
@@ -306,6 +430,7 @@ private fun ShapedCover(
 fun HomeRecentlyPlayedRow(
     items: List<RecentlyPlayedSongUiModel>,
     currentSongId: String?,
+    isPlaying: Boolean,
     onSongClick: (Song) -> Unit,
     onOpenAllClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -352,12 +477,16 @@ fun HomeRecentlyPlayedRow(
                                     .background(MaterialTheme.colorScheme.primary),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.GraphicEq,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                if (isPlaying) {
+                                    PlayingBars(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.GraphicEq,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -399,6 +528,8 @@ data class HomeMixCard(
     val key: String,
     val title: String,
     val subtitle: String,
+    /** The queue name this mix plays under, to recognise it while it plays. */
+    val queueName: String,
     val visual: HomeMixVisual,
     val onOpen: () -> Unit,
     val onPlay: () -> Unit
@@ -409,6 +540,7 @@ data class HomeMixCard(
 fun HomeMixesRow(
     mixes: List<HomeMixCard>,
     titleStyle: TextStyle,
+    playback: HomePlayback,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -418,14 +550,14 @@ fun HomeMixesRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             itemsIndexed(mixes, key = { _, mix -> mix.key }, contentType = { _, _ -> "mix_card" }) { index, mix ->
-                HomeMixCardItem(mix = mix, index = index, titleStyle = titleStyle)
+                HomeMixCardItem(mix = mix, index = index, titleStyle = titleStyle, playback = playback)
             }
         }
     }
 }
 
 @Composable
-private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle) {
+private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle, playback: HomePlayback) {
     val colors = MaterialTheme.colorScheme
     val isDark = LocalPixelPlayDarkTheme.current
     val visual = mix.visual
@@ -531,8 +663,16 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle)
                 modifier = Modifier.padding(top = 6.dp)
             )
         }
+        val playButton = rememberHomePlayButton(mix.queueName, playback, mix.onPlay)
+        // Round when idle, a softer square while it plays, like the expressive toggle buttons.
+        val buttonCorner by animateDpAsState(
+            targetValue = if (playButton.showBars) 16.dp else 24.dp,
+            animationSpec = homeMotion.defaultSpatialSpec(),
+            label = "mixPlayButtonCorner"
+        )
         FilledIconButton(
-            onClick = mix.onPlay,
+            onClick = playButton.onClick,
+            shape = RoundedCornerShape(buttonCorner),
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = buttonContainer,
                 contentColor = buttonContent
@@ -542,10 +682,12 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle)
                 .padding(14.dp)
                 .size(48.dp)
         ) {
-            Icon(
-                imageVector = Icons.Rounded.PlayArrow,
-                contentDescription = stringResource(R.string.home_mix_play, mix.title)
-            )
+            PlayStateIcon(showBars = playButton.showBars, iconSize = 22.dp) {
+                Icon(
+                    imageVector = Icons.Rounded.PlayArrow,
+                    contentDescription = stringResource(R.string.home_mix_play, mix.title)
+                )
+            }
         }
     }
 }
@@ -745,16 +887,20 @@ fun HomeRediscoverSection(
     songs: List<Song>,
     currentSongId: String?,
     isPlaying: Boolean,
+    playback: HomePlayback,
+    queueName: String,
     onSongClick: (Song) -> Unit,
     onPlayAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        val playButton = rememberHomePlayButton(queueName, playback, onPlayAll)
         HomeSectionHeader(
             title = stringResource(R.string.home_rediscover_title),
             actionIcon = Icons.Rounded.PlayArrow,
             actionContentDescription = stringResource(R.string.home_rediscover_play_all),
-            onActionClick = onPlayAll
+            actionPlaying = playButton.showBars,
+            onActionClick = playButton.onClick
         )
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             songs.take(REDISCOVER_VISIBLE_ROWS).forEach { song ->

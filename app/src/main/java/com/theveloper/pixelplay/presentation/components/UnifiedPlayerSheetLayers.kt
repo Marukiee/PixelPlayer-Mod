@@ -1,5 +1,7 @@
 package com.theveloper.pixelplay.presentation.components
 
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.theveloper.pixelplay.presentation.viewmodel.SonosViewModel
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -119,13 +121,23 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                     val isMiniPlayerVisible by remember {
                         derivedStateOf { playerContentExpansionFraction.value < 0.01f }
                     }
+                    val sonosViewModel: SonosViewModel = hiltViewModel()
+                    val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
+                    val isRemotePlaybackActive by playerViewModel.isRemotePlaybackActive.collectAsStateWithLifecycle()
+                    val isBluetoothEnabled by playerViewModel.isBluetoothEnabled.collectAsStateWithLifecycle()
+                    val bluetoothName by playerViewModel.bluetoothName.collectAsStateWithLifecycle()
                     MiniPlayerContentInternal(
                         song = currentSongNonNull,
                         isPlaying = infrequentPlayerState.isPlaying,
                         isCastConnecting = isCastConnecting,
                         isPreparingPlayback = isPreparingPlayback,
+                        output = PlayerOutputIcon.of(
+                            sonosRooms = sonosSession?.group?.members?.size,
+                            isCasting = isCastConnecting || isRemotePlaybackActive,
+                            isBluetoothActive = isBluetoothEnabled && !bluetoothName.isNullOrEmpty()
+                        ),
                         onPlayPause = { playerViewModel.playPause() },
-                        onPrevious = { playerViewModel.previousSong() },
+                        onOutputClick = onShowCastClicked,
                         onNext = { playerViewModel.nextSong() },
                         canScroll = isMiniPlayerVisible && infrequentPlayerState.isPlaying,
                         modifier = Modifier.fillMaxSize()

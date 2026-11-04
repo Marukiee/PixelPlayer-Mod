@@ -173,6 +173,25 @@ class SonosParsingTest {
         assertThat(SonosController.groupVolumeTargets(mapOf("a" to 0, "b" to 0), 12)).isEqualTo(mapOf("a" to 12, "b" to 12))
     }
 
+    @Test
+    fun speakerOffset_narrowsDownFromWholeSeconds() {
+        // The speaker really is 640 ms ahead; it reports whole seconds, polled every 1150 ms.
+        val estimate = SpeakerOffsetEstimate()
+        var result: Long? = null
+        var polls = 0
+        var phone = 10_000L
+        while (result == null && polls < 20) {
+            val speaker = phone + 640
+            result = estimate.add(speaker / 1000 * 1000, phone)
+            phone += 1_150
+            polls++
+        }
+        assertThat(polls).isAtMost(8)
+        assertThat(result!!).isIn(com.google.common.collect.Range.closed(640L - 250, 640L + 250))
+        // A jump of a clock starts over instead of giving nonsense.
+        assertThat(estimate.add(90_000, 10_000)).isNull()
+    }
+
     private fun entity(id: String, title: String, artist: String, album: String, durationMs: Long) = NavidromeSongEntity(
         id = id,
         navidromeId = id,

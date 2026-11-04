@@ -15,6 +15,7 @@
     <string name="sonos_refresh">Opnieuw zoeken</string>
     <string name="sonos_tap_hint">Tik op een ruimte om daar te spelen</string>
     <string name="sonos_playing_on">Speelt op %1$s</string>
+    <string name="player_cd_choose_output">Kies waar je afspeelt</string>
     <string name="sonos_more_options">Meer opties voor %1$s</string>
     <string name="sonos_menu_play_here">Hier afspelen</string>
     <string name="sonos_menu_add_to_playing">Toevoegen aan %1$s</string>

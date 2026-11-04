@@ -37,11 +37,29 @@ class SonosSoapClient(
         .readTimeout(8, TimeUnit.SECONDS)
         .build()
 ) {
+    /** Gives up quickly, for a call that must never hold up what comes after it. */
+    private val quickHttp = http.newBuilder().callTimeout(1_500, TimeUnit.MILLISECONDS).build()
+
     suspend fun call(
         host: String,
         service: SonosService,
         action: String,
         vararg args: Pair<String, Any>
+    ): Map<String, String> = execute(http, host, service, action, args)
+
+    suspend fun callQuick(
+        host: String,
+        service: SonosService,
+        action: String,
+        vararg args: Pair<String, Any>
+    ): Map<String, String> = execute(quickHttp, host, service, action, args)
+
+    private suspend fun execute(
+        client: OkHttpClient,
+        host: String,
+        service: SonosService,
+        action: String,
+        args: Array<out Pair<String, Any>>
     ): Map<String, String> = withContext(Dispatchers.IO) {
         val body = buildEnvelope(service, action, args.toList())
         val request = Request.Builder()
@@ -52,7 +70,7 @@ class SonosSoapClient(
             .post(body.toRequestBody(XML_MEDIA_TYPE))
             .build()
         val (code, text) = try {
-            http.newCall(request).execute().use { it.code to it.body.string() }
+            client.newCall(request).execute().use { it.code to it.body.string() }
         } catch (e: IOException) {
             throw SonosException("$action: ${e.message ?: "no connection"}", cause = e)
         }

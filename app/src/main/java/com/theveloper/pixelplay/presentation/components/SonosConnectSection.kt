@@ -3,7 +3,6 @@ package com.theveloper.pixelplay.presentation.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -14,12 +13,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
@@ -54,10 +48,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -386,39 +378,6 @@ internal fun BoxScope.DeviceIconBackdrop(active: Boolean, color: Color) {
             }
             .background(color, if (active) scallopShape else CircleShape)
     )
-}
-
-/**
- * Three dancing bars for a speaker that is playing. They only exist while it plays, so they
- * never rest as three dots. The heights change in the draw phase only.
- */
-@Composable
-internal fun SpeakerPlayingBars(color: Color, modifier: Modifier = Modifier) {
-    val bars = remember { List(3) { Animatable(0.35f) } }
-    LaunchedEffect(Unit) {
-        bars.forEachIndexed { i, bar ->
-            launch {
-                delay(i * 120L)
-                while (true) {
-                    bar.animateTo(Random.nextDouble(0.6, 1.0).toFloat(), tween(Random.nextInt(240, 420)))
-                    bar.animateTo(Random.nextDouble(0.3, 0.55).toFloat(), tween(Random.nextInt(240, 420)))
-                }
-            }
-        }
-    }
-    Canvas(modifier = modifier) {
-        val barWidth = size.width / 4.2f
-        val gap = (size.width - barWidth * 3) / 2
-        bars.forEachIndexed { i, bar ->
-            val height = size.height * bar.value
-            drawRoundRect(
-                color = color,
-                topLeft = Offset(i * (barWidth + gap), (size.height - height) / 2),
-                size = Size(barWidth, height),
-                cornerRadius = CornerRadius(barWidth / 2f)
-            )
-        }
-    }
 }
 
 /** Same look as the Cast device rows: tonal pill, rotating scallop behind the active icon. */

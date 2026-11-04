@@ -1,5 +1,10 @@
 package com.theveloper.pixelplay.presentation.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MotionScheme
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -480,7 +485,16 @@ internal fun UnifiedPlayerSaveQueueLayer(
     }
 }
 
-@OptIn(UnstableApi::class)
+/**
+ * A modal sheet closes with the theme's fast effects motion, which is made for small things
+ * like fades: the whole sheet jumps away on the back gesture. This gives it time to slide.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private object CastSheetMotionScheme : MotionScheme by MotionScheme.expressive() {
+    override fun <T> fastEffectsSpec(): FiniteAnimationSpec<T> = tween(380, easing = FastOutSlowInEasing)
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun UnifiedPlayerCastLayer(
     showCastSheet: Boolean,
@@ -497,6 +511,7 @@ internal fun UnifiedPlayerCastLayer(
     ) {
         MaterialTheme(
             colorScheme = LocalMaterialTheme.current,
+            motionScheme = CastSheetMotionScheme,
             typography = MaterialTheme.typography,
             shapes = MaterialTheme.shapes
         ) {
