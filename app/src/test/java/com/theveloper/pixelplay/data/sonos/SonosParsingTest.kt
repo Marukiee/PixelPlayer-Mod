@@ -162,6 +162,18 @@ class SonosParsingTest {
     }
 
     @Test
+    fun coverAddress_mustBeHttps() {
+        assertThat(SonosTrackResolver.normalizeCoverAddress("cover.example.com/")).isEqualTo("https://cover.example.com")
+        assertThat(SonosTrackResolver.normalizeCoverAddress(" https://cover.example.com ")).isEqualTo("https://cover.example.com")
+        assertThat(SonosTrackResolver.normalizeCoverAddress("http://cover.example.com")).isNull()
+        assertThat(SonosTrackResolver.normalizeCoverAddress("")).isNull()
+
+        val login = "http://100.86.14.39:4533"
+        assertThat(SonosTrackResolver.rebase("$login/rest/getCoverArt.view?u=mark&id=42", login, "https://cover.example.com"))
+            .isEqualTo("https://cover.example.com/rest/getCoverArt.view?u=mark&id=42")
+    }
+
+    @Test
     fun groupVolume_loudRoomMovesFasterAndQuietRoomStaysOn() {
         val base = mapOf("a" to 50, "b" to 10)
         assertThat(SonosController.groupVolumeTargets(base, 20)).isEqualTo(mapOf("a" to 33, "b" to 7))

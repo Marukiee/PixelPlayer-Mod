@@ -62,6 +62,11 @@
     <string name="settings_sonos_home_address_hint">Het adres van je server op je thuiswifi, zoals http://192.168.1.157:4533. De app zelf blijft je normale adres gebruiken, bijvoorbeeld Tailscale.</string>
     <string name="settings_sonos_home_address_label">Thuisadres</string>
     <string name="settings_sonos_home_address_invalid">Dit is geen geldig adres</string>
+    <string name="settings_sonos_cover_address_title">Adres voor hoesjes</string>
+    <string name="settings_sonos_cover_address_unset">Niet ingesteld: de Sonos-app toont geen hoesjes van je server</string>
+    <string name="settings_sonos_cover_address_hint">De Sonos-app laadt hoesjes alleen via https. Vul het https-adres van je server in, zoals https://cover.example.com. Een adres dat alleen thuis werkt is goed genoeg.</string>
+    <string name="settings_sonos_cover_address_label">Hoesadres</string>
+    <string name="settings_sonos_cover_address_invalid">Vul een geldig https-adres in</string>
     <string name="settings_sonos_save">Opslaan</string>
     <string name="settings_sonos_cancel">Annuleren</string>
     <string name="settings_sonos_reachable">bereikbaar</string>

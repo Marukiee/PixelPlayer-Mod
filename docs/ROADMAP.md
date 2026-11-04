@@ -13,7 +13,7 @@ Volgorde gekozen door Mark (2026-11-02):
    - [ ] Animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
    - [x] **Ronde mod.11 en mod.12** (wensen van Mark, 2026-11-02 en 2026-11-04): overzetten op dezelfde plek, speakers vooraf klaar, groepsvolume zoals de Sonos-app, dempknop, drie puntjes, nieuwe indeling, soepel scrollen en krimpen, artiestfoto's, speaker-pil, Spotify overnemen, geen grijze box op de homepage
    - [x] Hoes in de Drip-pil: lag aan Drip (koos de mediasessie van de Sonos-app). Opgelost aan de Drip-kant; PixelPlayer hoeft niets
-   - [ ] Hoesjes in de Sonos-app (zie "Hoesjes in de Sonos-app" hieronder): Mark wil eigen hoezen, geen Deezer
+   - [x] Hoesjes in de Sonos-app (zie "Hoesjes in de Sonos-app" hieronder): eigen hoezen via een https-adres dat alleen thuis werkt, geen Deezer
 2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
 3. [ ] Spotify: te kopen-lijst
 4. [ ] Spotify: nieuwe releases
@@ -78,20 +78,22 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 - Volume buiten de app (0.7.5-mod.13): `SonosSessionPlayer` om de sessiespeler meldt een remote device (0 tot 100) en stuurt de knoppen door naar het groepsvolume. Uit te zetten met dezelfde instelling als de volumeknoppen in de app.
 - Spotify (0.7.5-mod.12): gemeten op de speakers. Staat Spotify Connect op de speaker (`x-sonos-vli:`) en zet je de wachtrij erop, dan pakt Spotify hem binnen 0,6 seconde terug, ook als Spotify al op pauze stond. Een Pause-commando vooraf plus 300 ms wachten lost dat op. `holdSpeaker` kijkt daarna nog even of Spotify echt weg is, want een Play of Seek die op Spotify belandt, zet Spotify weer aan of blijft hangen. Daarna kost overzetten ongeveer 0,6 seconde (Seek terwijl gestopt werkt meteen, Play tot geluid 0,5 tot 0,6 seconde).
 
-### Hoesjes in de Sonos-app (open)
+### Hoesjes in de Sonos-app
+
+Instelling "Adres voor hoesjes" (Instellingen > Sonos): `SonosTrackResolver.coverForSonos` zet de hoes-URL op dat https-adres, de muziek blijft op het thuisadres. Geldt voor de eerstvolgende wachtrij, dus opnieuw verbinden na het invullen.
+
+Bij Mark is dat `https://cover.markmaaktmedia.nl`: een A-record naar `192.168.1.157` (DNS only), Nginx Proxy Manager (proxy host 13, bestaand wildcard-certificaat) naar Navidrome, en alleen GET en HEAD op exact `/rest/getCoverArt.view`. Niets staat open naar buiten. De link bevat wel het Subsonic-token, dus dat komt in het toegangslog van die proxy host.
 
 Gemeten op Marks echte speakers en de Sonos-app (Android) op 2026-11-04:
 
-- **http (Navidrome thuis):** de app toont geen hoes en vraagt hem niet eens op; een testserver kreeg geen verzoek, ook niet van de speaker.
-- **Openbare https (Deezer-link):** werkt meteen.
-- **https via Tailscale (`tailscale serve`, geldig certificaat):** geen hoes en geen verzoek, ook niet toen de telefoon de naam kon opzoeken ("Use Tailscale DNS" aan). De telefoon haalt de hoes dus niet zelf op; waarschijnlijk doet de Sonos-cloud dat, en die kan alleen bij openbare adressen.
-- **`/getaa?s=1&u=<stream-URL>` op de speaker:** 404 voor http-streams. Gebouwd in mod.11 en in mod.12 weer weggehaald, want de app pakt de eerste hoes in de lijst.
-- **Hoes in de metadata (`data:image/jpeg;base64`):** de speaker weigert dat (UPnP 804, te lang, al bij 15 kB).
+- **https thuis, geldig certificaat:** hoes zichtbaar. Volgens het log haalde alleen de telefoon hem op (`192.168.1.26`, `okhttp/5.3.2`; PixelPlayer gebruikt 5.5.0, dus vrijwel zeker de Sonos-app). Van de speakers kwam geen enkel verzoek. Andere Sonos-apps in huis zijn niet getest; zij halen de hoes vermoedelijk ook zelf op.
+- **http (Navidrome thuis):** geen hoes en geen verzoek, ook niet van de speaker.
+- **Openbare https (Deezer-link):** werkt ook, maar Mark wil dat niet.
+- **https via Tailscale (`tailscale serve`, geldig certificaat):** geen hoes en geen verzoek, ook niet met "Use Tailscale DNS" aan. Waarom niet is onbekend.
+- **`/getaa?s=1&u=<stream-URL>` op de speaker:** 404 voor http-streams. Gebouwd in mod.11 en in mod.12 weer weggehaald.
+- **Hoes in de metadata (`data:image/jpeg;base64`):** de speaker weigert dat (UPnP 804).
 
-Wat overblijft:
-
-1. **Tailscale Funnel op maruks-server, alleen voor het hoes-pad** (`tailscale funnel --bg --set-path=/rest/getCoverArt.view http://localhost:4533/rest/getCoverArt.view`). Eigen hoezen, maar dat pad wordt openbaar, en de link bevat het Subsonic-token. Eerst testen met een testplaatje of hij dan wel wordt opgehaald en door wie. Daarna een instelling "adres voor hoesjes" en `SonosTrackResolver.rebase` gebruiken.
-2. **Deezer** (`search/album`, `cover_xl`): werkte in de test en is simpel, maar Mark wil dit liever niet.
+Let op bij een nieuwe naam: de router bewaart een "bestaat niet"-antwoord tot 30 minuten (SOA-minimum 1800 s). Dat was bij deze test de oorzaak van NXDOMAIN, geen rebind-bescherming: `192.168.1.157.nip.io` lost via de router gewoon op.
 
 ### Sonos-volume (punt 1 gebouwd in 0.7.5-mod.13, punt 2 en 3 nog niet)
 

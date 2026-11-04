@@ -39,10 +39,13 @@ class SonosTrackResolver @Inject constructor(
     private val cache = HashMap<String, SonosTrack?>()
     /** Home address from Settings > Sonos, read on each check so a change applies to the next session. */
     private var homeBase: String? = null
+    /** Https address for cover art from Settings > Sonos, read together with [homeBase]. */
+    private var coverBase: String? = null
 
     suspend fun sourceProblem(): SonosSourceProblem? {
         if (!navidromeRepository.isLoggedIn) return SonosSourceProblem.NOT_LOGGED_IN
         homeBase = normalizeAddress(userPreferencesRepository.sonosHomeAddressFlow.first())
+        coverBase = normalizeCoverAddress(userPreferencesRepository.sonosCoverAddressFlow.first())
         val host = sonosBaseUrl()?.toHttpUrlOrNull()?.host
         if (host != null && isTailscaleHost(host)) return SonosSourceProblem.TAILSCALE_ADDRESS
         return null
@@ -59,6 +62,13 @@ class SonosTrackResolver @Inject constructor(
         val home = homeBase ?: return url
         val login = loginBase() ?: return url
         return rebase(url, login, home)
+    }
+
+    /** The Sonos app only loads cover art over https, so covers can go through their own address. */
+    private fun coverForSonos(url: String): String {
+        val cover = coverBase ?: return forSonos(url)
+        val login = loginBase() ?: return url
+        return rebase(url, login, cover)
     }
 
     /** Loads the Navidrome library index. Returns a problem when Sonos cannot play from Navidrome. */
@@ -128,7 +138,7 @@ class SonosTrackResolver @Inject constructor(
             title = row.title,
             artist = row.artistName,
             album = row.albumName,
-            artUri = navidromeRepository.getCoverArtUrl(entity?.coverArtId ?: navidromeId)?.let(::forSonos),
+            artUri = navidromeRepository.getCoverArtUrl(entity?.coverArtId ?: navidromeId)?.let(::coverForSonos),
             uri = uri,
             mimeType = mime,
             durationMs = row.duration
@@ -153,6 +163,13 @@ class SonosTrackResolver @Inject constructor(
             val url = "$scheme://$rest".toHttpUrlOrNull() ?: return null
             if (url.host.isBlank()) return null
             return url.toString().trimEnd('/')
+        }
+
+        /** Like [normalizeAddress], but assumes https and refuses http: the Sonos app shows no covers over http. */
+        fun normalizeCoverAddress(input: String?): String? {
+            val raw = input?.trim().orEmpty()
+            val withScheme = if (raw.contains("://")) raw else "https://$raw"
+            return normalizeAddress(withScheme)?.takeIf { it.startsWith("https://") }
         }
 
         /** Swaps the [loginBase] at the start of [url] for [homeBase]; other URLs stay as they are. */

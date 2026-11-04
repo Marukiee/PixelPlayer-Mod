@@ -53,6 +53,8 @@ class SonosViewModel @Inject constructor(
 
     val homeAddress: StateFlow<String> = userPreferencesRepository.sonosHomeAddressFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+    val coverAddress: StateFlow<String> = userPreferencesRepository.sonosCoverAddressFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     private val _sourceInfo = MutableStateFlow<SonosSourceInfo?>(null)
     val sourceInfo: StateFlow<SonosSourceInfo?> = _sourceInfo.asStateFlow()
@@ -87,6 +89,17 @@ class SonosViewModel @Inject constructor(
         val normalized = if (input.isBlank()) "" else SonosTrackResolver.normalizeAddress(input) ?: return false
         viewModelScope.launch {
             userPreferencesRepository.setSonosHomeAddress(normalized)
+            resolver.clearSession()
+            loadSourceInfo()
+        }
+        return true
+    }
+
+    /** Saves the cover address; returns false when it is not a valid https address. Blank clears it. */
+    fun setCoverAddress(input: String): Boolean {
+        val normalized = if (input.isBlank()) "" else SonosTrackResolver.normalizeCoverAddress(input) ?: return false
+        viewModelScope.launch {
+            userPreferencesRepository.setSonosCoverAddress(normalized)
             resolver.clearSession()
             loadSourceInfo()
         }

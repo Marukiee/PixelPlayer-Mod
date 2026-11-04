@@ -3220,6 +3220,8 @@ private fun SonosSettingsBlock() {
 
     val homeAddress by sonosViewModel.homeAddress.collectAsStateWithLifecycle()
     var showHomeAddressDialog by remember { mutableStateOf(false) }
+    val coverAddress by sonosViewModel.coverAddress.collectAsStateWithLifecycle()
+    var showCoverAddressDialog by remember { mutableStateOf(false) }
     SettingsSubsection(title = stringResource(R.string.settings_sonos_navidrome_section)) {
         SettingsItem(
             title = stringResource(R.string.settings_sonos_home_address_title),
@@ -3227,51 +3229,37 @@ private fun SonosSettingsBlock() {
             leadingIcon = { Icon(painterResource(R.drawable.rounded_wifi_24), null, tint = MaterialTheme.colorScheme.secondary) },
             onClick = { showHomeAddressDialog = true }
         )
+        SettingsItem(
+            title = stringResource(R.string.settings_sonos_cover_address_title),
+            subtitle = coverAddress.ifBlank { stringResource(R.string.settings_sonos_cover_address_unset) },
+            leadingIcon = { Icon(painterResource(R.drawable.rounded_album_24), null, tint = MaterialTheme.colorScheme.secondary) },
+            onClick = { showCoverAddressDialog = true }
+        )
     }
     if (showHomeAddressDialog) {
-        var text by remember { mutableStateOf(homeAddress) }
-        var invalid by remember { mutableStateOf(false) }
-        AlertDialog(
-            onDismissRequest = { showHomeAddressDialog = false },
-            icon = { Icon(painterResource(R.drawable.rounded_wifi_24), null, tint = MaterialTheme.colorScheme.secondary) },
-            title = { Text(stringResource(R.string.settings_sonos_home_address_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_sonos_home_address_hint),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    OutlinedTextField(
-                        value = text,
-                        onValueChange = {
-                            text = it
-                            invalid = false
-                        },
-                        label = { Text(stringResource(R.string.settings_sonos_home_address_label)) },
-                        placeholder = { Text("http://192.168.1.157:4533") },
-                        singleLine = true,
-                        isError = invalid,
-                        supportingText = if (invalid) {
-                            { Text(stringResource(R.string.settings_sonos_home_address_invalid)) }
-                        } else {
-                            null
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (sonosViewModel.setHomeAddress(text)) showHomeAddressDialog = false else invalid = true
-                }) { Text(stringResource(R.string.settings_sonos_save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showHomeAddressDialog = false }) {
-                    Text(stringResource(R.string.settings_sonos_cancel))
-                }
-            }
+        SonosAddressDialog(
+            iconRes = R.drawable.rounded_wifi_24,
+            title = stringResource(R.string.settings_sonos_home_address_title),
+            hint = stringResource(R.string.settings_sonos_home_address_hint),
+            label = stringResource(R.string.settings_sonos_home_address_label),
+            placeholder = "http://192.168.1.157:4533",
+            invalidMessage = stringResource(R.string.settings_sonos_home_address_invalid),
+            initial = homeAddress,
+            onSave = sonosViewModel::setHomeAddress,
+            onDismiss = { showHomeAddressDialog = false }
+        )
+    }
+    if (showCoverAddressDialog) {
+        SonosAddressDialog(
+            iconRes = R.drawable.rounded_album_24,
+            title = stringResource(R.string.settings_sonos_cover_address_title),
+            hint = stringResource(R.string.settings_sonos_cover_address_hint),
+            label = stringResource(R.string.settings_sonos_cover_address_label),
+            placeholder = "https://cover.example.com",
+            invalidMessage = stringResource(R.string.settings_sonos_cover_address_invalid),
+            initial = coverAddress,
+            onSave = sonosViewModel::setCoverAddress,
+            onDismiss = { showCoverAddressDialog = false }
         )
     }
 
@@ -3422,4 +3410,60 @@ private fun QueueSwipeActionSettingItem(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SonosAddressDialog(
+    iconRes: Int,
+    title: String,
+    hint: String,
+    label: String,
+    placeholder: String,
+    invalidMessage: String,
+    initial: String,
+    onSave: (String) -> Boolean,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(initial) }
+    var invalid by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(painterResource(iconRes), null, tint = MaterialTheme.colorScheme.secondary) },
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(text = hint, style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = {
+                        text = it
+                        invalid = false
+                    },
+                    label = { Text(label) },
+                    placeholder = { Text(placeholder) },
+                    singleLine = true,
+                    isError = invalid,
+                    supportingText = if (invalid) {
+                        { Text(invalidMessage) }
+                    } else {
+                        null
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (onSave(text)) onDismiss() else invalid = true
+            }) { Text(stringResource(R.string.settings_sonos_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_sonos_cancel))
+            }
+        }
+    )
 }

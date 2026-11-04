@@ -268,6 +268,7 @@ class UserPreferencesRepository @Inject constructor(
         val SONOS_SKIP_UNAVAILABLE = booleanPreferencesKey("sonos_skip_unavailable")
         val SONOS_VOLUME_KEYS = booleanPreferencesKey("sonos_volume_keys")
         val SONOS_HOME_ADDRESS = stringPreferencesKey("sonos_home_address")
+        val SONOS_COVER_ADDRESS = stringPreferencesKey("sonos_cover_address")
 
     }
 
@@ -839,6 +840,14 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
 
     suspend fun setSonosHomeAddress(address: String) {
         dataStore.edit { it[PreferencesKeys.SONOS_HOME_ADDRESS] = address }
+    }
+
+    /** Https base URL for cover art in the Sonos app. Empty: covers use the same address as the music. */
+    val sonosCoverAddressFlow: Flow<String> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_COVER_ADDRESS].orEmpty() }
+
+    suspend fun setSonosCoverAddress(address: String) {
+        dataStore.edit { it[PreferencesKeys.SONOS_COVER_ADDRESS] = address }
     }
 
     // ─── Sort options ─────────────────────────────────────────────────────────
