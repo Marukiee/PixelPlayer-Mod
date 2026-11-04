@@ -14,7 +14,7 @@ Volgorde gekozen door Mark (2026-11-02):
    - [x] **Ronde mod.11 en mod.12** (wensen van Mark, 2026-11-02 en 2026-11-04): overzetten op dezelfde plek, speakers vooraf klaar, groepsvolume zoals de Sonos-app, dempknop, drie puntjes, nieuwe indeling, soepel scrollen en krimpen, artiestfoto's, speaker-pil, Spotify overnemen, geen grijze box op de homepage
    - [x] Hoes in de Drip-pil: lag aan Drip (koos de mediasessie van de Sonos-app). Opgelost aan de Drip-kant; PixelPlayer hoeft niets
    - [x] Hoesjes in de Sonos-app (zie "Hoesjes in de Sonos-app" hieronder): eigen hoezen via een https-adres dat alleen thuis werkt, geen Deezer
-   - [ ] Pauze in het eiland van Drip blijft soms op play staan: niet na te spelen (12 van 12 goed met Drip v0.1.19 op de emulator, de sessie staat steeds goed). Mogelijke oorzaak aan de Drip-kant (`expandedFallback`), doorgegeven aan de Drip-chat. Opnieuw bekijken als Mark het nog ziet met de nieuwste Drip
+   - [ ] Pauze in het eiland van Drip blijft soms op play staan: lag aan Drip, de kaart bleef op `expandedFallback` hangen zodra er een tweede sessie was. Met een sessie klopt het (12 van 12 op de emulator). Oplossing staat in de Drip-repo op branch `claude/pauze-icoon`, nog niet uitgebracht. PixelPlayer moet `DRIP_REMOTE_NAME` in de session extras blijven zetten zolang hij cast. Afvinken als Mark het met die Drip-versie niet meer ziet
 2. [ ] PixelPlayerOSS verwerken: hun fixes en verbeteringen in de mod overnemen. Bij de start navragen of de mod daarbij ook Google-vrij moet worden (Cast, Gemini, Firebase eruit), of alleen de fixes.
 3. [ ] Spotify: te kopen-lijst
 4. [ ] Spotify: nieuwe releases
