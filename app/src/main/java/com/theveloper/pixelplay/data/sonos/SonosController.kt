@@ -148,8 +148,13 @@ class SonosController @Inject constructor(
         var lastPlayPauseCommandAt = 0L
         var lastResetAt = 0L
         var lastLocalAutoTransitionAt = 0L
-        /** Local player events before this moment were caused by us following the Sonos. */
-        var followUntil = 0L
+        /** We are moving the phone to follow the Sonos right now. The player reports that during the call. */
+        var following = false
+        /** Bumped by every sync request, so a sync that waited its turn can see a newer one behind it. */
+        var syncGeneration = 0L
+        var lastSkipAt = 0L
+        /** The speaker went quiet during a run of skips and starts again on the song they end on. */
+        var quietForSkips = false
         var skipStreak = 0
         /** The phone is skipping a song that is not on Navidrome; the Sonos must not restart. */
         var skipping = false
@@ -564,7 +569,16 @@ class SonosController @Inject constructor(
                 scheduleSync(s, jump = false)
                 return
             }
-            scheduleSync(s, jump = true)
+            val inRun = now() - s.lastSkipAt < SKIP_RUN_MS
+            s.lastSkipAt = now()
+            if (inRun && !s.quietForSkips && engine.masterPlayer.playWhenReady) {
+                // The speaker should not start every song that is being skipped past.
+                s.quietForSkips = true
+                s.lastPlayPauseCommandAt = now()
+                command(s) { pauseSonos(s) }
+            }
+            if (inRun) s.lastPlayPauseCommandAt = now()
+            scheduleSync(s, jump = true, waitMs = if (inRun) SKIP_RUN_DEBOUNCE_MS else SYNC_DEBOUNCE_MS)
         }
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -577,16 +591,14 @@ class SonosController @Inject constructor(
             val s = active ?: return
             if (isFollowing(s) || reason != Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) return
             s.lastPlayPauseCommandAt = now()
-            // A pending sync sends the play state itself once the queue is right.
-            if (s.syncJob?.isActive == true) return
-            command(s) {
-                if (playWhenReady) {
-                    avt(s, "Play", "Speed" to "1")
-                    if (s.alignOnPlay) alignWithPhone(s)
-                } else {
-                    pauseSonos(s)
-                }
+            // Starting waits for the queue to be right, or the old song plays for a moment. A sync that
+            // is already running may have passed the play state, so this asks for one more after it.
+            if (playWhenReady && s.syncJob?.isActive == true) {
+                scheduleSync(s, jump = false)
+                return
             }
+            // A pause goes out right away, also in the middle of a sync: the order of the lock keeps it last.
+            command(s) { applyPlayState(s) }
         }
 
         override fun onPositionDiscontinuity(
@@ -614,11 +626,15 @@ class SonosController @Inject constructor(
         observedPlayer = null
     }
 
-    private fun isFollowing(s: ActiveSession) = now() < s.followUntil || now() < s.resumedUntil
+    private fun isFollowing(s: ActiveSession) = s.following || now() < s.resumedUntil
 
     private inline fun followLocal(s: ActiveSession, block: (Player) -> Unit) {
-        s.followUntil = now() + FOLLOW_GRACE_MS
-        block(engine.masterPlayer)
+        s.following = true
+        try {
+            block(engine.masterPlayer)
+        } finally {
+            s.following = false
+        }
     }
 
     private fun command(s: ActiveSession, block: suspend () -> Unit) {
@@ -629,14 +645,16 @@ class SonosController @Inject constructor(
         }
     }
 
-    private fun scheduleSync(s: ActiveSession, jump: Boolean) {
+    private fun scheduleSync(s: ActiveSession, jump: Boolean, waitMs: Long = SYNC_DEBOUNCE_MS) {
         s.pendingJump = s.pendingJump || jump
         s.syncJob?.cancel()
+        val generation = ++s.syncGeneration
         s.syncJob = scope.launch {
-            delay(SYNC_DEBOUNCE_MS)
+            delay(waitMs)
             withContext(NonCancellable) {
                 commandMutex.withLock {
-                    if (active !== s) return@withLock
+                    // A newer request behind this one reads the phone when it is its turn.
+                    if (active !== s || generation != s.syncGeneration) return@withLock
                     val wantJump = s.pendingJump
                     s.pendingJump = false
                     runCatching { syncNow(s, wantJump, forceReset = false) }.onFailure(::report)
@@ -665,8 +683,11 @@ class SonosController @Inject constructor(
      */
     private suspend fun syncNow(s: ActiveSession, jump: Boolean, forceReset: Boolean) {
         s.appendJob?.cancel()
+        val generation = s.syncGeneration
         val local = readLocal() ?: return
         val resolved = resolver.resolve(local.upcomingIds)
+        // The phone moved on during the lookup; the sync that caused is next in line.
+        if (generation != s.syncGeneration) return
         val current = resolved[local.currentMediaId]
         if (current == null) {
             handleUnplayable(s)
@@ -695,7 +716,7 @@ class SonosController @Inject constructor(
                     seekSonos(s, local.positionMs)
                 }
                 if (index >= 0) {
-                    applyPlayState(s, local.playWhenReady)
+                    applyPlayState(s)
                     replaceUpcoming(s, index, upcoming)
                     return
                 }
@@ -724,7 +745,8 @@ class SonosController @Inject constructor(
                 "Target" to SonosSoapClient.msToHms(phoneAt + if (local.playWhenReady) START_LEAD_MS else 0L)
             )
         }.isSuccess
-        if (local.playWhenReady) {
+        s.quietForSkips = false
+        if (engine.masterPlayer.playWhenReady) {
             s.lastPlayPauseCommandAt = now()
             avt(s, "Play", "Speed" to "1")
             alignWithPhone(s)
@@ -775,8 +797,16 @@ class SonosController @Inject constructor(
      */
     private suspend fun alignWithPhone(s: ActiveSession) {
         s.alignOnPlay = false
+        val player = engine.masterPlayer
+        val mediaId = player.currentMediaItem?.mediaId
         val deadline = now() + PLAY_START_TIMEOUT_MS
         while (now() < deadline) {
+            // Paused or skipped while the speaker was starting: do not hold up what comes next.
+            if (!player.playWhenReady) {
+                s.alignOnPlay = true
+                return
+            }
+            if (player.currentMediaItem?.mediaId != mediaId) return
             if (avt(s, "GetTransportInfo")["CurrentTransportState"] == "PLAYING") break
             delay(120)
         }
@@ -834,14 +864,18 @@ class SonosController @Inject constructor(
         saveSession(s)
     }
 
-    private suspend fun applyPlayState(s: ActiveSession, playing: Boolean) {
+    /** Puts the speaker in the play state the phone is in now, not in the one it had when a sync started. */
+    private suspend fun applyPlayState(s: ActiveSession) {
         val state = avt(s, "GetTransportInfo")["CurrentTransportState"].orEmpty()
         s.lastPlayPauseCommandAt = now()
-        if (playing && state != "PLAYING") {
-            avt(s, "Play", "Speed" to "1")
-            if (s.alignOnPlay) alignWithPhone(s)
+        s.quietForSkips = false
+        when (playStateCommand(engine.masterPlayer.playWhenReady, state)) {
+            "Play" -> {
+                avt(s, "Play", "Speed" to "1")
+                if (s.alignOnPlay) alignWithPhone(s)
+            }
+            "Pause" -> pauseSonos(s)
         }
-        if (!playing && state == "PLAYING") pauseSonos(s)
     }
 
     private suspend fun handleUnplayable(s: ActiveSession) {
@@ -1013,7 +1047,10 @@ class SonosController @Inject constructor(
         /** Not a whole second, so each poll lands at another moment in the speaker's second; see [SpeakerOffsetEstimate]. */
         private const val POLL_INTERVAL_MS = 1_130L
         private const val SYNC_DEBOUNCE_MS = 250L
-        private const val FOLLOW_GRACE_MS = 1_200L
+        /** Skips closer together than this are one run. */
+        private const val SKIP_RUN_MS = 1_500L
+        /** How long the speaker stays quiet after the last skip of a run. */
+        private const val SKIP_RUN_DEBOUNCE_MS = 800L
         private const val TRACK_COMMAND_GRACE_MS = 4_000L
         private const val PLAY_PAUSE_GRACE_MS = 3_000L
         private const val AUTO_ADVANCE_GRACE_MS = 7_000L
@@ -1038,6 +1075,19 @@ class SonosController @Inject constructor(
         private const val ALIGN_TOLERANCE_MS = 1_200L
         /** Volume changes closer together than this count as one drag or run of key presses. */
         private const val VOLUME_GESTURE_MS = 1_500L
+
+        /**
+         * What the speaker needs to match the phone, or null when it already does. A speaker that
+         * is starting reports TRANSITIONING: it counts as playing, and takes a Pause at once.
+         */
+        internal fun playStateCommand(wantPlaying: Boolean, transport: String): String? {
+            val going = transport == "PLAYING" || transport == "TRANSITIONING"
+            return when {
+                wantPlaying && !going -> "Play"
+                !wantPlaying && going -> "Pause"
+                else -> null
+            }
+        }
 
         /**
          * Whether the speaker plays the stream we queued. Compares the Subsonic song id only,

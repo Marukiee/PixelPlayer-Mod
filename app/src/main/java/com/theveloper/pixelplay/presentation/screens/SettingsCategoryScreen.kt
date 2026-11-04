@@ -3242,7 +3242,7 @@ private fun SonosSettingsBlock() {
             title = stringResource(R.string.settings_sonos_home_address_title),
             hint = stringResource(R.string.settings_sonos_home_address_hint),
             label = stringResource(R.string.settings_sonos_home_address_label),
-            placeholder = "http://192.168.1.157:4533",
+            placeholder = "http://192.168.0.10:4533",
             invalidMessage = stringResource(R.string.settings_sonos_home_address_invalid),
             initial = homeAddress,
             onSave = sonosViewModel::setHomeAddress,

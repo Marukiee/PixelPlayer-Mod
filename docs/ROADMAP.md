@@ -72,28 +72,32 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 - De telefoon blijft de baas over de wachtrij en speelt stil mee: het geluid wordt in de audio-sink op 0 gezet (`SonosAudioGate`, `MutingAudioSink`), zonder audiofocus en zonder crossfade. Daardoor werken melding, vergrendelscherm, swipes en luisterstatistieken gewoon.
 - `SonosController` stuurt elke actie van de telefoon door (afspelen, pauze, volgende, spoelen, wachtrij) en zet de komende 100 nummers op de Sonos-wachtrij. De Sonos is leidend voor de positie; wat in de Sonos-app gebeurt, volgt de telefoon.
 - `SonosTrackResolver` koppelt nummers aan de Navidrome-cache (titel, artiest, album, duur). Hi-res (boven 48 kHz) en Opus of DSD vraagt hij als MP3 320 op, omdat Sonos die niet afspeelt.
-- Thuisadres (0.7.5-mod.10): de app gebruikt het Navidrome-inlogadres (bij Mark Tailscale, `100.86.14.39`), de speakers krijgen het adres uit Instellingen > Sonos (`http://192.168.1.157:4533`, maruks-server). `SonosTrackResolver.rebase` zet het begin van de stream- en hoes-URL om.
+- Thuisadres (0.7.5-mod.10): de app gebruikt het Navidrome-inlogadres (bij Mark via Tailscale), de speakers krijgen het thuisadres van de server uit Instellingen > Sonos. `SonosTrackResolver.rebase` zet het begin van de stream- en hoes-URL om.
 - Getest op de emulator tegen een echte Navidrome en een nep-Sonos met drie speakers, en door Mark thuis op zijn echte speakers: werkt (2026-11-02).
 - Terugverbinden (0.7.5-mod.13): het coördinator-id en de wachtrij staan in SharedPreferences. Bij het starten dempt de app eerst, vraagt de speaker wat hij speelt, en pakt de sessie op als die nog op onze wachtrij staat (spelend, of gepauzeerd en minder dan 12 uur oud). De speaker krijgt daarbij geen commando's; de telefoon volgt hem. Wegvegen uit Recent stopt de service niet zolang Sonos actief is.
 - Volume buiten de app (0.7.5-mod.13): `SonosSessionPlayer` om de sessiespeler meldt een remote device (0 tot 100) en stuurt de knoppen door naar het groepsvolume. Uit te zetten met dezelfde instelling als de volumeknoppen in de app.
 - Spotify (0.7.5-mod.12): gemeten op de speakers. Staat Spotify Connect op de speaker (`x-sonos-vli:`) en zet je de wachtrij erop, dan pakt Spotify hem binnen 0,6 seconde terug, ook als Spotify al op pauze stond. Een Pause-commando vooraf plus 300 ms wachten lost dat op. `holdSpeaker` kijkt daarna nog even of Spotify echt weg is, want een Play of Seek die op Spotify belandt, zet Spotify weer aan of blijft hangen. Daarna kost overzetten ongeveer 0,6 seconde (Seek terwijl gestopt werkt meteen, Play tot geluid 0,5 tot 0,6 seconde).
 
+- Snel skippen en pauze (0.7.5-mod.15): gemeten op een echte speaker. Calls duren 12 tot 90 ms, na Play of een track-Seek tijdens het spelen staat hij eerst op `TRANSITIONING`, en een Pause werkt dan ook meteen. Reeksen skips houden de speaker stil tot 800 ms na de laatste (`SKIP_RUN_DEBOUNCE_MS`). Een pauze gaat altijd meteen door en de speakerstand wordt op het laatste moment van de telefoon gelezen. De oude tijdvenster-beveiliging bij het volgen van de speaker is weg, want die negeerde knoppen. `tools/sonos-test` is de stresstest hiervoor: de oude code haalde 15 van de 27 rondes, de nieuwe alles.
+
 ### Hoesjes in de Sonos-app
 
 Instelling "Adres voor hoesjes" (Instellingen > Sonos): `SonosTrackResolver.coverForSonos` zet de hoes-URL op dat https-adres, de muziek blijft op het thuisadres. Geldt voor de eerstvolgende wachtrij, dus opnieuw verbinden na het invullen.
 
-Bij Mark is dat `https://cover.markmaaktmedia.nl`: een A-record naar `192.168.1.157` (DNS only), Nginx Proxy Manager (proxy host 13, bestaand wildcard-certificaat) naar Navidrome, en alleen GET en HEAD op exact `/rest/getCoverArt.view`. Niets staat open naar buiten. De link bevat wel het Subsonic-token, dus dat komt in het toegangslog van die proxy host.
+Het adres staat standaard ingevuld en is te wijzigen in de app. De standaardwaarde zit niet in de code: `SONOS_COVER_ADDRESS` in `local.properties` of, op GitHub, de secret met dezelfde naam. Leeg opslaan zet het uit.
+
+Bij Mark loopt dat via een eigen domeinnaam die naar het thuisadres van de server wijst (DNS only), Nginx Proxy Manager (bestaand wildcard-certificaat) naar Navidrome, en alleen GET en HEAD op exact `/rest/getCoverArt.view`. Niets staat open naar buiten. De link bevat wel het Subsonic-token, dus dat komt in het toegangslog van die proxy host.
 
 Gemeten op Marks echte speakers en de Sonos-app (Android) op 2026-11-04:
 
-- **https thuis, geldig certificaat:** hoes zichtbaar. Volgens het log haalde alleen de telefoon hem op (`192.168.1.26`, `okhttp/5.3.2`; PixelPlayer gebruikt 5.5.0, dus vrijwel zeker de Sonos-app). Van de speakers kwam geen enkel verzoek. Andere Sonos-apps in huis zijn niet getest; zij halen de hoes vermoedelijk ook zelf op.
+- **https thuis, geldig certificaat:** hoes zichtbaar. Volgens het log haalde alleen de telefoon hem op (`okhttp/5.3.2`; PixelPlayer gebruikt 5.5.0, dus vrijwel zeker de Sonos-app). Van de speakers kwam geen enkel verzoek. Andere Sonos-apps in huis zijn niet getest; zij halen de hoes vermoedelijk ook zelf op.
 - **http (Navidrome thuis):** geen hoes en geen verzoek, ook niet van de speaker.
 - **Openbare https (Deezer-link):** werkt ook, maar Mark wil dat niet.
 - **https via Tailscale (`tailscale serve`, geldig certificaat):** geen hoes en geen verzoek, ook niet met "Use Tailscale DNS" aan. Waarom niet is onbekend.
 - **`/getaa?s=1&u=<stream-URL>` op de speaker:** 404 voor http-streams. Gebouwd in mod.11 en in mod.12 weer weggehaald.
 - **Hoes in de metadata (`data:image/jpeg;base64`):** de speaker weigert dat (UPnP 804).
 
-Let op bij een nieuwe naam: de router bewaart een "bestaat niet"-antwoord tot 30 minuten (SOA-minimum 1800 s). Dat was bij deze test de oorzaak van NXDOMAIN, geen rebind-bescherming: `192.168.1.157.nip.io` lost via de router gewoon op.
+Let op bij een nieuwe naam: de router bewaart een "bestaat niet"-antwoord tot 30 minuten (SOA-minimum 1800 s). Dat was bij deze test de oorzaak van NXDOMAIN, geen rebind-bescherming: een `nip.io`-naam die naar hetzelfde privé-adres wijst, lost via de router gewoon op.
 
 ### Sonos-volume (punt 1 gebouwd in 0.7.5-mod.13, punt 2 en 3 nog niet)
 

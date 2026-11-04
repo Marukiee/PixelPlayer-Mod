@@ -59,7 +59,7 @@
     <string name="settings_sonos_navidrome_section">Navidrome</string>
     <string name="settings_sonos_home_address_title">Thuisadres voor Sonos</string>
     <string name="settings_sonos_home_address_unset">Niet ingesteld: Sonos gebruikt je Navidrome-inlogadres</string>
-    <string name="settings_sonos_home_address_hint">Het adres van je server op je thuiswifi, zoals http://192.168.1.157:4533. De app zelf blijft je normale adres gebruiken, bijvoorbeeld Tailscale.</string>
+    <string name="settings_sonos_home_address_hint">Het adres van je server op je thuiswifi, zoals http://192.168.0.10:4533. De app zelf blijft je normale adres gebruiken, bijvoorbeeld Tailscale.</string>
     <string name="settings_sonos_home_address_label">Thuisadres</string>
     <string name="settings_sonos_home_address_invalid">Dit is geen geldig adres</string>
     <string name="settings_sonos_cover_address_title">Adres voor hoesjes</string>

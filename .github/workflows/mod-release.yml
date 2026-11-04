@@ -48,6 +48,8 @@ jobs:
           } > keystore.properties
 
       - name: Build release APK
+        env:
+          SONOS_COVER_ADDRESS: ${{ secrets.SONOS_COVER_ADDRESS }}
         run: ./gradlew :app:assembleRelease -Ppixelplay.enableAbiSplits=true --console=plain
 
       # The certificate of the app on Mark's phone. Any other key means Android refuses the update.

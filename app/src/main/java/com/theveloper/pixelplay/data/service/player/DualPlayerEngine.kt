@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -1122,12 +1123,14 @@ class DualPlayerEngine @Inject constructor(
                 val uri = dataSpec.uri
                 val scheme = uri.scheme
                 if (scheme in CLOUD_PROXY_SCHEMES) {
-                    val originalUri = uri.toString()
-                    val resolved = resolvedUriCache.get(originalUri)
-                    if (resolved != null) {
+                    // Skipping fast gets here before the neighbours are looked up. This runs on the
+                    // loader thread, which may block, and the original URI could not be opened anyway.
+                    val resolved = resolvedUriCache.get(uri.toString())
+                        ?: runBlocking { resolveCloudUri(uri) }
+                    if (resolved != uri) {
                         return dataSpec.buildUpon().setUri(resolved).build()
                     }
-                    Timber.tag("DualPlayerEngine").d("resolveDataSpec: Cache MISS for %s — using original URI", scheme)
+                    Timber.tag("DualPlayerEngine").d("resolveDataSpec: could not resolve %s", scheme)
                 }
                 return dataSpec
             }

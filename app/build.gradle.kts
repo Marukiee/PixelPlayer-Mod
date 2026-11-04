@@ -115,6 +115,12 @@ android {
             ?: "b18441a1ff607e10a989891a5462e627"
         buildConfigField("int", "TELEGRAM_API_ID", telegramApiId)
         buildConfigField("String", "TELEGRAM_API_HASH", "\"$telegramApiHash\"")
+
+        // Your own https address for covers in the Sonos app. Stays out of the repository:
+        // comes from local.properties or a CI secret, and can be changed in the app's settings.
+        val sonosCoverAddress = localProperties.getProperty("SONOS_COVER_ADDRESS")?.ifEmpty { null }
+            ?: System.getenv("SONOS_COVER_ADDRESS").orEmpty()
+        buildConfigField("String", "SONOS_DEFAULT_COVER_ADDRESS", "\"$sonosCoverAddress\"")
     }
 
     signingConfigs {

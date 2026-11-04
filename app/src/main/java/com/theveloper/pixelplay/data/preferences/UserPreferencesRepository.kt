@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.data.preferences
 
+import com.theveloper.pixelplay.BuildConfig
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
@@ -842,9 +843,12 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
         dataStore.edit { it[PreferencesKeys.SONOS_HOME_ADDRESS] = address }
     }
 
-    /** Https base URL for cover art in the Sonos app. Empty: covers use the same address as the music. */
+    /**
+     * Https base URL for cover art in the Sonos app. Never set: the address this build came with.
+     * Saved empty: the user turned it off, and covers use the same address as the music.
+     */
     val sonosCoverAddressFlow: Flow<String> =
-        dataStore.data.map { it[PreferencesKeys.SONOS_COVER_ADDRESS].orEmpty() }
+        dataStore.data.map { it[PreferencesKeys.SONOS_COVER_ADDRESS] ?: BuildConfig.SONOS_DEFAULT_COVER_ADDRESS }
 
     suspend fun setSonosCoverAddress(address: String) {
         dataStore.edit { it[PreferencesKeys.SONOS_COVER_ADDRESS] = address }

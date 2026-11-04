@@ -146,19 +146,31 @@ class SonosParsingTest {
 
     @Test
     fun homeAddress_isCleanedUpAndSwappedIntoSonosUrls() {
-        assertThat(SonosTrackResolver.normalizeAddress("192.168.1.157:4533/")).isEqualTo("http://192.168.1.157:4533")
+        assertThat(SonosTrackResolver.normalizeAddress("192.168.0.10:4533/")).isEqualTo("http://192.168.0.10:4533")
         assertThat(SonosTrackResolver.normalizeAddress(" https://music.home/navidrome ")).isEqualTo("https://music.home/navidrome")
         assertThat(SonosTrackResolver.normalizeAddress("")).isNull()
         assertThat(SonosTrackResolver.normalizeAddress("http://")).isNull()
 
-        val login = "http://100.86.14.39:4533"
-        val home = "http://192.168.1.157:4533"
+        val login = "http://100.64.0.1:4533"
+        val home = "http://192.168.0.10:4533"
         val stream = "$login/rest/stream.view?u=mark&t=abc&s=def&id=42"
         assertThat(SonosTrackResolver.rebase(stream, login, home))
             .isEqualTo("$home/rest/stream.view?u=mark&t=abc&s=def&id=42")
         // A longer host that only starts the same is left alone.
-        assertThat(SonosTrackResolver.rebase("http://100.86.14.39:45330/rest/x", login, home))
-            .isEqualTo("http://100.86.14.39:45330/rest/x")
+        assertThat(SonosTrackResolver.rebase("http://100.64.0.1:45330/rest/x", login, home))
+            .isEqualTo("http://100.64.0.1:45330/rest/x")
+    }
+
+    @Test
+    fun playState_pausesASpeakerThatIsStillStarting() {
+        assertThat(SonosController.playStateCommand(false, "TRANSITIONING")).isEqualTo("Pause")
+        assertThat(SonosController.playStateCommand(false, "PLAYING")).isEqualTo("Pause")
+        assertThat(SonosController.playStateCommand(false, "PAUSED_PLAYBACK")).isNull()
+        assertThat(SonosController.playStateCommand(false, "STOPPED")).isNull()
+        assertThat(SonosController.playStateCommand(true, "STOPPED")).isEqualTo("Play")
+        assertThat(SonosController.playStateCommand(true, "PAUSED_PLAYBACK")).isEqualTo("Play")
+        assertThat(SonosController.playStateCommand(true, "TRANSITIONING")).isNull()
+        assertThat(SonosController.playStateCommand(true, "PLAYING")).isNull()
     }
 
     @Test
@@ -168,7 +180,7 @@ class SonosParsingTest {
         assertThat(SonosTrackResolver.normalizeCoverAddress("http://cover.example.com")).isNull()
         assertThat(SonosTrackResolver.normalizeCoverAddress("")).isNull()
 
-        val login = "http://100.86.14.39:4533"
+        val login = "http://100.64.0.1:4533"
         assertThat(SonosTrackResolver.rebase("$login/rest/getCoverArt.view?u=mark&id=42", login, "https://cover.example.com"))
             .isEqualTo("https://cover.example.com/rest/getCoverArt.view?u=mark&id=42")
     }

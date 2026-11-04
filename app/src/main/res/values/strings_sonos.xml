@@ -59,7 +59,7 @@
     <string name="settings_sonos_navidrome_section">Navidrome</string>
     <string name="settings_sonos_home_address_title">Home address for Sonos</string>
     <string name="settings_sonos_home_address_unset">Not set: Sonos uses your Navidrome login address</string>
-    <string name="settings_sonos_home_address_hint">The address of your server on your home Wi-Fi, like http://192.168.1.157:4533. The app itself keeps using your normal address, for example Tailscale.</string>
+    <string name="settings_sonos_home_address_hint">The address of your server on your home Wi-Fi, like http://192.168.0.10:4533. The app itself keeps using your normal address, for example Tailscale.</string>
     <string name="settings_sonos_home_address_label">Home address</string>
     <string name="settings_sonos_home_address_invalid">This is not a valid address</string>
     <string name="settings_sonos_cover_address_title">Address for covers</string>
