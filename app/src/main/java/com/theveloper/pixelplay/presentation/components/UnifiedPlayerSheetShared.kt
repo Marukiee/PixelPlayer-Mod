@@ -237,11 +237,21 @@ internal fun MiniPlayerContentInternal(
             animationSpec = miniPlayerMotion.defaultEffectsSpec(),
             label = "miniOutputTint"
         )
+        // Bare icons sit about 16 dp apart because of the room around them. A circle fills that
+        // room, so the buttons shift to keep the gaps on both sides of the play button equal.
+        val outputGap by animateDpAsState(
+            targetValue = if (isElsewhere) 10.dp else 4.dp,
+            animationSpec = miniPlayerMotion.defaultSpatialSpec(),
+            label = "miniOutputGap"
+        )
+        val nextGap by animateDpAsState(
+            targetValue = if (isElsewhere) 0.dp else 4.dp,
+            animationSpec = miniPlayerMotion.defaultSpatialSpec(),
+            label = "miniNextGap"
+        )
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
-                .background(outputContainer)
                 .clickable(
                     interactionSource = outputInteraction,
                     indication = miniPlayerIndication
@@ -251,6 +261,12 @@ internal fun MiniPlayerContentInternal(
                 },
             contentAlignment = Alignment.Center
         ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(outputContainer)
+            )
             AnimatedContent(
                 targetState = output,
                 transitionSpec = {
@@ -269,7 +285,7 @@ internal fun MiniPlayerContentInternal(
             }
         }
 
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(outputGap))
 
         // Settings choose between a ring that shows the progress and a filled button. The filled
         // one is round when paused and a softer square while playing, like the homepage buttons.
@@ -312,7 +328,7 @@ internal fun MiniPlayerContentInternal(
             )
         }
 
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(nextGap))
 
         Box(
             modifier = Modifier

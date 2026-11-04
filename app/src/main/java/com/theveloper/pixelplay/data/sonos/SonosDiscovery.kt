@@ -30,6 +30,8 @@ data class SonosGroup(
 ) {
     val coordinator: SonosSpeaker get() = members.first { it.uuid == coordinatorUuid }
     val displayName: String get() = members.joinToString(" + ") { it.name }
+    /** Every room on its own line, for places with room to show the whole group. */
+    val stackedNames: String get() = members.joinToString("\n") { it.name }
     /** "Living room +2": fits in a small pill. */
     val shortName: String get() = if (members.size > 1) "${coordinator.name} +${members.size - 1}" else coordinator.name
     val queueUri: String get() = "x-rincon-queue:$coordinatorUuid#0"

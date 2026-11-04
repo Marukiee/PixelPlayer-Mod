@@ -2,6 +2,7 @@ package com.theveloper.pixelplay.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
@@ -207,7 +208,7 @@ internal fun SonosDeviceSection(
                 .ifBlank { stringResource(R.string.sonos_section_title) }
         }
         OutputRow(
-            title = group.displayName,
+            title = group.stackedNames,
             status = status,
             icon = if (group.members.size > 1) Icons.Rounded.SpeakerGroup else Icons.Rounded.Speaker,
             isSelected = isActive,
@@ -402,10 +403,12 @@ private fun OutputRow(
         animationSpec = sonosMotion.defaultEffectsSpec(),
         label = "outputRowContent"
     )
+    // As round as a one-line row is high, so a group with more lines stays the same kind of pill.
+    val rowShape = RoundedCornerShape(38.dp)
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(CircleShape)
+            .clip(rowShape)
             .clickable(onClick = onClick),
         color = containerColor,
         tonalElevation = 2.dp
@@ -444,13 +447,17 @@ private fun OutputRow(
                     }
                 }
             }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .animateContentSize(RowSizeSpec),
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = onContainer,
-                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -544,7 +551,7 @@ internal fun SonosActiveCard(
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AnimatedContent(
-                        targetState = state.group.displayName,
+                        targetState = state.group.stackedNames,
                         transitionSpec = {
                             (fadeIn(sonosMotion.defaultEffectsSpec()) + slideInVertically(sonosMotion.defaultSpatialSpec()) { it / 3 }) togetherWith
                                 (fadeOut(sonosMotion.fastEffectsSpec()) + slideOutVertically(sonosMotion.fastSpatialSpec()) { -it / 3 }) using
@@ -556,7 +563,6 @@ internal fun SonosActiveCard(
                             text = name,
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                             color = onContainer,
-                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }

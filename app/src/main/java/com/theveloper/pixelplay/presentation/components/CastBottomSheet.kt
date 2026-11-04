@@ -1741,7 +1741,7 @@ private fun CastDeviceRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(CircleShape) // Mantenemos el clip circular para el ripple
+            .clip(RoundedCornerShape(38.dp))
             .clickable(
                 enabled = true,
                 onClick = when {
