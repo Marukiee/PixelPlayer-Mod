@@ -1,8 +1,9 @@
-- App gesloten terwijl de Sonos speelt: bij openen pakt hij de speaker vanzelf weer op
-- Volumeknoppen regelen de Sonos nu ook buiten de app, en het volume staat in het eiland van Drip
-- Mini-speler: de play-knop is het enige gevulde rondje, en een gewoon speaker-icoon om de uitvoer te kiezen
+- Mini-speler: play-knop met voortgangsring of gevuld, te kiezen in Instellingen > Appearance
+- Speaker-icoon even groot en even dik als de andere iconen, in dezelfde accentkleur als je op een speaker speelt
 
 Ook in deze versie (sinds 0.7.5-mod.1):
+- App gesloten terwijl de Sonos speelt: bij openen pakt hij de speaker vanzelf weer op
+- Volumeknoppen regelen de Sonos nu ook buiten de app, en het volume staat in het eiland van Drip
 - Sonos neemt het nu ook over als Spotify op de speaker speelt
 - Speaker-pil in de speler sluit aan op de puntjes, met het icoon van je apparaat en een `+1` voor de groep
 - Geen grijze box meer als je iets op de homepage vasthoudt

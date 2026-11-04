@@ -18,6 +18,7 @@ import com.theveloper.pixelplay.data.preferences.SwipeAction
 import com.theveloper.pixelplay.data.preferences.QueueSwipeAction
 import com.theveloper.pixelplay.data.preferences.LibraryNavigationMode
 import com.theveloper.pixelplay.data.preferences.ThemePreference
+import com.theveloper.pixelplay.data.preferences.MiniPlayerStyle
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.database.AiUsageDao
 import com.theveloper.pixelplay.data.database.AiUsageEntity
@@ -946,6 +947,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.setCarouselStyle(style)
         }
+    }
+
+    val miniPlayerStyle: StateFlow<String> = userPreferencesRepository.miniPlayerStyleFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MiniPlayerStyle.RING)
+
+    fun setMiniPlayerStyle(style: String) {
+        viewModelScope.launch { userPreferencesRepository.setMiniPlayerStyle(style) }
     }
 
     fun setShowPlayerFileInfo(show: Boolean) {

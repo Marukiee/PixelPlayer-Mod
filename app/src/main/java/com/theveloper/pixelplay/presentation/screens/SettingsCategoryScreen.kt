@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.screens
 
+import com.theveloper.pixelplay.data.preferences.MiniPlayerStyle
 import com.theveloper.pixelplay.presentation.navigation.navigateSafely
 import com.theveloper.pixelplay.presentation.components.BackupModuleSelectionDialog
 import com.theveloper.pixelplay.data.preferences.AiPreferencesRepository
@@ -782,6 +783,18 @@ fun SettingsCategoryScreen(
                                     checked = uiState.showPlayerFileInfo,
                                     onCheckedChange = { settingsViewModel.setShowPlayerFileInfo(it) },
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_attach_file_24), null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                val miniPlayerStyle by settingsViewModel.miniPlayerStyle.collectAsStateWithLifecycle()
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_mini_player_style_title),
+                                    description = stringResource(R.string.settings_mini_player_style_subtitle),
+                                    options = mapOf(
+                                        MiniPlayerStyle.RING to stringResource(R.string.settings_mini_player_style_ring),
+                                        MiniPlayerStyle.FILLED to stringResource(R.string.settings_mini_player_style_filled)
+                                    ),
+                                    selectedKey = miniPlayerStyle,
+                                    onSelectionChanged = { settingsViewModel.setMiniPlayerStyle(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.PlayCircle, null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
                                 SettingsItem(
                                     title = stringResource(R.string.settings_album_art_palette_title),

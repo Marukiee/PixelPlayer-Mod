@@ -24,6 +24,11 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Size as GeometrySize
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.animateDpAsState
@@ -40,7 +45,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.theveloper.pixelplay.R
-import androidx.compose.material.icons.outlined.SpeakerGroup
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ColorScheme
@@ -79,12 +83,12 @@ fun getNavigationBarHeight(): Dp {
 
 /** Where the music comes out, with the same icon in the full player's pill and the mini player. */
 internal enum class PlayerOutputIcon(@DrawableRes val drawable: Int) {
-    Speaker(R.drawable.rounded_speaker_24),
-    SpeakerGroup(R.drawable.rounded_speaker_24),
+    Speaker(R.drawable.ic_output_speaker),
+    SpeakerGroup(R.drawable.ic_output_speaker_group),
     Cast(R.drawable.rounded_cast_24),
     Bluetooth(R.drawable.rounded_bluetooth_24),
     // A plain speaker, like Spotify; the colour and the pill's label say when it is not the phone.
-    Phone(R.drawable.rounded_speaker_24);
+    Phone(R.drawable.ic_output_speaker);
 
     val isPhone: Boolean get() = this == Phone
 
@@ -99,7 +103,6 @@ internal enum class PlayerOutputIcon(@DrawableRes val drawable: Int) {
     }
 }
 
-/** Outlined, unlike the filled icons on the device rows in the connect sheet. */
 @Composable
 internal fun PlayerOutputGlyph(
     icon: PlayerOutputIcon,
@@ -107,10 +110,19 @@ internal fun PlayerOutputGlyph(
     tint: Color,
     modifier: Modifier = Modifier
 ) {
-    if (icon == PlayerOutputIcon.SpeakerGroup) {
-        Icon(Icons.Outlined.SpeakerGroup, contentDescription, modifier, tint)
-    } else {
-        Icon(painterResource(icon.drawable), contentDescription, modifier, tint)
+    Icon(painterResource(icon.drawable), contentDescription, modifier, tint)
+}
+
+/** How far the song is, as a ring around the play button. Only redraws, it never recomposes. */
+@Composable
+private fun MiniPlayerProgressRing(progress: () -> Float, color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val ring = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+        val topLeft = Offset(ring.width / 2, ring.width / 2)
+        val arcSize = GeometrySize(size.width - ring.width, size.height - ring.width)
+        drawArc(color.copy(alpha = 0.2f), 0f, 360f, false, topLeft, arcSize, style = ring)
+        val sweep = 360f * progress().coerceIn(0f, 1f)
+        if (sweep > 0f) drawArc(color, -90f, sweep, false, topLeft, arcSize, style = ring)
     }
 }
 
@@ -124,6 +136,8 @@ internal fun MiniPlayerContentInternal(
     isCastConnecting: Boolean,
     isPreparingPlayback: Boolean,
     output: PlayerOutputIcon,
+    progressRing: Boolean,
+    progress: () -> Float,
     onPlayPause: () -> Unit,
     onOutputClick: () -> Unit,
     onNext: () -> Unit,
@@ -207,23 +221,25 @@ internal fun MiniPlayerContentInternal(
         }
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Like Spotify, the output icon stands out when the music is not on this phone. With a
-        // coloured circle, because album colours can make two icon colours look alike.
-        val isElsewhere = !output.isPhone
+        // Like Spotify, the output icon stands out when the music is not on this phone, in the
+        // same accent colour as the rest of the controls.
+        val accent = LocalMaterialTheme.current.primary
+        val onAccent = LocalMaterialTheme.current.onPrimary
         val iconTint = LocalMaterialTheme.current.onPrimaryContainer
+        val isElsewhere = !output.isPhone
         val outputContainer by animateColorAsState(
-            targetValue = if (isElsewhere) LocalMaterialTheme.current.tertiary else Color.Transparent,
+            targetValue = if (isElsewhere) accent else accent.copy(alpha = 0f),
             animationSpec = miniPlayerMotion.defaultEffectsSpec(),
             label = "miniOutputContainer"
         )
         val outputTint by animateColorAsState(
-            targetValue = if (isElsewhere) LocalMaterialTheme.current.onTertiary else iconTint,
+            targetValue = if (isElsewhere) onAccent else iconTint,
             animationSpec = miniPlayerMotion.defaultEffectsSpec(),
             label = "miniOutputTint"
         )
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(40.dp)
                 .clip(CircleShape)
                 .background(outputContainer)
                 .clickable(
@@ -253,10 +269,10 @@ internal fun MiniPlayerContentInternal(
             }
         }
 
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(4.dp))
 
-        // The one filled control, so the main action stands out. Round when paused, a softer
-        // square while playing, like the play buttons on the homepage.
+        // Settings choose between a ring that shows the progress and a filled button. The filled
+        // one is round when paused and a softer square while playing, like the homepage buttons.
         val playCorner by animateDpAsState(
             targetValue = if (isPlaying) 13.dp else 20.dp,
             animationSpec = miniPlayerMotion.defaultSpatialSpec(),
@@ -265,8 +281,15 @@ internal fun MiniPlayerContentInternal(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(playCorner))
-                .background(LocalMaterialTheme.current.primary)
+                .then(
+                    if (progressRing) {
+                        Modifier
+                    } else {
+                        Modifier
+                            .clip(RoundedCornerShape(playCorner))
+                            .background(accent)
+                    }
+                )
                 .clickable(
                     interactionSource = playPauseInteraction,
                     indication = miniPlayerIndication,
@@ -277,15 +300,18 @@ internal fun MiniPlayerContentInternal(
                 },
             contentAlignment = Alignment.Center
         ) {
+            if (progressRing) {
+                MiniPlayerProgressRing(progress = progress, color = accent, modifier = Modifier.matchParentSize())
+            }
             Icon(
-                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                painter = painterResource(if (isPlaying) R.drawable.rounded_pause_filled_24 else R.drawable.rounded_play_arrow_filled_24),
                 contentDescription = if (isPlaying) "Pausar" else "Reproducir",
-                tint = LocalMaterialTheme.current.onPrimary,
+                tint = if (progressRing) iconTint else onAccent,
                 modifier = Modifier.size(24.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(2.dp))
+        Spacer(modifier = Modifier.width(4.dp))
 
         Box(
             modifier = Modifier
@@ -298,10 +324,10 @@ internal fun MiniPlayerContentInternal(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Rounded.SkipNext,
+                painter = painterResource(R.drawable.rounded_skip_next_filled_24),
                 contentDescription = "Siguiente",
                 tint = iconTint,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(24.dp)
             )
         }
     }

@@ -51,5 +51,5 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 - Groepsvolume zoals de Sonos-app: elke speaker houdt zijn aandeel, dus de luide gaat sneller omlaag dan de zachte
 - Speelt Spotify op de speaker, dan pauzeert de app dat eerst, anders pakt Spotify de speaker meteen terug
 - De pil in de speler toont het apparaat als omlijnd icoon en de ruimte met `+1` voor de groep
-- Mini-speler: speaker-knop om de uitvoer te kiezen, in een andere kleur zolang je niet op de telefoon speelt
+- Mini-speler: speaker-knop om de uitvoer te kiezen, in de accentkleur zolang je niet op de telefoon speelt; de play-knop heeft een voortgangsring of is gevuld (Instellingen > Appearance)
 - Lyrics en voortgangsbalk lopen gelijk met de speaker, tot op een paar honderd milliseconden

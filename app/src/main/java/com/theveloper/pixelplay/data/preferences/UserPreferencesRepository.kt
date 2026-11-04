@@ -77,6 +77,12 @@ data class AdvancedPerformanceDiagnosticsSettings(
         enabled && expiresAtEpochMs?.let { nowEpochMs < it } == true
 }
 
+/** The play button of the mini player: a ring that shows the progress, or a filled button. */
+object MiniPlayerStyle {
+    const val RING = "ring"
+    const val FILLED = "filled"
+}
+
 @Singleton
 class UserPreferencesRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
@@ -161,6 +167,7 @@ class UserPreferencesRepository @Inject constructor(
         val SHOW_QUEUE_HISTORY = booleanPreferencesKey("show_queue_history")
         val PLAYBACK_QUEUE_SNAPSHOT = stringPreferencesKey("playback_queue_snapshot_v1")
         val FULL_PLAYER_SHOW_FILE_INFO = booleanPreferencesKey("full_player_show_file_info")
+        val MINI_PLAYER_STYLE = stringPreferencesKey("mini_player_style")
         val FULL_PLAYER_DELAY_ALBUM = booleanPreferencesKey("full_player_delay_album")
         val FULL_PLAYER_DELAY_METADATA = booleanPreferencesKey("full_player_delay_metadata")
         val FULL_PLAYER_DELAY_PROGRESS = booleanPreferencesKey("full_player_delay_progress")
@@ -414,6 +421,13 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     // ─── Full player loading tweaks ───────────────────────────────────────────
+
+    val miniPlayerStyleFlow: Flow<String> =
+        pref { it[PreferencesKeys.MINI_PLAYER_STYLE] ?: MiniPlayerStyle.RING }
+
+    suspend fun setMiniPlayerStyle(style: String) {
+        dataStore.edit { it[PreferencesKeys.MINI_PLAYER_STYLE] = style }
+    }
 
     val showPlayerFileInfoFlow: Flow<Boolean> =
         pref { it[PreferencesKeys.FULL_PLAYER_SHOW_FILE_INFO] ?: true }

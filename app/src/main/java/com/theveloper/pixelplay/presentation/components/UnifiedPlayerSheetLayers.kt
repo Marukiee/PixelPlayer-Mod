@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.components
 
+import com.theveloper.pixelplay.data.preferences.MiniPlayerStyle
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.theveloper.pixelplay.presentation.viewmodel.SonosViewModel
 import androidx.annotation.OptIn
@@ -126,6 +127,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                     val isRemotePlaybackActive by playerViewModel.isRemotePlaybackActive.collectAsStateWithLifecycle()
                     val isBluetoothEnabled by playerViewModel.isBluetoothEnabled.collectAsStateWithLifecycle()
                     val bluetoothName by playerViewModel.bluetoothName.collectAsStateWithLifecycle()
+                    val miniPlayerStyle by playerViewModel.miniPlayerStyle.collectAsStateWithLifecycle()
+                    val latestDuration = rememberUpdatedState(infrequentPlayerState.totalDuration)
                     MiniPlayerContentInternal(
                         song = currentSongNonNull,
                         isPlaying = infrequentPlayerState.isPlaying,
@@ -136,6 +139,11 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                             isCasting = isCastConnecting || isRemotePlaybackActive,
                             isBluetoothActive = isBluetoothEnabled && !bluetoothName.isNullOrEmpty()
                         ),
+                        progressRing = miniPlayerStyle == MiniPlayerStyle.RING,
+                        progress = {
+                            val duration = latestDuration.value
+                            if (duration > 0L) currentPositionProvider().toFloat() / duration else 0f
+                        },
                         onPlayPause = { playerViewModel.playPause() },
                         onOutputClick = onShowCastClicked,
                         onNext = { playerViewModel.nextSong() },

@@ -58,6 +58,7 @@ import com.theveloper.pixelplay.data.preferences.FullPlayerLoadingTweaks
 import com.theveloper.pixelplay.data.preferences.AiPreferencesRepository
 import com.theveloper.pixelplay.data.preferences.AlbumArtPaletteStyle
 import com.theveloper.pixelplay.data.preferences.ThemePreferencesRepository
+import com.theveloper.pixelplay.data.preferences.MiniPlayerStyle
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.preferences.AlbumArtQuality
 import com.theveloper.pixelplay.data.preferences.ThemePreference
@@ -268,6 +269,8 @@ class PlayerViewModel @Inject constructor(
      * Keep a dedicated position flow for real-time UI elements (seek bars, lyrics timing).
      */
     val currentPlaybackPosition: StateFlow<Long> = playbackStateHolder.currentPosition
+    val miniPlayerStyle: StateFlow<String> = userPreferencesRepository.miniPlayerStyleFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, MiniPlayerStyle.RING)
     val playbackHistory = listeningStatsTracker.playbackHistory
 
     // Removed: _masterAllSongs was a duplicate of libraryStateHolder.allSongs

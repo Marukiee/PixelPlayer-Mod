@@ -8,7 +8,7 @@
 
 ## Status
 
-De ronde mod.11 is af; de laatste versie is `0.7.5-mod.13`. De open punten staan in `docs/ROADMAP.md`, bovenaan. Daar staat ook wat al is geprobeerd voor de hoesjes in de Sonos-app; gebruik geen `/getaa`, dat geeft 404.
+De ronde mod.11 is af; de laatste versie is `0.7.5-mod.14`. De open punten staan in `docs/ROADMAP.md`, bovenaan. Daar staat ook wat al is geprobeerd voor de hoesjes in de Sonos-app; gebruik geen `/getaa`, dat geeft 404.
 
 ## Waar alles staat
 
