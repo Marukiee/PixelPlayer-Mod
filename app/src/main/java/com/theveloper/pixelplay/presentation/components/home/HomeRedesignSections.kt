@@ -25,7 +25,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,6 +61,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -149,11 +149,11 @@ data class HomePlayback(
     val onPlayPause: () -> Unit
 )
 
-private class HomePlayButton(val showBars: Boolean, val onClick: () -> Unit)
+private class HomePlayButton(val showPause: Boolean, val onClick: () -> Unit)
 
 /**
- * A play button that shows its mix is on: bars right after the tap, also while the songs still
- * load (they go back when nothing starts), and for as long as the mix plays. A second tap pauses.
+ * A play button that shows its mix is on: pause right after the tap, also while the songs still
+ * load (it goes back when nothing starts), and for as long as the mix plays. A second tap pauses.
  */
 @Composable
 private fun rememberHomePlayButton(queueName: String, playback: HomePlayback, onPlay: () -> Unit): HomePlayButton {
@@ -165,7 +165,7 @@ private fun rememberHomePlayButton(queueName: String, playback: HomePlayback, on
         if (!isOn) delay(START_PENDING_MS)
         starting = false
     }
-    return HomePlayButton(showBars = starting || isOn) {
+    return HomePlayButton(showPause = starting || isOn) {
         if (isCurrent) {
             playback.onPlayPause()
         } else {
@@ -180,21 +180,24 @@ private const val START_PENDING_MS = 4_000L
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val homeMotion = MotionScheme.expressive()
 
-/** Swaps a button's icon for the dancing bars, with the expressive pop the rest of the app uses. */
+/** Swaps a button's play icon for pause, with the expressive pop the rest of the app uses. */
 @Composable
-private fun PlayStateIcon(showBars: Boolean, iconSize: Dp, icon: @Composable () -> Unit) {
-    val barsColor = LocalContentColor.current
+private fun PlayStateIcon(showPause: Boolean, iconSize: Dp, icon: @Composable () -> Unit) {
     AnimatedContent(
-        targetState = showBars,
+        targetState = showPause,
         transitionSpec = {
             (fadeIn(homeMotion.defaultEffectsSpec()) + scaleIn(homeMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
                 (fadeOut(homeMotion.fastEffectsSpec()) + scaleOut(homeMotion.fastSpatialSpec(), targetScale = 0.6f))
         },
         contentAlignment = Alignment.Center,
         label = "homePlayIcon"
-    ) { bars ->
-        if (bars) {
-            PlayingBars(color = barsColor, modifier = Modifier.size(iconSize))
+    ) { pause ->
+        if (pause) {
+            Icon(
+                imageVector = Icons.Rounded.Pause,
+                contentDescription = stringResource(R.string.home_pause),
+                modifier = Modifier.size(iconSize)
+            )
         } else {
             icon()
         }
@@ -269,7 +272,7 @@ fun HomeSectionHeader(
                 ),
                 onClick = onActionClick
             ) {
-                PlayStateIcon(showBars = actionPlaying, iconSize = 18.dp) {
+                PlayStateIcon(showPause = actionPlaying, iconSize = 18.dp) {
                     Icon(
                         imageVector = actionIcon,
                         contentDescription = actionContentDescription,
@@ -352,12 +355,12 @@ fun HomeYourMixCard(
                         .height(48.dp)
                         .animateContentSize(homeMotion.defaultSpatialSpec())
                 ) {
-                    PlayStateIcon(showBars = playButton.showBars, iconSize = 22.dp) {
+                    PlayStateIcon(showPause = playButton.showPause, iconSize = 22.dp) {
                         Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
                     }
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        stringResource(if (playButton.showBars) R.string.home_playing else R.string.home_play),
+                        stringResource(if (playButton.showPause) R.string.home_pause else R.string.home_play),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -666,7 +669,7 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle,
         val playButton = rememberHomePlayButton(mix.queueName, playback, mix.onPlay)
         // Round when idle, a softer square while it plays, like the expressive toggle buttons.
         val buttonCorner by animateDpAsState(
-            targetValue = if (playButton.showBars) 16.dp else 24.dp,
+            targetValue = if (playButton.showPause) 16.dp else 24.dp,
             animationSpec = homeMotion.defaultSpatialSpec(),
             label = "mixPlayButtonCorner"
         )
@@ -682,7 +685,7 @@ private fun HomeMixCardItem(mix: HomeMixCard, index: Int, titleStyle: TextStyle,
                 .padding(14.dp)
                 .size(48.dp)
         ) {
-            PlayStateIcon(showBars = playButton.showBars, iconSize = 22.dp) {
+            PlayStateIcon(showPause = playButton.showPause, iconSize = 24.dp) {
                 Icon(
                     imageVector = Icons.Rounded.PlayArrow,
                     contentDescription = stringResource(R.string.home_mix_play, mix.title)
@@ -899,7 +902,7 @@ fun HomeRediscoverSection(
             title = stringResource(R.string.home_rediscover_title),
             actionIcon = Icons.Rounded.PlayArrow,
             actionContentDescription = stringResource(R.string.home_rediscover_play_all),
-            actionPlaying = playButton.showBars,
+            actionPlaying = playButton.showPause,
             onActionClick = playButton.onClick
         )
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

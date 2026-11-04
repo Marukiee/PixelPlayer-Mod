@@ -20,7 +20,11 @@ def phone():
     b=b[:b.find('package=',20)] if b.find('package=',20)>0 else b
     st=re.search(r'state=PlaybackState \{state=(\w+)',b); t=re.search(r'description=([^,\n]*)',b)
     return st.group(1) if st else '?',(t.group(1).strip() if t else None)
-def logmark(): 
+def phone_index():
+    """The phone's place in its own queue. The speaker's track number says less: songs the speaker cannot play are not on its queue."""
+    m=re.search(r'package=com\.theveloper\.pixelplay.*?active item id=(-?\d+)',adb('dumpsys media_session'),re.S)
+    return int(m.group(1)) if m else None
+def logmark():
     try: return sum(1 for _ in open(LOG))
     except FileNotFoundError: return 0
 def cmds(mark):
@@ -62,7 +66,7 @@ def room(needed):
         s,t,n,qlen=speaker()
         if qlen-n>needed: return
         keys([(i*130,PREV) for i in range(18)]); time.sleep(3.5); recover()
-def check(name,want,mark,settle=6.5,count_play=None,before=None):
+def check(name,want,mark,settle=6.5,count_play=None,before=None,skips=None):
     """Waits past every grace period, because the fault shows when the phone starts following the speaker."""
     global fails,total,errors,invalid
     total+=1
@@ -71,14 +75,18 @@ def check(name,want,mark,settle=6.5,count_play=None,before=None):
     if p=='BUFFERING': time.sleep(2.5); s,title,n,qlen=speaker(); p,pt=phone()
     ok_state=(s=='PLAYING' and p=='PLAYING') if want=='play' else (s in('PAUSED_PLAYBACK','STOPPED') and p=='PAUSED')
     ok_title= title==pt
-    ok=ok_state and ok_title
+    # The song the phone was told to go to, not the one the speaker happened to start on the way there.
+    # Further is allowed: the app itself moves on from a song the speaker cannot play.
+    at=phone_index()
+    landed=skips is None or before is None or at is None or at>=before+skips
+    ok=ok_state and ok_title and landed
     if p=='ERROR': errors+=1
-    if before is not None and n==before:
+    if before is not None and at==before:
         invalid+=1; print(f"ONGELDIG {name}: er is niet geskipt",flush=True); total-=1; return True
     evs=cmds(mark)
     nowplaying=sum(1 for e in evs if e.get('event')=='now_playing')
     if count_play is not None: plays.append(nowplaying)
-    print(f"{'ok  ' if ok else 'FOUT'} {name:44s} speaker={s[:7]:7s} '{(title or '')[:14]}' telefoon={p[:7]:7s} '{(pt or '')[:14]}' startte={nowplaying}",flush=True)
+    print(f"{'ok  ' if ok else 'FOUT'} {name:44s} speaker={s[:7]:7s} '{(title or '')[:14]}' telefoon={p[:7]:7s} '{(pt or '')[:14]}' startte={nowplaying}{'' if landed else f' LANDING: plek {at}, verwacht {before+skips}'}",flush=True)
     if not ok:
         fails+=1; print('     ',short(evs)[:190],flush=True)
     return ok
@@ -87,26 +95,26 @@ for r in range(ROUNDS):
     for n,gap,after in ((3,150,60),(3,150,300),(3,300,60),(3,300,300),(3,300,700),(5,200,100),(5,350,0),(5,350,500),(2,500,100),(4,700,150),(6,120,30)):
         room(n+1)
         if not ensure_playing(): print('kon niet starten'); break
-        before=speaker()[2]; mark=logmark(); t=0; seq=[]
+        before=phone_index(); mark=logmark(); t=0; seq=[]
         for i in range(n): seq.append((t,NEXT)); t+=gap
         seq.append((t-gap+after,PAUSE))
-        keys(seq); check(f'{n} skips om de {gap} ms, pauze {after} ms later','pause',mark,count_play=True,before=before)
+        keys(seq); check(f'{n} skips om de {gap} ms, pauze {after} ms later','pause',mark,count_play=True,before=before,skips=n)
     # B: alleen snel skippen: de speaker moet eindigen op het nummer van de telefoon en spelen
     for n,gap in ((3,150),(4,300),(6,350),(5,500)):
         room(n+1)
         if not ensure_playing(): break
-        before=speaker()[2]; mark=logmark(); keys([(i*gap,NEXT) for i in range(n)]); check(f'{n} skips om de {gap} ms, door spelen','play',mark,count_play=True,before=before)
+        before=phone_index(); mark=logmark(); keys([(i*gap,NEXT) for i in range(n)]); check(f'{n} skips om de {gap} ms, door spelen','play',mark,count_play=True,before=before,skips=n)
     # C: gepauzeerd skippen en dan play
     for n,gap,after in ((3,300,100),(4,200,400)):
         room(n+1)
         if not ensure_paused(): print('kon niet pauzeren'); break
-        before=speaker()[2]; mark=logmark(); seq=[(i*gap,NEXT) for i in range(n)]; seq.append(((n-1)*gap+after,PLAY))
-        keys(seq); check(f'gepauzeerd {n} skips om de {gap} ms, play na {after}','play',mark,before=before)
+        before=phone_index(); mark=logmark(); seq=[(i*gap,NEXT) for i in range(n)]; seq.append(((n-1)*gap+after,PLAY))
+        keys(seq); check(f'gepauzeerd {n} skips om de {gap} ms, play na {after}','play',mark,before=before,skips=n)
     # D: pauze en play vlak na elkaar tijdens een skip
     for a,b,want in ((100,250,'play'),(50,400,'play')):
         room(2)
         if not ensure_playing(): break
-        before=speaker()[2]; mark=logmark(); keys([(0,NEXT),(a,PAUSE),(a+b,PLAY)]); check(f'skip, pauze na {a}, play na {a+b}',want,mark,before=before)
+        before=phone_index(); mark=logmark(); keys([(0,NEXT),(a,PAUSE),(a+b,PLAY)]); check(f'skip, pauze na {a}, play na {a+b}',want,mark,before=before,skips=1)
     # E: blinde periode: de telefoon loopt net iets anders, en dan op een willekeurig moment een knop
     for i in range(8):
         if not ensure_playing(): break

@@ -1,13 +1,17 @@
-- Mini-speler: play-knop met voortgangsring of gevuld, te kiezen in Instellingen > Appearance
-- Speaker-icoon even groot en even dik als de andere iconen, in dezelfde accentkleur als je op een speaker speelt
+- Pauzeknop werkt nu ook als je net hebt geskipt, en de Sonos start niet meer elk nummer tijdens het skippen
+- Android-mediakaart toont je speaker in plaats van This phone
+- Verbinden-paneel sluit met een korte veeg omlaag
+- Made for you en Your Mix tonen gewoon een pauzeknop als ze spelen
+- Adres voor hoesjes staat standaard ingevuld en is te wijzigen
 
 Ook in deze versie (sinds 0.7.5-mod.1):
+- Mini-speler: play-knop met voortgangsring of gevuld, te kiezen in Instellingen > Appearance
+- Speaker-icoon even groot en even dik als de andere iconen, in dezelfde accentkleur als je op een speaker speelt
 - App gesloten terwijl de Sonos speelt: bij openen pakt hij de speaker vanzelf weer op
 - Volumeknoppen regelen de Sonos nu ook buiten de app, en het volume staat in het eiland van Drip
 - Sonos neemt het nu ook over als Spotify op de speaker speelt
 - Speaker-pil in de speler sluit aan op de puntjes, met het icoon van je apparaat en een `+1` voor de groep
 - Geen grijze box meer als je iets op de homepage vasthoudt
-- Play-knoppen op de homepage laten zien dat ze spelen
 - Verbinden-paneel: groeit en krimpt mee met het wisselen van tab, en schuift rustig weg bij terug
 - Lyrics lopen gelijk met de Sonos
 - Mini-speler: speaker-knop in plaats van terugspoelen

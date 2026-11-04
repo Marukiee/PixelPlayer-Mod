@@ -2,7 +2,7 @@
 <resources>
     <string name="home_your_mix_card_subtitle">%1$d songs · made for you today</string>
     <string name="home_play">Play</string>
-    <string name="home_playing">Playing</string>
+    <string name="home_pause">Pause</string>
     <string name="home_made_for_you_title">Made for you</string>
     <string name="home_mix_daily_title">Daily Mix</string>
     <string name="home_mix_daily_subtitle">Based on your listening</string>

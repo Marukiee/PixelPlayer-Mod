@@ -131,7 +131,7 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                     val latestDuration = rememberUpdatedState(infrequentPlayerState.totalDuration)
                     MiniPlayerContentInternal(
                         song = currentSongNonNull,
-                        isPlaying = infrequentPlayerState.isPlaying,
+                        isPlaying = infrequentPlayerState.showsPause,
                         isCastConnecting = isCastConnecting,
                         isPreparingPlayback = isPreparingPlayback,
                         output = PlayerOutputIcon.of(

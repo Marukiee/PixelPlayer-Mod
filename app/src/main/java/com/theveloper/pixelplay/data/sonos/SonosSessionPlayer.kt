@@ -15,7 +15,8 @@ import java.util.concurrent.CopyOnWriteArraySet
 @OptIn(UnstableApi::class)
 class SonosSessionPlayer(
     val wrapped: Player,
-    private val sonos: SonosController
+    private val sonos: SonosController,
+    private val output: SonosOutputRoute
 ) : ForwardingPlayer(wrapped) {
 
     private val sessionListeners = CopyOnWriteArraySet<Player.Listener>()
@@ -31,27 +32,43 @@ class SonosSessionPlayer(
     }
 
     private var announcedRemote = false
+    private var announcedRoute: String? = null
 
-    /** Tells the session that the volume or mute changed, or that a Sonos session began or ended. */
+    /** Tells the session that the volume or mute changed, or that a Sonos session or its route began or ended. */
     fun onSonosVolumeChanged() {
-        val isRemote = remote != null
-        if (isRemote != announcedRemote) {
-            announcedRemote = isRemote
-            val commands = availableCommands
-            val info = deviceInfo
-            sessionListeners.forEach {
-                it.onAvailableCommandsChanged(commands)
-                it.onDeviceInfoChanged(info)
-            }
-        }
+        if ((remote != null) != announcedRemote || output.controllerId.value != announcedRoute) announceDevice()
         val volume = deviceVolume
         val muted = isDeviceMuted
         sessionListeners.forEach { it.onDeviceVolumeChanged(volume, muted) }
     }
 
+    /**
+     * Also needed right after this player takes over in the session: a new player has announced nothing yet,
+     * while the session still shows what the old one told it. Without this it stays on the speakers after a disconnect.
+     */
+    fun announceDevice() {
+        announcedRemote = remote != null
+        announcedRoute = output.controllerId.value
+        val commands = availableCommands
+        val info = deviceInfo
+        sessionListeners.forEach {
+            it.onAvailableCommandsChanged(commands)
+            it.onDeviceInfoChanged(info)
+        }
+    }
+
     private val remote: SonosSessionState? get() = sonos.remoteVolume.value
 
-    override fun getDeviceInfo(): DeviceInfo = if (remote != null) REMOTE_DEVICE else super.getDeviceInfo()
+    override fun getDeviceInfo(): DeviceInfo =
+        if (remote != null) {
+            DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE)
+                .setMinVolume(0)
+                .setMaxVolume(100)
+                .setRoutingControllerId(output.controllerId.value)
+                .build()
+        } else {
+            super.getDeviceInfo()
+        }
 
     override fun getDeviceVolume(): Int = remote?.let { it.groupVolume ?: 0 } ?: super.getDeviceVolume()
 
@@ -84,10 +101,6 @@ class SonosSessionPlayer(
 
     private companion object {
         const val VOLUME_STEP = 2
-        val REMOTE_DEVICE: DeviceInfo = DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE)
-            .setMinVolume(0)
-            .setMaxVolume(100)
-            .build()
         val VOLUME_COMMANDS = intArrayOf(
             Player.COMMAND_GET_DEVICE_VOLUME,
             Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,

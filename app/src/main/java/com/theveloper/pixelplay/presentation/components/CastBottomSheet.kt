@@ -99,12 +99,13 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -116,6 +117,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -163,6 +165,8 @@ import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import android.content.pm.PackageManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.LocalOverscrollFactory
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -171,12 +175,15 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Velocity
 import com.theveloper.pixelplay.utils.shapes.RoundedStarShape
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -378,6 +385,25 @@ fun CastBottomSheet(
         skipPartiallyExpanded = true,
         confirmValueChange = { true }
     )
+    val closeScope = rememberCoroutineScope()
+    val closeOnShortPull = Modifier.closesOnShortPull(sheetState) { rest ->
+        closeScope.launch {
+            // The drag reaches the sheet a frame or two after the finger. Still at rest means a list or a slider took it.
+            repeat(2) { withFrameNanos { } }
+            if (sheetState.requireOffset() <= rest) return@launch
+            // Material's own fling starts a moment later and takes the sheet back up, which interrupts this.
+            repeat(3) {
+                if (sheetState.isVisible) {
+                    try {
+                        sheetState.hide()
+                    } catch (interrupted: CancellationException) {
+                        ensureActive()
+                    }
+                }
+            }
+            onDismiss()
+        }
+    }
 
     DisposableEffect(Unit) {
         onExpansionChanged(1f)
@@ -387,7 +413,11 @@ fun CastBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        dragHandle = {
+            Box(Modifier.fillMaxWidth().then(closeOnShortPull), contentAlignment = Alignment.Center) {
+                BottomSheetDefaults.DragHandle()
+            }
+        },
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 12.dp
@@ -402,6 +432,7 @@ fun CastBottomSheet(
         ) {
             Box(
                 modifier = Modifier
+                    .then(closeOnShortPull)
                     .padding(bottom = 18.dp)
                     .focusRequester(keyFocus)
                     .focusable()
@@ -698,7 +729,47 @@ private fun missingCastPermissions(context: Context, permissions: List<String>):
 }
 
 /** Switching tabs, by tap or by swipe, at the same calm pace in both directions. */
+private val CastSheetCloseDistance = 24.dp
+private val CastSheetPullBackDistance = 12.dp
+private val CastSheetScrollFirstDistance = 32.dp
 private val CastTabSwitchSpec = tween<Float>(durationMillis = 450, easing = FastOutSlowInEasing)
+
+/**
+ * A short pull down closes the panel. Material itself only closes past half the panel's height, or when the
+ * finger is still moving fast as it lets go, so a short swipe that slows down at the end springs back. This
+ * reports a short swipe down with where the sheet was when it began, and the caller checks the sheet followed,
+ * so dragging a slider never counts. A list scrolled first counts from where the sheet took over. Pulling back
+ * up before letting go keeps the panel open.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+private fun Modifier.closesOnShortPull(sheetState: SheetState, close: (rest: Float) -> Unit): Modifier =
+    pointerInput(sheetState) {
+        val closeDistance = CastSheetCloseDistance.toPx()
+        val pullBack = CastSheetPullBackDistance.toPx()
+        val scrollFirst = CastSheetScrollFirstDistance.toPx()
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val rest = sheetState.requireOffset()
+            var start = down.position.y
+            var followed = false
+            var travel = 0f
+            var deepest = 0f
+            do {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val finger = event.changes.firstOrNull { it.id == down.id } ?: break
+                val pulled = sheetState.requireOffset() - rest
+                // The content moves along with the sheet, so the sheet's own move is added to the finger's.
+                val y = finger.position.y + pulled
+                if (!followed && pulled > 0f) {
+                    followed = true
+                    if (y - start > scrollFirst) start = y
+                }
+                travel = y - start
+                deepest = maxOf(deepest, travel)
+            } while (event.changes.any { it.pressed })
+            if (travel >= closeDistance && deepest - travel < pullBack) close(rest)
+        }
+    }
 
 @Composable
 private fun CastSheetContent(

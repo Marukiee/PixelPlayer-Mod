@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import com.theveloper.pixelplay.data.service.player.DualPlayerEngine
 import com.theveloper.pixelplay.data.service.player.SonosAudioGate
 import com.theveloper.pixelplay.data.sonos.SonosController
+import com.theveloper.pixelplay.data.sonos.SonosOutputRoute
 import com.theveloper.pixelplay.data.sonos.SonosSessionPlayer
 import com.theveloper.pixelplay.data.service.player.TransitionController
 import com.theveloper.pixelplay.ui.glancewidget.PlayerActions
@@ -175,6 +176,8 @@ class MusicService : MediaLibraryService() {
     lateinit var listeningStatsTracker: ListeningStatsTracker
     @Inject
     lateinit var sonosController: SonosController
+    @Inject
+    lateinit var sonosOutputRoute: SonosOutputRoute
 
     @Inject
     @AppScope
@@ -355,7 +358,9 @@ class MusicService : MediaLibraryService() {
         val oldPlayer = (session.player as? SonosSessionPlayer)?.wrapped ?: session.player
         if (oldPlayer !== player) {
             oldPlayer.removeListener(playerListener)
-            session.player = SonosSessionPlayer(player, sonosController)
+            val sessionPlayer = SonosSessionPlayer(player, sonosController, sonosOutputRoute)
+            session.player = sessionPlayer
+            sessionPlayer.announceDevice()
             player.addListener(playerListener)
         }
 
@@ -901,13 +906,19 @@ class MusicService : MediaLibraryService() {
             }
         }
 
-        mediaSession = MediaLibrarySession.Builder(this, SonosSessionPlayer(engine.masterPlayer, sonosController), callback)
+        mediaSession = MediaLibrarySession.Builder(this, SonosSessionPlayer(engine.masterPlayer, sonosController, sonosOutputRoute), callback)
             .setSessionActivity(getOpenAppPendingIntent())
             .setBitmapLoader(CoilBitmapLoader(this, serviceScope))
             .build()
 
         serviceScope.launch {
             sonosController.remoteVolume.collect {
+                sonosOutputRoute.update(it)
+                (mediaSession?.player as? SonosSessionPlayer)?.onSonosVolumeChanged()
+            }
+        }
+        serviceScope.launch {
+            sonosOutputRoute.controllerId.collect {
                 (mediaSession?.player as? SonosSessionPlayer)?.onSonosVolumeChanged()
             }
         }

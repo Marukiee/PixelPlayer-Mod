@@ -428,7 +428,7 @@ class PlaybackStateHolder @Inject constructor(
             }
         } else {
             val controller = activeLocalPlayer()
-            if (controller.isPlaying) {
+            if (controller.wantsToPlay) {
                 controller.pause()
             } else {
                 if (controller.playbackState == Player.STATE_IDLE && controller.mediaItemCount > 0) {

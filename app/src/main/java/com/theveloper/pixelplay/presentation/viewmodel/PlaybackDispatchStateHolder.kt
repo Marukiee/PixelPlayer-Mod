@@ -1159,7 +1159,7 @@ class PlaybackDispatchStateHolder @Inject constructor(
                 return
             }
 
-            if (controller.isPlaying) {
+            if (controller.wantsToPlay) {
                 controller.pause()
             } else {
                 if (controller.currentMediaItem == null) {

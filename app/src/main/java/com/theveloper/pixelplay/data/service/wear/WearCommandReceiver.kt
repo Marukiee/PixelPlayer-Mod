@@ -21,6 +21,7 @@ import com.theveloper.pixelplay.data.repository.MusicRepository
 import com.theveloper.pixelplay.data.service.MusicService
 import com.theveloper.pixelplay.data.service.MusicNotificationProvider
 import com.theveloper.pixelplay.data.service.player.DualPlayerEngine
+import com.theveloper.pixelplay.presentation.viewmodel.wantsToPlay
 import com.theveloper.pixelplay.shared.WearBrowseRequest
 import com.theveloper.pixelplay.shared.WearBrowseResponse
 import com.theveloper.pixelplay.shared.WearDataPaths
@@ -122,7 +123,7 @@ class WearCommandReceiver : WearableListenerService() {
                         WearPlaybackCommand.PLAY -> controller.play()
                         WearPlaybackCommand.PAUSE -> controller.pause()
                         WearPlaybackCommand.TOGGLE_PLAY_PAUSE -> {
-                            if (controller.isPlaying) controller.pause() else controller.play()
+                            if (controller.wantsToPlay) controller.pause() else controller.play()
                         }
                         WearPlaybackCommand.NEXT -> {
                             val shouldResumePlayback =

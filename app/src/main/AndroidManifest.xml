@@ -150,6 +150,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Names the Sonos group in Android's media card. The base class only lets the system call it. -->
+        <service
+            android:name=".data.sonos.SonosRouteProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.MediaRoute2ProviderService" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".data.service.MusicService"
             android:exported="true"

@@ -455,7 +455,8 @@ class MediaControllerSyncStateHolder @Inject constructor(
                 lyrics = null,
                 isLoadingLyrics = song != null,
                 isPlaying = player.isPlaying,
-                playWhenReady = player.playWhenReady
+                playWhenReady = player.playWhenReady,
+                isStalled = player.isStalled
             )
         }
         syncPlaybackPositionFromPlayer(mediaItem.mediaId, currentPosition)
@@ -514,7 +515,8 @@ class MediaControllerSyncStateHolder @Inject constructor(
                 isShuffleEnabled = it.isShuffleEnabled,
                 repeatMode = playerCtrl.repeatMode,
                 isPlaying = playerCtrl.isPlaying,
-                playWhenReady = playerCtrl.playWhenReady
+                playWhenReady = playerCtrl.playWhenReady,
+                isStalled = playerCtrl.isStalled
             )
         }
         preparePlaybackAudioMetadataForMedia(playerCtrl.currentMediaItem?.mediaId)
@@ -617,6 +619,7 @@ class MediaControllerSyncStateHolder @Inject constructor(
                 if (isRemoteSessionControllingPlayback()) return
                 refreshPlaybackAudioMetadata(playerCtrl)
                 syncDisplayedMediaItemIfChanged(playerCtrl)
+                playbackStateHolder.updateStablePlayerState { it.copy(isStalled = playerCtrl.isStalled) }
 
                 // Debounce buffering state to avoid flickering
                 bufferingDebounceJob?.cancel()
