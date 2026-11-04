@@ -307,7 +307,8 @@ internal fun MiniPlayerContentInternal(
                 painter = painterResource(if (isPlaying) R.drawable.rounded_pause_filled_24 else R.drawable.rounded_play_arrow_filled_24),
                 contentDescription = if (isPlaying) "Pausar" else "Reproducir",
                 tint = if (progressRing) iconTint else onAccent,
-                modifier = Modifier.size(24.dp)
+                // These Material icons leave more room around the shape than the speaker icon.
+                modifier = Modifier.size(28.dp)
             )
         }
 
@@ -327,7 +328,7 @@ internal fun MiniPlayerContentInternal(
                 painter = painterResource(R.drawable.rounded_skip_next_filled_24),
                 contentDescription = "Siguiente",
                 tint = iconTint,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(30.dp)
             )
         }
     }
