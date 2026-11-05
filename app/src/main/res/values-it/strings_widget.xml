@@ -10,8 +10,5 @@
     <string name="widget_album_art_placeholder">Placeholder copertina album</string>
 
     <string name="widget_tap_to_play">Tocca per riprodurre</string>
-    <string name="widget_preview_song_title">Titolo brano</string>
-    <string name="widget_preview_artist">Artista</string>
 
-    <string name="widget_wavy_progress_bar_desc">Barra di avanzamento, %1$d percento</string>
 </resources>

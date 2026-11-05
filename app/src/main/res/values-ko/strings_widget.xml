@@ -10,8 +10,5 @@
     <string name="widget_album_art_placeholder">앨범 아트 플레이스홀더</string>
 
     <string name="widget_tap_to_play">탭하여 재생</string>
-    <string name="widget_preview_song_title">곡 제목</string>
-    <string name="widget_preview_artist">아티스트</string>
 
-    <string name="widget_wavy_progress_bar_desc">진행 바, %1$d 퍼센트</string>
 </resources>

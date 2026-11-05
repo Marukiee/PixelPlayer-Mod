@@ -37,7 +37,6 @@
     <string name="cast_disconnect">Bağlantıyı kes</string>
     <string name="cast_connectivity">Bağlantı</string>
     <string name="cast_turn_on_wifi_bt">Wi-Fi veya Bluetooth\'u açın</string>
-    <string name="cast_cd_refresh_connections">Bağlantıları yenile</string>
     <string name="cast_wifi">Wi-Fi</string>
     <string name="cast_wifi_off">Kapalı</string>
     <string name="cast_wifi_on">Açık</string>
@@ -111,7 +110,6 @@
     <string name="queue_save_playlist_named">%1$s kuyruğu</string>
     <string name="queue_save_playlist_current">Mevcut kuyruk</string>
     <string name="queue_cd_dismiss_song">Şarkıyı kaldır</string>
-    <string name="queue_song_removed">kaldırıldı</string>
     <string name="queue_save_as_playlist_sheet_title">Çalma listesi olarak kaydet</string>
     <string name="queue_save_as_playlist_deselect_all">Tüm seçimi kaldır</string>
     <string name="queue_save_as_playlist_name_label">Çalma listesi adı</string>
@@ -156,7 +154,6 @@
     <string name="lyrics_translate_via_ai">Yapay Zeka ile Çevir</string>
     <string name="lyrics_translate_already_translated">Bu şarkı sözlerinin zaten bir çevirisi var</string>
     <string name="lyrics_translate_already_in_target_language">Bu şarkı sözleri zaten bu dilde</string>
-    <string name="lyrics_translate_api_not_configured">API yapılandırılmamış</string>
     <string name="lyrics_translate_success">Şarkı sözleri başarıyla çevrildi!</string>
     <string name="lyrics_translate_progress">Şarkı sözleri çevriliyor...</string>
     <string name="lyrics_reset_imported">İçe aktarılan sözleri sıfırla</string>

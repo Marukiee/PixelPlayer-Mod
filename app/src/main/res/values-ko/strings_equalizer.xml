@@ -28,7 +28,6 @@
     <string name="equalizer_band_bass_low">베이스 / 로우</string>
     <string name="equalizer_band_mid_high">미드 / 하이</string>
     <string name="equalizer_page_n">%1$d페이지</string>
-    <string name="equalizer_reset_duration_cd">지속 시간 초기화</string>
     <string name="equalizer_action_save_new">새로 저장</string>
 
     <!-- CustomPresetsSheet -->

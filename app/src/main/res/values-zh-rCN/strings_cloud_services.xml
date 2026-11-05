@@ -81,11 +81,6 @@
     <string name="jellyfin_dashboard_quick_actions_subtitle">管理您的 Jellyfin 服务器连接。</string>
 
     <!-- Google Drive dashboard -->
-    <string name="gdrive_dashboard_music_folders">音乐文件夹</string>
-    <string name="gdrive_dashboard_add_folder_hint">点击 + 添加 Drive 文件夹</string>
-    <string name="gdrive_dashboard_no_folders_yet">暂未添加文件夹</string>
-    <string name="gdrive_dashboard_folders_synced_count">已同步 %1$d 个文件夹</string>
-    <string name="gdrive_cd_add_folder">添加文件夹</string>
 
     <!-- QQ Music dashboard -->
     <string name="qqmusic_select_playlist_type_title">选择播放列表类型</string>
@@ -123,7 +118,6 @@
 
     <!-- Cloud content descriptions -->
     <string name="cloud_cd_sync">同步</string>
-    <string name="cloud_cd_sync_all">全部同步</string>
     <string name="cloud_cd_logout">登出</string>
     <string name="cloud_cd_sync_all_playlists">同步所有播放列表</string>
     <string name="cloud_cd_user_avatar">用户头像</string>

@@ -37,7 +37,6 @@
     <string name="cast_disconnect">断开连接</string>
     <string name="cast_connectivity">连接性</string>
     <string name="cast_turn_on_wifi_bt">开启 Wi-Fi 或蓝牙</string>
-    <string name="cast_cd_refresh_connections">刷新连接</string>
     <string name="cast_wifi">Wi-Fi</string>
     <string name="cast_wifi_off">关</string>
     <string name="cast_wifi_on">开</string>
@@ -111,7 +110,6 @@
     <string name="queue_save_playlist_named">%1$s 队列</string>
     <string name="queue_save_playlist_current">当前队列</string>
     <string name="queue_cd_dismiss_song">移除歌曲</string>
-    <string name="queue_song_removed">已移除</string>
     <string name="queue_save_as_playlist_sheet_title">保存为播放列表</string>
     <string name="queue_save_as_playlist_deselect_all">取消全选</string>
     <string name="queue_save_as_playlist_name_label">播放列表名称</string>
@@ -156,7 +154,6 @@
     <string name="lyrics_translate_via_ai">使用 AI 翻译</string>
     <string name="lyrics_translate_already_translated">此歌词已有翻译</string>
     <string name="lyrics_translate_already_in_target_language">此歌词已经是该语言</string>
-    <string name="lyrics_translate_api_not_configured">未配置 API</string>
     <string name="lyrics_translate_success">歌词翻译成功！</string>
     <string name="lyrics_translate_progress">正在翻译歌词...</string>
     <string name="lyrics_reset_imported">重置已导入的歌词</string>

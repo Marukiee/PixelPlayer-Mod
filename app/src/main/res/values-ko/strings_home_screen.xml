@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Top Bar -->
-    <string name="topbar_beta_letter">β</string>
-    <string name="topbar_beta_label">베타</string>
-    <string name="topbar_cd_changelog">변경 로그</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -20,7 +17,6 @@
     <string name="beta_sheet_github_body">먼저 검색한 후 버그, 충돌, 요청 또는 질문에 대한 집중 보고서를 작성하세요.</string>
     <string name="beta_sheet_open_issues">기존 이슈 열기</string>
     <string name="beta_sheet_report_bug">이슈 또는 충돌 보고</string>
-    <string name="beta_sheet_report_body">재현 단계, 예상 결과, 실제 결과 및 기기/OS 상세 정보를 공유해 주세요.</string>
     <string name="beta_sheet_report_title">보고 방법</string>
     <string name="beta_sheet_report_summary">새 이슈를 작성하기 전 빠른 체크리스트.</string>
     <string name="beta_sheet_before_title">이슈를 작성하기 전에</string>

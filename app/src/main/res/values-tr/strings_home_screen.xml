@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Top Bar -->
-    <string name="topbar_beta_letter">β</string>
-    <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_changelog">Değişiklik Günlüğü</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -20,7 +17,6 @@
     <string name="beta_sheet_github_body">Önce arayın, ardından hatalar, çökmeler, istekler veya sorular için odaklanmış bir rapor açın.</string>
     <string name="beta_sheet_open_issues">Mevcut sorunları aç</string>
     <string name="beta_sheet_report_bug">Sorun veya çökme bildir</string>
-    <string name="beta_sheet_report_body">Yeniden oluşturma adımlarını, beklenen sonuçları, gerçek sonuçları ve cihaz/işletim sistemi bilgilerinizi paylaşın.</string>
     <string name="beta_sheet_report_title">Nasıl bildirilir</string>
     <string name="beta_sheet_report_summary">Yeni bir sorun açmadan önce hızlı kontrol listesi.</string>
     <string name="beta_sheet_before_title">Sorun açmadan önce</string>

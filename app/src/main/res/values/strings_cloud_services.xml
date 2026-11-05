@@ -81,11 +81,6 @@
     <string name="jellyfin_dashboard_quick_actions_subtitle">Manage your Jellyfin server connection.</string>
 
     <!-- Google Drive dashboard -->
-    <string name="gdrive_dashboard_music_folders">Music folders</string>
-    <string name="gdrive_dashboard_add_folder_hint">Tap + to add a Drive folder</string>
-    <string name="gdrive_dashboard_no_folders_yet">No folders added yet</string>
-    <string name="gdrive_dashboard_folders_synced_count">%1$d folders synced</string>
-    <string name="gdrive_cd_add_folder">Add folder</string>
 
     <!-- QQ Music dashboard -->
     <string name="qqmusic_select_playlist_type_title">Select playlist type</string>
@@ -123,7 +118,6 @@
 
     <!-- Cloud content descriptions -->
     <string name="cloud_cd_sync">Sync</string>
-    <string name="cloud_cd_sync_all">Sync all</string>
     <string name="cloud_cd_logout">Log out</string>
     <string name="cloud_cd_sync_all_playlists">Sync all playlists</string>
     <string name="cloud_cd_user_avatar">User avatar</string>

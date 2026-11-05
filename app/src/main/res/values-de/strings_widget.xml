@@ -10,8 +10,5 @@
     <string name="widget_album_art_placeholder">Cover-Platzhalter</string>
 
     <string name="widget_tap_to_play">Antippen zum Abspielen</string>
-    <string name="widget_preview_song_title">Songtitel</string>
-    <string name="widget_preview_artist">Künstler</string>
 
-    <string name="widget_wavy_progress_bar_desc">Fortschrittsbalken, %1$d Prozent</string>
 </resources>

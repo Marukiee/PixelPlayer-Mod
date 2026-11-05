@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">Bruk gester for å finne den perfekte utsnittet</string>
     <string name="playlist_creation_mode_manual">Manuell</string>
     <string name="playlist_creation_mode_smart">Smart</string>
-    <string name="playlist_creation_generate_with_ai">Generer med AI</string>
     <string name="playlist_creation_smart_rule">Smart regel</string>
     <string name="playlist_creation_tab_default">Standard</string>
     <string name="playlist_creation_tab_image">Bilde</string>

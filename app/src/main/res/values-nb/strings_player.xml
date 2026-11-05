@@ -37,7 +37,6 @@
     <string name="cast_disconnect">Koble fra</string>
     <string name="cast_connectivity">Tilkobling</string>
     <string name="cast_turn_on_wifi_bt">Slå på Wi-Fi eller Bluetooth</string>
-    <string name="cast_cd_refresh_connections">Oppdater tilkoblinger</string>
     <string name="cast_wifi">Wi-Fi</string>
     <string name="cast_wifi_off">Av</string>
     <string name="cast_wifi_on">På</string>
@@ -111,7 +110,6 @@
     <string name="queue_save_playlist_named">%1$s-kø</string>
     <string name="queue_save_playlist_current">Gjeldende kø</string>
     <string name="queue_cd_dismiss_song">Fjern sang</string>
-    <string name="queue_song_removed">fjernet</string>
     <string name="queue_save_as_playlist_sheet_title">Lagre som spilleliste</string>
     <string name="queue_save_as_playlist_deselect_all">Velg bort alle</string>
     <string name="queue_save_as_playlist_name_label">Navn på spilleliste</string>
@@ -156,7 +154,6 @@
     <string name="lyrics_translate_via_ai">Oversett via AI</string>
     <string name="lyrics_translate_already_translated">Disse sangtekstene har allerede en oversettelse</string>
     <string name="lyrics_translate_already_in_target_language">Disse sangtekstene er allerede på dette språket</string>
-    <string name="lyrics_translate_api_not_configured">API er ikke konfigurert</string>
     <string name="lyrics_translate_success">Sangtekster oversatt!</string>
     <string name="lyrics_translate_progress">Oversetter sangtekster...</string>
     <string name="lyrics_reset_imported">Nullstill importerte sangtekster</string>

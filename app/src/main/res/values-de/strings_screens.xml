@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">Nutze Gesten zum Zoomen und Verschieben</string>
     <string name="playlist_creation_mode_manual">Manuell</string>
     <string name="playlist_creation_mode_smart">Smart</string>
-    <string name="playlist_creation_generate_with_ai">Mit KI generieren</string>
     <string name="playlist_creation_smart_rule">Smart-Regel</string>
     <string name="playlist_creation_tab_default">Standard</string>
     <string name="playlist_creation_tab_image">Bild</string>

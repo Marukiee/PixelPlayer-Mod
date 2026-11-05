@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Top Bar -->
-    <string name="topbar_beta_letter">β</string>
-    <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_changelog">Changelog</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -20,7 +17,6 @@
     <string name="beta_sheet_github_body">Suche zuerst nach bestehenden Problemen und öffne dann einen gezielten Bericht für Fehler, Abstürze, Anfragen oder Fragen.</string>
     <string name="beta_sheet_open_issues">GitHub Issues öffnen</string>
     <string name="beta_sheet_report_bug">Fehler oder Absturz melden</string>
-    <string name="beta_sheet_report_body">Teile Schritte zur Reproduktion, erwartete Ergebnisse, tatsächliche Ergebnisse sowie Details zu deinem Gerät/Betriebssystem.</string>
     <string name="beta_sheet_report_title">Wie man Probleme meldet</string>
     <string name="beta_sheet_report_summary">Eine kurze Checkliste vor dem Erstellen eines neuen Issues.</string>
     <string name="beta_sheet_before_title">Vor dem Erstellen eines Issues</string>

@@ -17,7 +17,6 @@
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Плейлист успешно создан</string>
     <string name="library_toast_set_ai_provider_api_key_first">Сначала укажите API-ключ AI-провайдера</string>
-    <string name="library_toast_set_gemini_api_key_first">Сначала укажите API-ключ Gemini</string>
     <string name="library_toast_added_to_queue">Добавлено в очередь</string>
     <string name="library_toast_playing_next">Будет воспроизведено следующим</string>
 
@@ -52,7 +51,6 @@
     <string name="library_cloud_only_label">Только облако</string>
 
     <!-- Library AI Metadata Processing -->
-    <string name="library_generating_ai_metadata">Генерация метаданных с помощью ИИ…</string>
 
     <!-- Library list errors -->
     <string name="library_error_loading_songs">Ошибка загрузки треков</string>
@@ -150,7 +148,6 @@
     <string name="song_info_send_to_watch">Отправить на часы</string>
     <string name="song_info_watch_unavailable">Часы недоступны</string>
     <string name="song_info_cd_send_to_watch">Отправить трек на часы</string>
-    <string name="song_info_cd_watch_unavailable">Часы недоступны</string>
     <string name="song_info_set_sound_as_short">Установить как</string>
     <string name="song_info_set_sound_as_long">Установить как звук</string>
     <string name="song_info_cd_set_sound_as">Выберите, как использовать этот трек в качестве системного звука</string>
@@ -171,7 +168,6 @@
     <string name="song_info_tone_alarm_label">звук будильника</string>
     <string name="song_info_ringtone_permission_prompt">Включите разрешение «Изменение системных настроек», затем вернитесь в PixelPlayer для автоматического завершения.</string>
     <string name="song_info_ringtone_permission_missing">Разрешение «Изменение системных настроек» не было предоставлено.</string>
-    <string name="song_info_ringtone_success">«%1$s» установлен как рингтон</string>
     <string name="song_info_ringtone_local_only">Только локальные треки можно использовать как рингтоны.</string>
     <string name="song_info_ringtone_missing_file">Не удалось подготовить этот аудиофайл для рингтона.</string>
     <string name="song_info_ringtone_failed">Не удалось установить рингтон: %1$s</string>

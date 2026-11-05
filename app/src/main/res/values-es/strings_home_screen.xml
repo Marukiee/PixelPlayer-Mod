@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Top Bar -->
-    <string name="topbar_beta_letter">β</string>
-    <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_changelog">Registro de cambios</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -20,7 +17,6 @@
     <string name="beta_sheet_github_body">Busca primero, luego abre un informe enfocado para errores, fallos, solicitudes o preguntas.</string>
     <string name="beta_sheet_open_issues">Ver problemas abiertos</string>
     <string name="beta_sheet_report_bug">Informar de un error o fallo</string>
-    <string name="beta_sheet_report_body">Comparte los pasos para reproducir, los resultados esperados, los resultados reales y los detalles de tu dispositivo y sistema operativo.</string>
     <string name="beta_sheet_report_title">Cómo informar</string>
     <string name="beta_sheet_report_summary">Una lista de comprobación rápida antes de abrir un nuevo problema.</string>
     <string name="beta_sheet_before_title">Antes de abrir un problema</string>

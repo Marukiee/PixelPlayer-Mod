@@ -223,7 +223,6 @@
     <string name="settings_default_tab_title">Tab Default</string>
     <string name="settings_default_tab_subtitle">Pilih tab peluncuran Default.</string>
     <string name="settings_default_tab_home">Beranda</string>
-    <string name="settings_default_tab_search">Cari</string>
     <string name="settings_default_tab_library">Pustaka</string>
     <string name="settings_library_navigation_title">Navigasi Pustaka</string>
     <string name="settings_library_navigation_subtitle">Pilih cara berpindah antar tab Pustaka.</string>

@@ -81,11 +81,6 @@
     <string name="jellyfin_dashboard_quick_actions_subtitle">Kelola koneksi server Jellyfin Anda.</string>
 
     <!-- Google Drive dashboard -->
-    <string name="gdrive_dashboard_music_folders">Folder musik</string>
-    <string name="gdrive_dashboard_add_folder_hint">Ketuk + untuk menambahkan folder Drive</string>
-    <string name="gdrive_dashboard_no_folders_yet">Belum ada folder yang ditambahkan</string>
-    <string name="gdrive_dashboard_folders_synced_count">%1$d folder disinkronkan</string>
-    <string name="gdrive_cd_add_folder">Tambah folder</string>
 
     <!-- QQ Music dashboard -->
     <string name="qqmusic_select_playlist_type_title">Pilih tipe playlist</string>
@@ -123,7 +118,6 @@
 
     <!-- Cloud content descriptions -->
     <string name="cloud_cd_sync">Sinkronisasi</string>
-    <string name="cloud_cd_sync_all">Sinkronkan semua</string>
     <string name="cloud_cd_logout">Keluar</string>
     <string name="cloud_cd_sync_all_playlists">Sinkronkan semua playlist</string>
     <string name="cloud_cd_user_avatar">Avatar pengguna</string>

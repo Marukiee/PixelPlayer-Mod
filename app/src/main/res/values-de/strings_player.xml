@@ -37,7 +37,6 @@
     <string name="cast_disconnect">Trennen</string>
     <string name="cast_connectivity">Verbindung</string>
     <string name="cast_turn_on_wifi_bt">WLAN oder Bluetooth einschalten</string>
-    <string name="cast_cd_refresh_connections">Verbindungen aktualisieren</string>
     <string name="cast_wifi">WLAN</string>
     <string name="cast_wifi_off">Aus</string>
     <string name="cast_wifi_on">An</string>
@@ -111,7 +110,6 @@
     <string name="queue_save_playlist_named">%1$s Queue</string>
     <string name="queue_save_playlist_current">Aktuelle Queue</string>
     <string name="queue_cd_dismiss_song">Song schließen</string>
-    <string name="queue_song_removed">entfernt</string>
     <string name="queue_save_as_playlist_sheet_title">Als Playlist speichern</string>
     <string name="queue_save_as_playlist_deselect_all">Alle abwählen</string>
     <string name="queue_save_as_playlist_name_label">Playlist-Name</string>
@@ -156,7 +154,6 @@
     <string name="lyrics_translate_via_ai">Mit KI übersetzen</string>
     <string name="lyrics_translate_already_translated">Diese Lyrics haben bereits eine Übersetzung</string>
     <string name="lyrics_translate_already_in_target_language">Diese Lyrics sind bereits in dieser Sprache</string>
-    <string name="lyrics_translate_api_not_configured">API-Key ist nicht konfiguriert</string>
     <string name="lyrics_translate_success">Lyrics erfolgreich übersetzt!</string>
     <string name="lyrics_translate_progress">Lyrics werden übersetzt...</string>
     <string name="lyrics_reset_imported">Lyrics zurücksetzen</string>

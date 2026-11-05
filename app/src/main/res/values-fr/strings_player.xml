@@ -37,7 +37,6 @@
     <string name="cast_disconnect">Déconnecter</string>
     <string name="cast_connectivity">Connectivité</string>
     <string name="cast_turn_on_wifi_bt">Activez le Wi-Fi ou le Bluetooth</string>
-    <string name="cast_cd_refresh_connections">Actualiser les connexions</string>
     <string name="cast_wifi">Wi-Fi</string>
     <string name="cast_wifi_off">Désactivé</string>
     <string name="cast_wifi_on">Activé</string>
@@ -111,7 +110,6 @@
     <string name="queue_save_playlist_named">File d\'attente %1$s</string>
     <string name="queue_save_playlist_current">File d\'attente actuelle</string>
     <string name="queue_cd_dismiss_song">Ignorer la chanson</string>
-    <string name="queue_song_removed">supprimé</string>
     <string name="queue_save_as_playlist_sheet_title">Enregistrer comme liste de lecture</string>
     <string name="queue_save_as_playlist_deselect_all">Tout désélectionner</string>
     <string name="queue_save_as_playlist_name_label">Nom de la liste de lecture</string>
@@ -156,7 +154,6 @@
     <string name="lyrics_translate_via_ai">Traduire avec l\'IA</string>
     <string name="lyrics_translate_already_translated">Ces paroles ont déjà une traduction</string>
     <string name="lyrics_translate_already_in_target_language">Ces paroles sont déjà dans cette langue</string>
-    <string name="lyrics_translate_api_not_configured">L\'API n\'est pas configurée</string>
     <string name="lyrics_translate_success">Paroles traduites avec succès !</string>
     <string name="lyrics_translate_progress">Traduction des paroles en cours...</string>
     <string name="lyrics_reset_imported">Réinitialiser les paroles importées</string>

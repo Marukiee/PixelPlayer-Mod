@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
         <!-- Top Bar -->
-    <string name="topbar_beta_letter">β</string>
-    <string name="topbar_beta_label">Бета</string>
-    <string name="topbar_cd_changelog">Список изменений</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Бета 0.7.5</string>
@@ -20,7 +17,6 @@
     <string name="beta_sheet_github_body">Сначала выполните поиск, затем создайте чёткий отчёт об ошибке, сбое, предложении или вопросе.</string>
     <string name="beta_sheet_open_issues">Открыть существующие задачи</string>
     <string name="beta_sheet_report_bug">Сообщить об ошибке или сбое</string>
-    <string name="beta_sheet_report_body">Опишите шаги воспроизведения, ожидаемый результат, фактический результат и данные вашего устройства/ОС.</string>
     <string name="beta_sheet_report_title">Как сообщать о проблемах</string>
     <string name="beta_sheet_report_summary">Краткий чек-лист перед созданием новой задачи.</string>
     <string name="beta_sheet_before_title">Перед созданием задачи</string>

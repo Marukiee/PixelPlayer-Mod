@@ -28,7 +28,6 @@
     <string name="equalizer_band_bass_low">Bassi / Bassi medi</string>
     <string name="equalizer_band_mid_high">Medi / Alti</string>
     <string name="equalizer_page_n">Pagina %1$d</string>
-    <string name="equalizer_reset_duration_cd">Reimposta durata</string>
     <string name="equalizer_action_save_new">Salva nuovo</string>
 
     <!-- CustomPresetsSheet -->

@@ -89,11 +89,6 @@ class SonosTrackResolver @Inject constructor(
         cache.clear()
     }
 
-    fun invalidateIndex() {
-        byTitle = emptyMap()
-        cache.clear()
-    }
-
     /** Resolves the given media ids in one database read; unknown or unmatched songs map to null. */
     suspend fun resolve(mediaIds: List<String>): Map<String, SonosTrack?> = mutex.withLock {
         val missing = mediaIds.filter { it !in cache }.distinct()

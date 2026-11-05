@@ -17,7 +17,6 @@
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Çalma listesi başarıyla oluşturuldu</string>
     <string name="library_toast_set_ai_provider_api_key_first">Önce yapay zeka sağlayıcınızın API anahtarını ayarlayın</string>
-    <string name="library_toast_set_gemini_api_key_first">Önce Gemini API anahtarınızı ayarlayın</string>
     <string name="library_toast_added_to_queue">Sıraya eklendi</string>
     <string name="library_toast_playing_next">Sırada oynatılacak</string>
 
@@ -52,7 +51,6 @@
     <string name="library_cloud_only_label">Sadece Bulut</string>
 
     <!-- Library AI Metadata Processing -->
-    <string name="library_generating_ai_metadata">Yapay zeka ile meta veriler oluşturuluyor…</string>
 
     <!-- Library list errors -->
     <string name="library_error_loading_songs">Şarkılar yüklenirken hata oluştu</string>
@@ -150,7 +148,6 @@
     <string name="song_info_send_to_watch">Saate gönder</string>
     <string name="song_info_watch_unavailable">Saat kullanılamıyor</string>
     <string name="song_info_cd_send_to_watch">Şarkıyı saate gönder</string>
-    <string name="song_info_cd_watch_unavailable">Saat kullanılamıyor</string>
     <string name="song_info_set_sound_as_short">Şu şekilde ayarla:</string>
     <string name="song_info_set_sound_as_long">Ses olarak ayarla</string>
     <string name="song_info_cd_set_sound_as">Bu şarkıyı sistem sesi olarak nasıl kullanacağınızı seçin</string>
@@ -171,7 +168,6 @@
     <string name="song_info_tone_alarm_label">alarm sesi</string>
     <string name="song_info_ringtone_permission_prompt">Sistem ayarlarını değiştirmeyi etkinleştirin, ardından otomatik olarak tamamlamak için PixelPlayer\'a geri dönün.</string>
     <string name="song_info_ringtone_permission_missing">Sistem ayarlarını değiştirme etkinleştirilmedi.</string>
-    <string name="song_info_ringtone_success">\"%1$s\" zil sesi olarak ayarlandı</string>
     <string name="song_info_ringtone_local_only">Yalnızca yerel şarkılar zil sesi olarak kullanılabilir.</string>
     <string name="song_info_ringtone_missing_file">Bu ses dosyası zil sesi için hazırlanamadı.</string>
     <string name="song_info_ringtone_failed">Zil sesi ayarlanamadı: %1$s</string>

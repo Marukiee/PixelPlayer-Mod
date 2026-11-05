@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Top Bar -->
-    <string name="topbar_beta_letter">β</string>
-    <string name="topbar_beta_label">Bêta</string>
-    <string name="topbar_cd_changelog">Journal des modifications</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Bêta 0.7.5</string>
@@ -20,7 +17,6 @@
     <string name="beta_sheet_github_body">Recherchez d\'abord, puis ouvrez un rapport précis pour les bugs, plantages, demandes ou questions.</string>
     <string name="beta_sheet_open_issues">Ouvrir les tickets existants</string>
     <string name="beta_sheet_report_bug">Signaler un ticket ou un crash</string>
-    <string name="beta_sheet_report_body">Partagez les étapes de reproduction, le résultat attendu, le résultat actuel et les détails de votre appareil/OS.</string>
     <string name="beta_sheet_report_title">Comment signaler</string>
     <string name="beta_sheet_report_summary">Une liste de contrôle rapide avant d\'ouvrir un nouveau ticket.</string>
     <string name="beta_sheet_before_title">Avant d\'ouvrir un ticket</string>

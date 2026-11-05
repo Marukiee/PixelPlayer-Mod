@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">Use pinch and drag gestures to find the perfect framing</string>
     <string name="playlist_creation_mode_manual">Manual</string>
     <string name="playlist_creation_mode_smart">Smart</string>
-    <string name="playlist_creation_generate_with_ai">Generate with AI</string>
     <string name="playlist_creation_smart_rule">Smart Rule</string>
     <string name="playlist_creation_tab_default">Default</string>
     <string name="playlist_creation_tab_image">Image</string>

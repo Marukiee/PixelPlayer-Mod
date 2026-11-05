@@ -81,11 +81,6 @@
     <string name="jellyfin_dashboard_quick_actions_subtitle">Administrer din Jellyfin-tilkobling.</string>
 
     <!-- Google Drive dashboard -->
-    <string name="gdrive_dashboard_music_folders">Musikkmapper</string>
-    <string name="gdrive_dashboard_add_folder_hint">Trykk + for å legge til en Drive-mappe</string>
-    <string name="gdrive_dashboard_no_folders_yet">Ingen mapper lagt til ennå</string>
-    <string name="gdrive_dashboard_folders_synced_count">%1$d mapper synkronisert</string>
-    <string name="gdrive_cd_add_folder">Legg til mappe</string>
 
     <!-- QQ Music dashboard -->
     <string name="qqmusic_select_playlist_type_title">Velg type spilleliste</string>
@@ -123,7 +118,6 @@
 
     <!-- Cloud content descriptions -->
     <string name="cloud_cd_sync">Synkroniser</string>
-    <string name="cloud_cd_sync_all">Synkroniser alle</string>
     <string name="cloud_cd_logout">Logg ut</string>
     <string name="cloud_cd_sync_all_playlists">Synkroniser alle spillelister</string>
     <string name="cloud_cd_user_avatar">Brukeravatar</string>

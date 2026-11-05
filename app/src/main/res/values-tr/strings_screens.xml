@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">Mükemmel çerçeveyi bulmak için kıstırma ve sürükleme hareketlerini kullanın</string>
     <string name="playlist_creation_mode_manual">Manuel</string>
     <string name="playlist_creation_mode_smart">Akıllı</string>
-    <string name="playlist_creation_generate_with_ai">Yapay Zeka ile Oluştur</string>
     <string name="playlist_creation_smart_rule">Akıllı Kural</string>
     <string name="playlist_creation_tab_default">Varsayılan</string>
     <string name="playlist_creation_tab_image">Görsel</string>

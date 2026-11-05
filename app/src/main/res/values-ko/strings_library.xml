@@ -17,7 +17,6 @@
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">플레이리스트가 생성되었습니다</string>
     <string name="library_toast_set_ai_provider_api_key_first">먼저 AI 제공업체 API 키를 설정하세요</string>
-    <string name="library_toast_set_gemini_api_key_first">먼저 Gemini API 키를 설정하세요</string>
     <string name="library_toast_added_to_queue">대기열에 추가됨</string>
     <string name="library_toast_playing_next">다음에 재생됨</string>
 
@@ -52,7 +51,6 @@
     <string name="library_cloud_only_label">클라우드 전용</string>
 
     <!-- Library AI Metadata Processing -->
-    <string name="library_generating_ai_metadata">AI로 메타데이터 생성 중…</string>
 
     <!-- Library list errors -->
     <string name="library_error_loading_songs">곡을 불러오는 중 오류 발생</string>
@@ -150,7 +148,6 @@
     <string name="song_info_send_to_watch">워치로 보내기</string>
     <string name="song_info_watch_unavailable">워치 사용 불가</string>
     <string name="song_info_cd_send_to_watch">곡을 워치로 보내기</string>
-    <string name="song_info_cd_watch_unavailable">워치 사용 불가</string>
     <string name="song_info_set_sound_as_short">설정</string>
     <string name="song_info_set_sound_as_long">소리로 설정</string>
     <string name="song_info_cd_set_sound_as">이 곡을 시스템 소리로 사용하는 방법 선택</string>
@@ -171,7 +168,6 @@
     <string name="song_info_tone_alarm_label">알람음</string>
     <string name="song_info_ringtone_permission_prompt">시스템 설정 수정을 활성화한 후, PixelPlayer로 돌아와서 자동으로 완료하세요.</string>
     <string name="song_info_ringtone_permission_missing">시스템 설정 수정이 활성화되지 않았습니다.</string>
-    <string name="song_info_ringtone_success">\"%1$s\"을(를) 벨소리로 설정했습니다</string>
     <string name="song_info_ringtone_local_only">로컬 곡만 벨소리로 사용할 수 있습니다.</string>
     <string name="song_info_ringtone_missing_file">벨소리 지정을 위해 오디오 파일을 준비하지 못했습니다.</string>
     <string name="song_info_ringtone_failed">벨소리를 설정하지 못했습니다: %1$s</string>

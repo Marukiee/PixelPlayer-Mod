@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">Cubit dan geser untuk menyesuaikan framing</string>
     <string name="playlist_creation_mode_manual">Manual</string>
     <string name="playlist_creation_mode_smart">Pintar</string>
-    <string name="playlist_creation_generate_with_ai">Hasilkan dengan AI</string>
     <string name="playlist_creation_smart_rule">Aturan Pintar</string>
     <string name="playlist_creation_tab_default">Default</string>
     <string name="playlist_creation_tab_image">Gambar</string>

@@ -2,9 +2,6 @@
 <resources>
     <string name="app_name">PixelPlayer</string>
     <string name="app_tagline">Müzik Çalar</string>
-    <string name="app_name_change_title">Uygulama Adı Değişikliği</string>
-    <string name="app_name_change_message">Ticari marka kaynaklı bir sorun nedeniyle uygulamamızın adını PixelPlay\'den PixelPlayer olarak değiştirdik. Keyifli dinlemeler!</string>
-    <string name="app_name_change_do_not_show_again">Bir daha gösterme</string>
 
     <!-- Navigation Bar Labels -->
     <string name="nav_bar_home">Ana Sayfa</string>
@@ -94,7 +91,6 @@
     <string name="common_delete">Sil</string>
     <string name="common_export">Dışa aktar</string>
     <string name="common_merge">Birleştir</string>
-    <string name="common_rename">Yeniden adlandır</string>
     <string name="common_create">Oluştur</string>
     <string name="common_lyrics">Şarkı Sözleri</string>
     <string name="common_settings">Ayarlar</string>
@@ -112,7 +108,6 @@
     <string name="common_favorite">Favori</string>
     <string name="common_pause">Duraklat</string>
     <string name="common_repeat">Tekrarla</string>
-    <string name="common_options">Seçenekler</string>
     <string name="common_shuffle_play">Karışık Oynat</string>
     <string name="common_more_options_for">%1$s için daha fazla seçenek</string>
     <string name="common_expand_menu">Menüyü genişlet</string>

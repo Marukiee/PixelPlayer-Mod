@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">使用双指缩放和拖动手势找到完美的构图</string>
     <string name="playlist_creation_mode_manual">手动</string>
     <string name="playlist_creation_mode_smart">智能</string>
-    <string name="playlist_creation_generate_with_ai">使用 AI 生成</string>
     <string name="playlist_creation_smart_rule">智能规则</string>
     <string name="playlist_creation_tab_default">默认</string>
     <string name="playlist_creation_tab_image">图片</string>

@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Top Bar -->
-    <string name="topbar_beta_letter">β</string>
-    <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_changelog">Log Perubahan</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -20,7 +17,6 @@
     <string name="beta_sheet_github_body">Cari terlebih dahulu, lalu buat laporan yang jelas untuk bug, crash, permintaan fitur, atau pertanyaan.</string>
     <string name="beta_sheet_open_issues">Buka issue yang ada</string>
     <string name="beta_sheet_report_bug">Laporkan masalah atau crash</string>
-    <string name="beta_sheet_report_body">Bagikan langkah-langkah untuk mereproduksi, hasil yang diharapkan, hasil aktual, dan detail perangkat/OS Anda.</string>
     <string name="beta_sheet_report_title">Cara melapor</string>
     <string name="beta_sheet_report_summary">Checklist singkat sebelum membuat issue baru.</string>
     <string name="beta_sheet_before_title">Sebelum membuat issue</string>

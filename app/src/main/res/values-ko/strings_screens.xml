@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">완벽한 구도를 잡으려면 두 손가락으로 벌리거나 드래그하세요</string>
     <string name="playlist_creation_mode_manual">수동</string>
     <string name="playlist_creation_mode_smart">스마트</string>
-    <string name="playlist_creation_generate_with_ai">AI로 생성</string>
     <string name="playlist_creation_smart_rule">스마트 규칙</string>
     <string name="playlist_creation_tab_default">기본</string>
     <string name="playlist_creation_tab_image">이미지</string>

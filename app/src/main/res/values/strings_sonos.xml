@@ -29,7 +29,6 @@
     <string name="sonos_individual_volume">Individual volume</string>
     <string name="sonos_show_rooms">Show speakers</string>
     <string name="sonos_hide_rooms">Hide speakers</string>
-    <string name="sonos_rooms_count">%1$d rooms</string>
     <string name="cast_connectivity_hint">Wi-Fi and Bluetooth on this phone</string>
 
     <string name="sonos_msg_skipped">Not on Navidrome, skipped: %1$s</string>

@@ -17,7 +17,6 @@
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Playlist erfolgreich erstellt</string>
     <string name="library_toast_set_ai_provider_api_key_first">Bitte zuerst den API-Key für deinen KI-Anbieter einstellen</string>
-    <string name="library_toast_set_gemini_api_key_first">Bitte zuerst den Gemini API-Key einrichten.</string>
     <string name="library_toast_added_to_queue">Zur Queue hinzugefügt</string>
     <string name="library_toast_playing_next">Wird als nächstes gespielt</string>
 
@@ -52,7 +51,6 @@
     <string name="library_cloud_only_label">Nur Cloud</string>
 
     <!-- Library AI Metadata Processing -->
-    <string name="library_generating_ai_metadata">Metadaten werden mit KI generiert…</string>
 
     <!-- Library list errors -->
     <string name="library_error_loading_songs">Fehler beim Laden der Songs</string>
@@ -150,7 +148,6 @@
     <string name="song_info_send_to_watch">An Uhr senden</string>
     <string name="song_info_watch_unavailable">Uhr nicht verfügbar</string>
     <string name="song_info_cd_send_to_watch">Song an Uhr senden</string>
-    <string name="song_info_cd_watch_unavailable">Uhr nicht verfügbar</string>
     <string name="song_info_set_sound_as_short">Als</string>
     <string name="song_info_set_sound_as_long">Als Sound festlegen</string>
     <string name="song_info_cd_set_sound_as">Wähle, wie dieser Song als Systemton verwendet werden soll</string>
@@ -171,7 +168,6 @@
     <string name="song_info_tone_alarm_label">Weckton</string>
     <string name="song_info_ringtone_permission_prompt">Aktiviere Systemeinstellungen ändern und kehre zu PixelPlayer zurück, um automatisch fortzufahren.</string>
     <string name="song_info_ringtone_permission_missing">Systemeinstellungen ändern wurde nicht aktiviert.</string>
-    <string name="song_info_ringtone_success">\"%1$s\" wurde als Klingelton festgelegt</string>
     <string name="song_info_ringtone_local_only">Nur lokale Songs können als Systemsounds verwendet werden.</string>
     <string name="song_info_ringtone_missing_file">Diese Audiodatei konnte nicht vorbereitet werden.</string>
     <string name="song_info_ringtone_failed">Sound konnte nicht geändert werden: %1$s</string>

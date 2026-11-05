@@ -17,7 +17,6 @@
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Playlist créée avec succès</string>
     <string name="library_toast_set_ai_provider_api_key_first">Configurez d\'abord votre clé API de fournisseur d\'IA</string>
-    <string name="library_toast_set_gemini_api_key_first">Configurez d\'abord votre clé API Gemini</string>
     <string name="library_toast_added_to_queue">Ajouté à la file d\'attente</string>
     <string name="library_toast_playing_next">Passera ensuite</string>
 
@@ -52,7 +51,6 @@
     <string name="library_cloud_only_label">Uniquement Cloud</string>
 
     <!-- Library AI Metadata Processing -->
-    <string name="library_generating_ai_metadata">Génération des métadonnées avec l\'IA…</string>
 
     <!-- Library list errors -->
     <string name="library_error_loading_songs">Erreur lors du chargement des titres</string>
@@ -150,7 +148,6 @@
     <string name="song_info_send_to_watch">Envoyer vers la montre</string>
     <string name="song_info_watch_unavailable">Montre indisponible</string>
     <string name="song_info_cd_send_to_watch">Envoyer la chanson vers la montre</string>
-    <string name="song_info_cd_watch_unavailable">Montre indisponible</string>
     <string name="song_info_set_sound_as_short">Définir comme</string>
     <string name="song_info_set_sound_as_long">Définir comme sonnerie/alarme</string>
     <string name="song_info_cd_set_sound_as">Choisissez comment utiliser cette chanson comme son système</string>
@@ -171,7 +168,6 @@
     <string name="song_info_tone_alarm_label">son d\'alarme</string>
     <string name="song_info_ringtone_permission_prompt">Activez la modification des paramètres système, puis revenez à PixelPlayer to finish automatically.</string>
     <string name="song_info_ringtone_permission_missing">La modification des paramètres système n\'a pas été activée.</string>
-    <string name="song_info_ringtone_success">« %1$s » a été défini comme votre sonnerie</string>
     <string name="song_info_ringtone_local_only">Seules les chansons locales peuvent être utilisées comme sonneries.</string>
     <string name="song_info_ringtone_missing_file">Impossible de préparer ce fichier audio pour la sonnerie.</string>
     <string name="song_info_ringtone_failed">Impossible de définir la sonnerie : %1$s</string>

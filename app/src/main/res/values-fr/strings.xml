@@ -2,9 +2,6 @@
 <resources>
     <string name="app_name">PixelPlayer</string>
     <string name="app_tagline">Lecteur de musique</string>
-    <string name="app_name_change_title">Changement de nom de l\'application</string>
-    <string name="app_name_change_message">Nous avons changé le nom de notre application de PixelPlay à PixelPlayer en raison d\'un problème de marque déposée. Bonne écoute !</string>
-    <string name="app_name_change_do_not_show_again">Ne plus afficher</string>
 
     <!-- Navigation Bar Labels -->
     <string name="nav_bar_home">Accueil</string>
@@ -94,7 +91,6 @@
     <string name="common_delete">Supprimer</string>
     <string name="common_export">Exporter</string>
     <string name="common_merge">Fusionner</string>
-    <string name="common_rename">Renommer</string>
     <string name="common_create">Créer</string>
     <string name="common_lyrics">Paroles</string>
     <string name="common_settings">Paramètres</string>
@@ -112,7 +108,6 @@
     <string name="common_favorite">Favori</string>
     <string name="common_pause">Pause</string>
     <string name="common_repeat">Répéter</string>
-    <string name="common_options">Options</string>
     <string name="common_shuffle_play">Lecture aléatoire</string>
     <string name="common_more_options_for">Plus d\'options pour %1$s</string>
     <string name="common_expand_menu">Développer le menu</string>

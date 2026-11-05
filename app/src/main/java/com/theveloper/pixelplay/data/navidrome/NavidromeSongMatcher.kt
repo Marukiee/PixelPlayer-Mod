@@ -1,6 +1,5 @@
 package com.theveloper.pixelplay.data.navidrome
 
-import com.theveloper.pixelplay.data.network.navidrome.NavidromeApiService
 import com.theveloper.pixelplay.utils.SearchTextNormalizer
 
 /**
@@ -12,37 +11,6 @@ import com.theveloper.pixelplay.utils.SearchTextNormalizer
  * punctuation, "(Remastered)", feat. credits, order/joiners) still match.
  */
 object NavidromeSongMatcher {
-
-    /** Returns the server song id for a local track, or null if no confident match exists. */
-    suspend fun resolveNavidromeId(
-        api: NavidromeApiService,
-        title: String,
-        artist: String,
-        album: String
-    ): String? {
-        val wantTitle = normalize(title)
-        if (wantTitle.isBlank()) return null
-        val wantArtist = normalize(artist)
-        val wantAlbum = normalize(album)
-
-        var candidates = api.searchSongs(query = title, count = 50).getOrNull().orEmpty()
-        if (candidates.isEmpty() && artist.isNotBlank()) {
-            candidates = api.searchSongs(query = "$title $artist", count = 50).getOrNull().orEmpty()
-        }
-        if (candidates.isEmpty()) return null
-
-        val titleMatches = candidates.filter { titleMatches(normalize(it.optString("title")), wantTitle) }
-        if (titleMatches.isEmpty()) return null
-
-        val best = titleMatches.firstOrNull { c ->
-            artistMatches(normalize(c.optString("artist")), wantArtist) &&
-                titleMatches(normalize(c.optString("album")), wantAlbum)
-        } ?: titleMatches.firstOrNull { c ->
-            artistMatches(normalize(c.optString("artist")), wantArtist)
-        } ?: titleMatches.singleOrNull()
-
-        return best?.optString("id")?.takeIf { it.isNotBlank() }
-    }
 
     fun titleMatches(a: String, b: String): Boolean {
         if (a.isBlank() || b.isBlank()) return false

@@ -227,7 +227,6 @@
     <string name="settings_default_tab_title">默认选项卡</string>
     <string name="settings_default_tab_subtitle">选择默认启动时的选项卡。</string>
     <string name="settings_default_tab_home">首页</string>
-    <string name="settings_default_tab_search">搜索</string>
     <string name="settings_default_tab_library">媒体库</string>
     <string name="settings_library_navigation_title">媒体库导航</string>
     <string name="settings_library_navigation_subtitle">选择在媒体库选项卡之间移动的方式。</string>

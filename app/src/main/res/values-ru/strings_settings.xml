@@ -227,7 +227,6 @@
     <string name="settings_default_tab_title">Вкладка по умолчанию</string>
     <string name="settings_default_tab_subtitle">Выберите вкладку, открываемую при запуске.</string>
     <string name="settings_default_tab_home">Главная</string>
-    <string name="settings_default_tab_search">Поиск</string>
     <string name="settings_default_tab_library">Медиатека</string>
     <string name="settings_library_navigation_title">Навигация по медиатеке</string>
     <string name="settings_library_navigation_subtitle">Выберите способ переключения между вкладками медиатеки.</string>

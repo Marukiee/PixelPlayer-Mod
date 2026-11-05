@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">Используйте жесты масштабирования и перетаскивания для идеального кадрирования</string>
     <string name="playlist_creation_mode_manual">Вручную</string>
     <string name="playlist_creation_mode_smart">Умный</string>
-    <string name="playlist_creation_generate_with_ai">Создать с ИИ</string>
     <string name="playlist_creation_smart_rule">Умное правило</string>
     <string name="playlist_creation_tab_default">По умолчанию</string>
     <string name="playlist_creation_tab_image">Изображение</string>

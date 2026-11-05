@@ -81,11 +81,6 @@
     <string name="jellyfin_dashboard_quick_actions_subtitle">Jellyfin sunucu bağlantınızı yönetin.</string>
 
     <!-- Google Drive dashboard -->
-    <string name="gdrive_dashboard_music_folders">Müzik klasörleri</string>
-    <string name="gdrive_dashboard_add_folder_hint">Klasör eklemek için + simgesine dokunun</string>
-    <string name="gdrive_dashboard_no_folders_yet">Henüz klasör eklenmedi</string>
-    <string name="gdrive_dashboard_folders_synced_count">%1$d klasör senkronize edildi</string>
-    <string name="gdrive_cd_add_folder">Klasör ekle</string>
 
     <!-- QQ Music dashboard -->
     <string name="qqmusic_select_playlist_type_title">Çalma listesi türünü seçin</string>
@@ -123,7 +118,6 @@
 
     <!-- Cloud content descriptions -->
     <string name="cloud_cd_sync">Senkronize et</string>
-    <string name="cloud_cd_sync_all">Tümünü senkronize et</string>
     <string name="cloud_cd_logout">Oturumu kapat</string>
     <string name="cloud_cd_sync_all_playlists">Tüm çalma listelerini senkronize et</string>
     <string name="cloud_cd_user_avatar">Kullanıcı avatarı</string>

@@ -227,7 +227,6 @@
     <string name="settings_default_tab_title">Varsayılan Sekme</string>
     <string name="settings_default_tab_subtitle">Varsayılan açılış sekmesini seçin.</string>
     <string name="settings_default_tab_home">Ana Sayfa</string>
-    <string name="settings_default_tab_search">Ara</string>
     <string name="settings_default_tab_library">Kitaplık</string>
     <string name="settings_library_navigation_title">Kitaplık Gezinmesi</string>
     <string name="settings_library_navigation_subtitle">Kitaplık sekmeleri arasında nasıl geçiş yapılacağını seçin.</string>

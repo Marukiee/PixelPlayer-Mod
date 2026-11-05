@@ -227,7 +227,6 @@
     <string name="settings_default_tab_title">Scheda predefinita</string>
     <string name="settings_default_tab_subtitle">Scegli la scheda di avvio predefinita.</string>
     <string name="settings_default_tab_home">Home</string>
-    <string name="settings_default_tab_search">Cerca</string>
     <string name="settings_default_tab_library">Libreria</string>
     <string name="settings_library_navigation_title">Navigazione libreria</string>
     <string name="settings_library_navigation_subtitle">Scegli come muoverti tra le schede della libreria.</string>

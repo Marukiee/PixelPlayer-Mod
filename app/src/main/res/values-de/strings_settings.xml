@@ -227,7 +227,6 @@
     <string name="settings_default_tab_title">Start-Tab</string>
     <string name="settings_default_tab_subtitle">Welcher Tab beim Öffnen der App zuerst erscheint.</string>
     <string name="settings_default_tab_home">Home</string>
-    <string name="settings_default_tab_search">Suchen</string>
     <string name="settings_default_tab_library">Bibliothek</string>
     <string name="settings_library_navigation_title">Bibliotheks-Navigation</string>
     <string name="settings_library_navigation_subtitle">Wie zwischen Bibliotheks-Tabs gewechselt wird.</string>

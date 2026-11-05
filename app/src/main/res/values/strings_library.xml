@@ -17,7 +17,6 @@
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Playlist created successfully</string>
     <string name="library_toast_set_ai_provider_api_key_first">Set your AI provider API key first</string>
-    <string name="library_toast_set_gemini_api_key_first">Set your Gemini API key first</string>
     <string name="library_toast_added_to_queue">Added to queue</string>
     <string name="library_toast_playing_next">Playing next</string>
 
@@ -52,7 +51,6 @@
     <string name="library_cloud_only_label">Cloud Only</string>
 
     <!-- Library AI Metadata Processing -->
-    <string name="library_generating_ai_metadata">Generating metadata with AI…</string>
 
     <!-- Library list errors -->
     <string name="library_error_loading_songs">Error loading songs</string>
@@ -153,7 +151,6 @@
     <string name="song_info_send_to_watch">Send to watch</string>
     <string name="song_info_watch_unavailable">Watch unavailable</string>
     <string name="song_info_cd_send_to_watch">Send song to watch</string>
-    <string name="song_info_cd_watch_unavailable">Watch unavailable</string>
     <string name="song_info_set_sound_as_short">Set as</string>
     <string name="song_info_set_sound_as_long">Set as sound</string>
     <string name="song_info_cd_set_sound_as">Choose how to use this song as a system sound</string>
@@ -174,7 +171,6 @@
     <string name="song_info_tone_alarm_label">alarm sound</string>
     <string name="song_info_ringtone_permission_prompt">Enable Modify system settings, then return to PixelPlayer to finish automatically.</string>
     <string name="song_info_ringtone_permission_missing">Modify system settings was not enabled.</string>
-    <string name="song_info_ringtone_success">Set \"%1$s\" as your ringtone</string>
     <string name="song_info_ringtone_local_only">Only local songs can be used as ringtones.</string>
     <string name="song_info_ringtone_missing_file">Couldn\'t prepare this audio file for ringtone.</string>
     <string name="song_info_ringtone_failed">Couldn\'t set ringtone: %1$s</string>

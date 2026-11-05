@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">Usa i gesti di pizzico e trascinamento per trovare l\'inquadratura perfetta.</string>
     <string name="playlist_creation_mode_manual">Manuale</string>
     <string name="playlist_creation_mode_smart">Smart</string>
-    <string name="playlist_creation_generate_with_ai">Genera con AI</string>
     <string name="playlist_creation_smart_rule">Regola smart</string>
     <string name="playlist_creation_tab_default">Predefinito</string>
     <string name="playlist_creation_tab_image">Immagine</string>

@@ -2,9 +2,6 @@
 <resources>
     <string name="app_name">PixelPlayer</string>
     <string name="app_tagline">Music Player</string>
-    <string name="app_name_change_title">App Name Change</string>
-    <string name="app_name_change_message">We have changed our app\'s name from PixelPlay to PixelPlayer due to a trademark-related issue. Keep playing!</string>
-    <string name="app_name_change_do_not_show_again">Do not show again</string>
 
     <!-- Navigation Bar Labels -->
     <string name="nav_bar_home">Home</string>
@@ -94,7 +91,6 @@
     <string name="common_delete">Delete</string>
     <string name="common_export">Export</string>
     <string name="common_merge">Merge</string>
-    <string name="common_rename">Rename</string>
     <string name="common_create">Create</string>
     <string name="common_lyrics">Lyrics</string>
     <string name="common_settings">Settings</string>
@@ -112,7 +108,6 @@
     <string name="common_favorite">Favorite</string>
     <string name="common_pause">Pause</string>
     <string name="common_repeat">Repeat</string>
-    <string name="common_options">Options</string>
     <string name="common_shuffle_play">Shuffle Play</string>
     <string name="common_more_options_for">More options for %1$s</string>
     <string name="common_expand_menu">Expand menu</string>

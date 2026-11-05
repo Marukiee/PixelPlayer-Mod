@@ -37,7 +37,6 @@
     <string name="cast_disconnect">Putuskan koneksi</string>
     <string name="cast_connectivity">Konektivitas</string>
     <string name="cast_turn_on_wifi_bt">Aktifkan Wi-Fi atau Bluetooth</string>
-    <string name="cast_cd_refresh_connections">Segarkan koneksi</string>
     <string name="cast_wifi">Wi-Fi</string>
     <string name="cast_wifi_off">Nonaktif</string>
     <string name="cast_wifi_on">Aktif</string>
@@ -111,7 +110,6 @@
     <string name="queue_save_playlist_named">Antrean %1$s</string>
     <string name="queue_save_playlist_current">Antrean saat ini</string>
     <string name="queue_cd_dismiss_song">Tutup lagu</string>
-    <string name="queue_song_removed">dihapus</string>
     <string name="queue_save_as_playlist_sheet_title">Simpan sebagai playlist</string>
     <string name="queue_save_as_playlist_deselect_all">Batalkan pilihan semua</string>
     <string name="queue_save_as_playlist_name_label">Nama playlist</string>
@@ -156,7 +154,6 @@
     <string name="lyrics_translate_via_ai">Terjemahkan via AI</string>
     <string name="lyrics_translate_already_translated">Lirik ini sudah memiliki terjemahan</string>
     <string name="lyrics_translate_already_in_target_language">Lirik ini sudah dalam bahasa tersebut</string>
-    <string name="lyrics_translate_api_not_configured">API belum dikonfigurasi</string>
     <string name="lyrics_translate_success">Lirik berhasil diterjemahkan!</string>
     <string name="lyrics_translate_progress">Menerjemahkan lirik...</string>
     <string name="lyrics_reset_imported">Reset lirik yang diimpor</string>

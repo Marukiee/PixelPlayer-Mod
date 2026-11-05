@@ -37,7 +37,6 @@
     <string name="cast_disconnect">Отключить</string>
     <string name="cast_connectivity">Подключения</string>
     <string name="cast_turn_on_wifi_bt">Включите Wi-Fi или Bluetooth</string>
-    <string name="cast_cd_refresh_connections">Обновить подключения</string>
     <string name="cast_wifi">Wi-Fi</string>
     <string name="cast_wifi_off">Выкл.</string>
     <string name="cast_wifi_on">Вкл.</string>
@@ -111,7 +110,6 @@
     <string name="queue_save_playlist_named">Очередь %1$s</string>
     <string name="queue_save_playlist_current">Текущая очередь</string>
     <string name="queue_cd_dismiss_song">Убрать трек</string>
-    <string name="queue_song_removed">удалён</string>
     <string name="queue_save_as_playlist_sheet_title">Сохранить как плейлист</string>
     <string name="queue_save_as_playlist_deselect_all">Снять выделение</string>
     <string name="queue_save_as_playlist_name_label">Название плейлиста</string>
@@ -156,7 +154,6 @@
     <string name="lyrics_translate_via_ai">Перевести через ИИ</string>
     <string name="lyrics_translate_already_translated">Для этого текста уже существует перевод</string>
     <string name="lyrics_translate_already_in_target_language">Этот текст уже на выбранном языке</string>
-    <string name="lyrics_translate_api_not_configured">API не настроен</string>
     <string name="lyrics_translate_success">Текст песни успешно переведён!</string>
     <string name="lyrics_translate_progress">Перевод текста песни...</string>
     <string name="lyrics_reset_imported">Сбросить импортированный текст</string>

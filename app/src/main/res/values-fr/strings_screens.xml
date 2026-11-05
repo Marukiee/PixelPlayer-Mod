@@ -176,7 +176,6 @@
     <string name="playlist_creation_adjust_cover_hint">Pincez et glissez pour trouver le cadrage parfait</string>
     <string name="playlist_creation_mode_manual">Manuel</string>
     <string name="playlist_creation_mode_smart">Intelligent</string>
-    <string name="playlist_creation_generate_with_ai">Générer avec l\'IA</string>
     <string name="playlist_creation_smart_rule">Règle intelligente</string>
     <string name="playlist_creation_tab_default">Par défaut</string>
     <string name="playlist_creation_tab_image">Image</string>

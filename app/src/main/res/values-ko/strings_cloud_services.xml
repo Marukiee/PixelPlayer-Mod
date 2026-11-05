@@ -79,11 +79,6 @@
     <string name="jellyfin_dashboard_quick_actions_subtitle">Jellyfin 서버 연결을 관리합니다.</string>
 
     <!-- Google Drive dashboard -->
-    <string name="gdrive_dashboard_music_folders">음악 폴더</string>
-    <string name="gdrive_dashboard_add_folder_hint">Google Drive 폴더를 추가하려면 +를 누르세요.</string>
-    <string name="gdrive_dashboard_no_folders_yet">추가된 폴더가 없습니다</string>
-    <string name="gdrive_dashboard_folders_synced_count">%1$d개의 폴더 동기화됨</string>
-    <string name="gdrive_cd_add_folder">폴더 추가</string>
 
     <!-- QQ Music dashboard -->
     <string name="qqmusic_select_playlist_type_title">플레이리스트 유형 선택</string>
@@ -121,7 +116,6 @@
 
     <!-- Cloud content descriptions -->
     <string name="cloud_cd_sync">동기화</string>
-    <string name="cloud_cd_sync_all">모두 동기화</string>
     <string name="cloud_cd_logout">로그아웃</string>
     <string name="cloud_cd_sync_all_playlists">모든 플레이리스트 동기화</string>
     <string name="cloud_cd_user_avatar">사용자 아바타</string>

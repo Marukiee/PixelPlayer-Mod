@@ -223,7 +223,6 @@
     <string name="settings_default_tab_title">Onglet par défaut</string>
     <string name="settings_default_tab_subtitle">Choisissez l\'onglet par défaut au lancement.</string>
     <string name="settings_default_tab_home">Accueil</string>
-    <string name="settings_default_tab_search">Rechercher</string>
     <string name="settings_default_tab_library">Bibliothèque</string>
     <string name="settings_library_navigation_title">Navigation bibliothèque</string>
     <string name="settings_library_navigation_subtitle">Choisissez comment passer d\'un onglet à l\'autre dans la bibliothèque.</string>

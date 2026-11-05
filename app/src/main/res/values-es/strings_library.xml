@@ -17,7 +17,6 @@
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Lista creada correctamente</string>
     <string name="library_toast_set_ai_provider_api_key_first">Configura primero tu clave API del proveedor de IA</string>
-    <string name="library_toast_set_gemini_api_key_first">Configura primero tu clave API de Gemini</string>
     <string name="library_toast_added_to_queue">Añadida a la cola</string>
     <string name="library_toast_playing_next">Se reproducirá a continuación</string>
 
@@ -52,7 +51,6 @@
     <string name="library_cloud_only_label">Solo nube</string>
 
     <!-- Library AI Metadata Processing -->
-    <string name="library_generating_ai_metadata">Generando metadatos con IA…</string>
 
     <!-- Library list errors -->
     <string name="library_error_loading_songs">Error al cargar canciones</string>
@@ -150,7 +148,6 @@
     <string name="song_info_send_to_watch">Enviar al reloj</string>
     <string name="song_info_watch_unavailable">Reloj no disponible</string>
     <string name="song_info_cd_send_to_watch">Enviar canción al reloj</string>
-    <string name="song_info_cd_watch_unavailable">Reloj no disponible</string>
     <string name="song_info_set_sound_as_short">Establecer como</string>
     <string name="song_info_set_sound_as_long">Establecer como sonido</string>
     <string name="song_info_cd_set_sound_as">Elige cómo usar esta canción como sonido del sistema</string>
@@ -171,7 +168,6 @@
     <string name="song_info_tone_alarm_label">sonido de alarma</string>
     <string name="song_info_ringtone_permission_prompt">Habilita Modificar ajustes del sistema, luego regresa a PixelPlayer to finalizar automáticamente.</string>
     <string name="song_info_ringtone_permission_missing">No se habilitó Modificar ajustes del sistema.</string>
-    <string name="song_info_ringtone_success">Se ha establecido \"%1$s\" como tu tono de llamada</string>
     <string name="song_info_ringtone_local_only">Solo se pueden usar canciones locales como tono de llamada.</string>
     <string name="song_info_ringtone_missing_file">No se pudo preparar este archivo de audio para tono de llamada.</string>
     <string name="song_info_ringtone_failed">No se pudo establecer el tono de llamada: %1$s</string>

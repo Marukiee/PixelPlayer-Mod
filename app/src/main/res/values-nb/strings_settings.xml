@@ -227,7 +227,6 @@
     <string name="settings_default_tab_title">Standardfane</string>
     <string name="settings_default_tab_subtitle">Velg standardfane ved oppstart.</string>
     <string name="settings_default_tab_home">Hjem</string>
-    <string name="settings_default_tab_search">Søk</string>
     <string name="settings_default_tab_library">Bibliotek</string>
     <string name="settings_library_navigation_title">Biblioteksnavigasjon</string>
     <string name="settings_library_navigation_subtitle">Velg hvordan du flytter mellom biblioteksfanene.</string>

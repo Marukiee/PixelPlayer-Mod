@@ -227,7 +227,6 @@
     <string name="settings_default_tab_title">Default Tab</string>
     <string name="settings_default_tab_subtitle">Choose the Default launch tab.</string>
     <string name="settings_default_tab_home">Home</string>
-    <string name="settings_default_tab_search">Search</string>
     <string name="settings_default_tab_library">Library</string>
     <string name="settings_library_navigation_title">Library Navigation</string>
     <string name="settings_library_navigation_subtitle">Choose how to move between Library tabs.</string>
@@ -307,7 +306,6 @@
     <string name="settings_swipe_gestures_section">List swipe gestures</string>
     <string name="settings_swipe_left_title">Swipe left</string>
     <string name="settings_swipe_right_title">Swipe right</string>
-    <string name="settings_swipe_actions_subtitle">Swipe a song in the Library and Search lists to run this action.</string>
     <string name="swipe_action_none">Nothing</string>
     <string name="swipe_action_add_to_queue">Add to queue</string>
     <string name="swipe_action_play_next">Play next</string>

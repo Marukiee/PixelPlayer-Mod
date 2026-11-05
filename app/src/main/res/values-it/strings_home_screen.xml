@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Top Bar -->
-    <string name="topbar_beta_letter">β</string>
-    <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_changelog">Changelog</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -20,7 +17,6 @@
     <string name="beta_sheet_github_body">Cerca prima, quindi apri una segnalazione mirata per bug, crash, richieste o domande.</string>
     <string name="beta_sheet_open_issues">Apri segnalazioni esistenti</string>
     <string name="beta_sheet_report_bug">Segnala un bug o crash</string>
-    <string name="beta_sheet_report_body">Condividi i passaggi per riprodurre, il risultato atteso, il risultato effettivo e i dettagli del tuo dispositivo/SO.</string>
     <string name="beta_sheet_report_title">Come segnalare</string>
     <string name="beta_sheet_report_summary">Una rapida lista di controllo prima di aprire una nuova segnalazione.</string>
     <string name="beta_sheet_before_title">Prima di aprire una segnalazione</string>

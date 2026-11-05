@@ -227,7 +227,6 @@
     <string name="settings_default_tab_title">Pestaña predeterminada</string>
     <string name="settings_default_tab_subtitle">Elige la pestaña de inicio predeterminada.</string>
     <string name="settings_default_tab_home">Inicio</string>
-    <string name="settings_default_tab_search">Buscar</string>
     <string name="settings_default_tab_library">Biblioteca</string>
     <string name="settings_library_navigation_title">Navegación de la biblioteca</string>
     <string name="settings_library_navigation_subtitle">Elige cómo moverte entre las pestañas de la biblioteca.</string>

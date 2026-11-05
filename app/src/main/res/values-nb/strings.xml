@@ -2,9 +2,6 @@
 <resources>
     <string name="app_name">PixelPlayer</string>
     <string name="app_tagline">Musikkspiller</string>
-    <string name="app_name_change_title">Endring av app-navn</string>
-    <string name="app_name_change_message">Vi har endret appens navn fra PixelPlay til PixelPlayer på grunn av et varemerkeproblem. Fortsett spillingen!</string>
-    <string name="app_name_change_do_not_show_again">Ikke vis igjen</string>
 
     <!-- Navigation Bar Labels -->
     <string name="nav_bar_home">Hjem</string>
@@ -94,7 +91,6 @@
     <string name="common_delete">Slett</string>
     <string name="common_export">Eksporter</string>
     <string name="common_merge">Slå sammen</string>
-    <string name="common_rename">Gi nytt navn</string>
     <string name="common_create">Opprett</string>
     <string name="common_lyrics">Sangtekster</string>
     <string name="common_settings">Innstillinger</string>
@@ -112,7 +108,6 @@
     <string name="common_favorite">Favoritt</string>
     <string name="common_pause">Pause</string>
     <string name="common_repeat">Gjenta</string>
-    <string name="common_options">Alternativer</string>
     <string name="common_shuffle_play">Bland og spill</string>
     <string name="common_more_options_for">Flere alternativer for %1$s</string>
     <string name="common_expand_menu">Utvid meny</string>

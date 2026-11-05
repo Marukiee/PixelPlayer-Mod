@@ -17,7 +17,6 @@
     <!-- Library Toasts -->
     <string name="library_toast_playlist_created">Spilleliste opprettet</string>
     <string name="library_toast_set_ai_provider_api_key_first">Angi API-nøkkel for AI-leverandøren først</string>
-    <string name="library_toast_set_gemini_api_key_first">Angi Gemini API-nøkkel først</string>
     <string name="library_toast_added_to_queue">Lagt til i kø</string>
     <string name="library_toast_playing_next">Spilles neste</string>
 
@@ -52,7 +51,6 @@
     <string name="library_cloud_only_label">Kun sky</string>
 
     <!-- Library AI Metadata Processing -->
-    <string name="library_generating_ai_metadata">Genererer metadata med AI…</string>
 
     <!-- Library list errors -->
     <string name="library_error_loading_songs">Feil ved lasting av sanger</string>
@@ -150,7 +148,6 @@
     <string name="song_info_send_to_watch">Send til klokke</string>
     <string name="song_info_watch_unavailable">Klokke utilgjengelig</string>
     <string name="song_info_cd_send_to_watch">Send sang til klokke</string>
-    <string name="song_info_cd_watch_unavailable">Klokke utilgjengelig</string>
     <string name="song_info_set_sound_as_short">Angi som</string>
     <string name="song_info_set_sound_as_long">Angi som lyd</string>
     <string name="song_info_cd_set_sound_as">Velg hvordan denne sangen skal brukes som systemlyd</string>
@@ -171,7 +168,6 @@
     <string name="song_info_tone_alarm_label">alarmlyd</string>
     <string name="song_info_ringtone_permission_prompt">Aktiver Endre systeminnstillinger, og gå tilbake til PixelPlayer for å fullføre automatisk.</string>
     <string name="song_info_ringtone_permission_missing">Endre systeminnstillinger ble ikke aktivert.</string>
-    <string name="song_info_ringtone_success">Angitt \"%1$s\" som ringetone</string>
     <string name="song_info_ringtone_local_only">Kun lokale sanger kan brukes som ringetoner.</string>
     <string name="song_info_ringtone_missing_file">Kunne ikke klargjøre denne lydfilen som ringetone.</string>
     <string name="song_info_ringtone_failed">Kunne ikke angi ringetone: %1$s</string>
