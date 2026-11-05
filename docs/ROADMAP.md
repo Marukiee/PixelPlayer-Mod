@@ -23,27 +23,33 @@ Volgorde gekozen door Mark (2026-11-02):
 6. [ ] Spotify en PixelPlayer: luisterstatistieken samenvoegen
 7. [ ] Hele app in het Nederlands vertalen
 8. [ ] Tweede variant van de crash na herstarten van de telefoon
-9. [ ] Luistergegevens bij elkaar op de server, gepland voor mod.17 (Mark, 2026-11-04, zie "Luistergegevens naar Navidrome")
+9. [x] Luistergegevens bij elkaar op de server (0.7.5-mod.17, zie "Luistergegevens naar Navidrome")
+   - [ ] Mark kijkt thuis na: play count loopt op na een heel nummer, niet na overslaan
+   - [ ] Oude geschiedenis eenmalig meesturen: aparte keuze van Mark, zie hieronder
+10. [ ] Site en screenshots bijwerken naar het Verbinden-paneel van mod.16: `scherm-3` en de hero op de site, en de map met screenshots. Pas als Mark het zegt (Mark, 2026-11-05)
 
 ## Luistergegevens naar Navidrome
 
-Wens: alles wat Mark luistert op een plek, dus ook offline op de telefoon, later op de server samen met wat via Navidrome op de Sonos speelt. Komt in mod.17, niet in mod.16.
+Wens: alles wat Mark luistert op een plek, dus ook offline op de telefoon, op de server samen met wat via Navidrome op de Sonos speelt. Eisen van Mark (2026-11-05): niets dubbel geteld, niets kwijt bij geen verbinding of een herstart, en het echte tijdstip op de server.
 
-Hoe het nu is:
+Hoe het werkt sinds mod.17 (`NavidromeScrobbles`):
 
-- **Telefoon:** `ListeningStatsTracker` schrijft elke luisterbeurt naar `files/playback_history.json` (tot ongeveer 730 dagen), ook lokale bestanden en Sonos, want de telefoon speelt dan stil mee. Dit zit in de back-up van de app.
-- **Server:** `MusicService` stuurt alleen `scrobble` voor nummers met een `navidrome://`-id, en alleen als een nummer vanzelf afloopt. Zonder tijdstip en zonder nieuwe poging als er geen verbinding is. Overslaan telt niet. Lokale bestanden gaan nooit mee, ook niet als ze via hun Navidrome-kopie op de Sonos spelen.
+- **Een plek telt:** `ListeningStatsTracker` meldt elke luisterbeurt, ook van lokale bestanden en de Sonos, want de telefoon speelt dan stil mee. De losse `scrobble`-aanroepen in `MusicService` zijn weg en `reportPlayback` gaat mee met `ignoreScrobble=true`, anders telt een nieuwe Navidrome alles dubbel.
+- **Wat telt:** de helft van een nummer, of 4 minuten bij een lang nummer. Zonder bekende lengte 30 seconden. Korte nummers tellen dus ook, anders dan bij Last.fm.
+- **Wachtrij:** de luisterbeurt staat meteen in `navidrome_scrobbles` (SharedPreferences), met de tijd waarop hij begon. `NavidromeScrobbleWorker` verstuurt zodra er verbinding is, oudste eerst, en haalt elke beurt weg na zijn eigen antwoord. Een extra ronde bij het openen van de app en elke 6 uur. Hooguit 5000 op de wachtrij.
+- **Koppelen:** lokale bestanden via `FavoriteSongIndex`, dezelfde koppeling als de likes. Geen kopie op de server: 14 dagen bewaren, want Syncthing en de scan kunnen achterlopen, daarna weg.
+- **Fouten:** geen verbinding of een inlogfout: bewaren en later opnieuw. Een andere weigering van de server: alleen die beurt weg, zodat hij de rest niet ophoudt.
+- De telefoon houdt daarnaast zijn eigen geschiedenis in `files/playback_history.json` (tot ongeveer 730 dagen). Daar telt alles vanaf 5 seconden, de server is strenger.
 
-Plan als Mark het wil:
+Nog open:
 
-- Een wachtrij met luisterbeurten die een herstart overleeft (zoals `pending` bij de likes), gevuld op de plek waar `recordPlayback` al beslist dat iets telt. De losse `scrobble`-aanroepen in `MusicService` vervallen dan, anders telt alles dubbel.
-- Versturen met `scrobble(id, time, submission = true)` via WorkManager zodra er verbinding is. Koppelen met `FavoriteSongIndex`, dezelfde koppeling als de likes.
 - De oude geschiedenis eenmalig meesturen is een aparte keuze: de play counts lopen dan in een keer op, en Navidrome-nummers die al een scrobble kregen tellen dubbel als dat niet wordt uitgesloten.
 
 Grenzen:
 
 - Alleen wat op de server staat, want `scrobble` vraagt een song-id. Een nummer dat alleen op de telefoon staat blijft lokaal, tenzij het rechtstreeks naar ListenBrainz of Last.fm gaat (die werken op titel en artiest).
-- Navidrome bewaart een volledige geschiedenis met tijdstippen pas sinds 0.59.0, daarvoor alleen play count en laatst gespeeld. Versie op de server eerst nakijken.
+- Een antwoord dat onderweg verloren gaat kan die ene beurt dubbel sturen; de server heeft geen manier om dat te herkennen. Een nummer dat stopt doordat Android de app hard afsluit telt niet mee.
+- Navidrome bewaart een volledige geschiedenis met tijdstippen pas sinds 0.59.0, daarvoor alleen play count en laatst gespeeld.
 - De documentatie noemt nog geen manier om die geschiedenis terug te lezen ("future features"). De app blijft dus zijn eigen geschiedenis tonen en de server krijgt een kopie. Navidrome kan per gebruiker doorsturen naar Last.fm of ListenBrainz; of een late scrobble daar met het oude tijdstip aankomt moet nog getest worden.
 - Raakt punt 6 hierboven: Last.fm of ListenBrainz kan de gezamenlijke plek worden, ook voor Spotify.
 
@@ -175,6 +181,8 @@ Oorspronkelijke wens van Mark (2026-11-02): vanuit PixelPlayer naar zijn Sonos-s
 
 `PixelPlayerHQ/PixelPlayerOSS` is de officiële Google-vrije versie, onderhouden door @lostf1sh.
 
+Let op bij het overnemen: mod.17 haalde ongebruikte code van upstream weg in een eigen commit, "Remove unused code and resources": 15 Kotlin-bestanden, ongeveer 40 drawables en layouts, en ongeveer 1700 vertalingen in `values-ar` zonder Engelse versie. Botst dat, draai die commit dan terug.
+
 - Zonder Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, Play-billing, Firebase, Crashlytics en Google Play-diensten. Wel Navidrome/Jellyfin en de rest van de speler.
 - Veel actiever dan de gewone versie (die staat sinds juni stil): op 2026-11-01 nog fixes, zoals stil afspelen na shuffle en prestaties van Daily Mix, statistieken en Jellyfin. Release v0.4.0 op 2026-10-17, ook op F-Droid.
 - Andere pakketnaam (`com.lostf1sh.pixelplayeross`): een overstap betekent een aparte app, je likes overzetten via een back-up, en alle mod-wijzigingen opnieuw inbouwen op die code. Chromecast valt dan weg; Sonos werkt niet via Cast, dus dat raakt de Sonos-plannen niet.
@@ -183,6 +191,15 @@ Oorspronkelijke wens van Mark (2026-11-02): vanuit PixelPlayer naar zijn Sonos-s
   2. Overstappen op OSS als nieuwe basis. Groot werk, maar daarna profiteer je van hun updates.
 
 ## Technisch, om later uit te zoeken
+
+Security-check bij mod.17 (2026-11-05). Bewust zo gelaten:
+
+- Onversleuteld verkeer blijft toegestaan: de Sonos-speakers praten alleen http op het thuisnet, en een Navidrome thuis kan ook http zijn.
+- De speakers krijgen een stream-adres met het Navidrome-token. Dat kan niet anders en werkt alleen op het thuisnet.
+- De Cast-server luistert op het hele netwerk, maar alleen tijdens casten en met een token en een lijst toegestane nummers.
+- `sonos_hosts.txt` in `Android/data` is de testingang voor speakers. Andere apps kunnen daar sinds Android 11 niet bij, en de app vereist minstens Android 11.
+
+Vijf unit-tests lopen achter op de code, ook op mod.16 al, los van de mod.17-wijzigingen: `BackupSectionTest`, `LoadControlBufferProfileTest`, `LyricsStateHolderTest`, `AudioMetaUtilsTest`, `LocalArtworkUriTest`.
 
 Deze bibliotheken staan bewust op een oudere versie (zie `gradle/libs.versions.toml`):
 

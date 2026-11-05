@@ -136,6 +136,14 @@ class NavidromeRepository @Inject constructor(
     /**
      * Check if user is logged in.
      */
+    /** Who the app is logged in as. What was agreed with one account says nothing about another. */
+    val accountKey: String?
+        get() {
+            val server = serverUrl ?: return null
+            val user = username ?: return null
+            return "${NavidromeCredentials(server, "", "").normalizedServerUrl}|$user"
+        }
+
     val isLoggedIn: Boolean
         get() = _isLoggedInFlow.value
 
@@ -962,11 +970,6 @@ class NavidromeRepository @Inject constructor(
             }
         }
         return result
-    }
-
-    suspend fun scrobble(navidromeId: String, submission: Boolean = true): Result<Unit> {
-        if (!isLoggedIn) return Result.failure(Exception("Not logged in"))
-        return api.scrobble(id = navidromeId, submission = submission)
     }
 
     // ─── Delete ────────────────────────────────────────────────────────────

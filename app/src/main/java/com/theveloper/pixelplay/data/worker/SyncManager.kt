@@ -97,6 +97,21 @@ class SyncManager @Inject constructor(
         observeAppForeground()
         schedulePeriodicMaintenance()
         scheduleNavidromeFavoritesSync()
+        scheduleNavidromeScrobbles()
+    }
+
+    /** Also runs right away for whatever is left from last time, since no new listen may come to set it off. */
+    private fun scheduleNavidromeScrobbles() {
+        workManager.enqueueUniquePeriodicWork(
+            NavidromeScrobbleWorker.PERIODIC_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            NavidromeScrobbleWorker.periodicWork()
+        )
+        workManager.enqueueUniqueWork(
+            NavidromeScrobbleWorker.SEND_WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            NavidromeScrobbleWorker.sendWork()
+        )
     }
 
     /**

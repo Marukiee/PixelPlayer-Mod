@@ -522,10 +522,11 @@ class NavidromeApiService @Inject constructor(
      * Standard Subsonic scrobble API.
      * Used as fallback for now playing and marking as played.
      */
-    suspend fun scrobble(id: String, submission: Boolean = true): Result<Unit> {
+    suspend fun scrobble(id: String, submission: Boolean = true, timeMs: Long? = null): Result<Unit> {
         val params = mutableMapOf<String, String>()
         params["id"] = id
         params["submission"] = submission.toString()
+        timeMs?.let { params["time"] = it.toString() }
         
         Timber.d("$TAG: Calling scrobble API: id=$id, submission=$submission")
         return requestAndParse("scrobble", params).fold(

@@ -1,3 +1,10 @@
+- Wat je luistert gaat nu naar Navidrome met het echte tijdstip, ook de Sonos en lokale bestanden die ook op de server staan
+- Geen verbinding of een herstart: de luisterbeurt blijft bewaard en gaat later alsnog mee
+- Niets telt meer dubbel op de server, doorskippen telt niet
+- Veiliger: geen inloggegevens meer in de logs, serveradres en thuisadressen niet meer in de back-up
+- Ongebruikte code opgeruimd
+
+Ook in deze versie (sinds 0.7.5-mod.1):
 - Likes gaan direct naar Navidrome en sterren komen terug, twee kanten op
 - Navidrome staat nu in Instellingen, de cloudknop bovenin is weg
 - Genrepagina's opnieuw: zelfde opbouw als Your Mix, geen zijbalk, geen menu rechtsonder, geen dubbele nummers
@@ -9,8 +16,6 @@
 - Mediakaart in het snelle paneel verdwijnt niet meer even als je naar het volgende nummer gaat
 - Verbinden-paneel opnieuw: gelijke hoeken, individueel volume achter een eigen knop
 - Verbinden-paneel sluit niet meer als je vegend van Devices naar Controls gaat
-
-Ook in deze versie (sinds 0.7.5-mod.1):
 - Pauzeknop werkt nu ook als je net hebt geskipt, en de Sonos start niet meer elk nummer tijdens het skippen
 - Android-mediakaart toont je speaker in plaats van This phone
 - Verbinden-paneel sluit met een korte veeg omlaag

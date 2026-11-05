@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.media3.common.C
 import com.theveloper.pixelplay.data.DailyMixManager
 import com.theveloper.pixelplay.data.model.Song
+import com.theveloper.pixelplay.data.navidrome.NavidromeScrobbles
 import com.theveloper.pixelplay.data.stats.PlaybackStatsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +32,8 @@ import timber.log.Timber
 @Singleton
 class ListeningStatsTracker @Inject constructor(
     private val dailyMixManager: DailyMixManager,
-    private val playbackStatsRepository: PlaybackStatsRepository
+    private val playbackStatsRepository: PlaybackStatsRepository,
+    private val navidromeScrobbles: NavidromeScrobbles
 ) {
     private var currentSession: ActiveSession? = null
     private var pendingVoluntarySongId: String? = null
@@ -243,6 +245,13 @@ class ListeningStatsTracker @Inject constructor(
             _playbackHistory.update { current ->
                 (listOf(historyEntry) + current).take(MAX_INTERNAL_PLAYBACK_HISTORY_ITEMS)
             }
+            // Not in the background like the rest, so a listen that ends with the app closing still goes out.
+            navidromeScrobbles.onListened(
+                songId = songId,
+                listenedMs = listened,
+                durationMs = session.totalDurationMs,
+                endedAtMs = timestamp
+            )
             persistPlayback(
                 songId = songId,
                 listened = listened,

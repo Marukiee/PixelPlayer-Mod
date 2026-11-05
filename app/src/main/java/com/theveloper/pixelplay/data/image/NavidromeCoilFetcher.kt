@@ -113,14 +113,14 @@ class NavidromeCoilFetcher(
         return try {
             okHttpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Timber.w("$TAG: HTTP ${response.code} for $url")
+                    Timber.w("$TAG: HTTP ${response.code} for a cover")
                     return null
                 }
 
                 val bytes = response.body.bytes()
 
                 if (bytes.isEmpty()) {
-                    Timber.w("$TAG: Empty response body for $url")
+                    Timber.w("$TAG: Empty response body for a cover")
                     return null
                 }
 
@@ -141,7 +141,7 @@ class NavidromeCoilFetcher(
                 )
             }
         } catch (e: Exception) {
-            Timber.w(e, "$TAG: Failed to download image from $url")
+            Timber.w(e, "$TAG: Failed to download a cover")
             null
         }
     }

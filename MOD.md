@@ -35,6 +35,7 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 - Likes overleven back-up, herstel en herscan (koppeling op bestandsnaam en tags)
 - Likes worden naar Navidrome gesynchroniseerd, met controle in Instellingen
 - Navidrome-nummers optioneel buiten de bibliotheek houden
+- Wat je luistert gaat naar Navidrome met het echte tijdstip, ook de Sonos en lokale bestanden die ook op de server staan; zonder verbinding gaat het later alsnog mee
 
 **Sonos**
 - Afspelen op Sonos via de verbindknop in de speler: kies een ruimte en de muziek gaat erheen

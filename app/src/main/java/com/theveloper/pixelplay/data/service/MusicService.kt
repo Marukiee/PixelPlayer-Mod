@@ -1286,7 +1286,9 @@ class MusicService : MediaLibraryService() {
                 navidromeId = navidromeId,
                 positionMs = positionMs,
                 state = state,
-                playbackRate = playbackRate
+                playbackRate = playbackRate,
+                // NavidromeScrobbles is what counts a listen. Without this a newer server counts the report as well.
+                ignoreScrobble = true
             )
         }
     }
@@ -1380,12 +1382,6 @@ class MusicService : MediaLibraryService() {
             Timber.tag(TAG).d("Playback state changed: $playbackState")
             if (playbackState == Player.STATE_ENDED) {
                 listeningStatsTracker.finalizeCurrentSession()
-                val mediaItem = (mediaSession?.player ?: engine.masterPlayer).currentMediaItem
-                getNavidromeId(mediaItem)?.let { navidromeId ->
-                    appScope.launch(Dispatchers.IO) {
-                        navidromeRepository.scrobble(navidromeId, submission = true)
-                    }
-                }
 
                 endOfTrackTimerSongId = null
                 reportNavidromePlayback("stopped")
@@ -1421,13 +1417,7 @@ class MusicService : MediaLibraryService() {
             if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
                 val finishedItem = oldPosition.mediaItem
                 if (isNavidromeMediaItem(finishedItem)) {
-                    val prevId = getNavidromeId(finishedItem)
                     reportNavidromePlayback("stopped", finishedItem)
-                    if (prevId != null) {
-                        appScope.launch(Dispatchers.IO) {
-                            navidromeRepository.scrobble(prevId, submission = true)
-                        }
-                    }
                 }
             }
 

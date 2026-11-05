@@ -6,9 +6,6 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
 import com.theveloper.pixelplay.data.database.FavoritesDao
 import com.theveloper.pixelplay.data.database.FavoritesEntity
-import com.theveloper.pixelplay.data.database.MusicDao
-import com.theveloper.pixelplay.data.database.NavidromeDao
-import com.theveloper.pixelplay.data.navidrome.model.NavidromeCredentials
 import com.theveloper.pixelplay.data.network.navidrome.NavidromeApiService
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.worker.NavidromeFavoritesSyncWorker
@@ -31,8 +28,7 @@ class NavidromeFavoritesSync @Inject constructor(
     @ApplicationContext context: Context,
     private val api: NavidromeApiService,
     private val navidromeRepository: NavidromeRepository,
-    private val navidromeDao: NavidromeDao,
-    private val musicDao: MusicDao,
+    private val songSource: NavidromeSongSource,
     private val favoritesDao: FavoritesDao,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val workManager: WorkManager
@@ -78,8 +74,8 @@ class NavidromeFavoritesSync @Inject constructor(
             return Outcome.TRY_AGAIN
         }.mapNotNull { it.toServerSong() }
 
-        val locals = loadLocalSongs()
-        val index = FavoriteSongIndex(loadServerSongs() + starred, locals)
+        val locals = songSource.localSongs()
+        val index = FavoriteSongIndex(songSource.serverSongs() + starred, locals)
         val favoriteIds = favoritesDao.getFavoriteSongIdsOnce().toSet()
         // A like without a song in the library or a match on the server is left alone: it stays liked here.
         val liked = locals.filter { it.id in favoriteIds }
@@ -124,7 +120,7 @@ class NavidromeFavoritesSync @Inject constructor(
         val pending = synchronized(stateLock) { pending() }
         if (pending.isEmpty()) return true
 
-        val locals = loadLocalSongs()
+        val locals = songSource.localSongs()
         val localsById = locals.associateBy { it.id }
         // An unlike has to catch every star that counts as this song, or the next sync likes it again.
         val starred = if (pending.values.any { !it }) {
@@ -132,7 +128,7 @@ class NavidromeFavoritesSync @Inject constructor(
         } else {
             emptyList()
         }
-        val index = FavoriteSongIndex(loadServerSongs() + starred, locals)
+        val index = FavoriteSongIndex(songSource.serverSongs() + starred, locals)
 
         for ((songId, like) in pending) {
             val song = localsById[songId]
@@ -190,24 +186,6 @@ class NavidromeFavoritesSync @Inject constructor(
 
     private fun Throwable?.isServerRefusal() = this?.message?.startsWith("API Error") == true
 
-    private suspend fun loadLocalSongs(): List<FavoriteLocalSong> = musicDao.getSongsForFavoritesSync().map {
-        FavoriteLocalSong(
-            id = it.id,
-            title = it.title,
-            artist = it.artist,
-            album = it.album,
-            durationMs = it.durationMs,
-            navidromeId = it.contentUri.takeIf { uri -> uri.startsWith(NAVIDROME_URI) }?.removePrefix(NAVIDROME_URI)
-        )
-    }
-
-    private suspend fun loadServerSongs(): List<FavoriteServerSong> {
-        if (navidromeDao.getLibrarySongCount() == 0) navidromeRepository.syncLibrarySongs()
-        return navidromeDao.getAllNavidromeSongsList().distinctBy { it.navidromeId }.map {
-            FavoriteServerSong(it.navidromeId, it.title, it.artist, it.album, it.duration)
-        }
-    }
-
     private fun JSONObject.toServerSong(): FavoriteServerSong? {
         val id = optString("id").takeIf { it.isNotBlank() } ?: return null
         return FavoriteServerSong(
@@ -221,9 +199,7 @@ class NavidromeFavoritesSync @Inject constructor(
 
     /** What was agreed with one account says nothing about another, so a different login starts over and only adds. */
     private fun useCurrentAccount() {
-        val server = navidromeRepository.serverUrl ?: return
-        val username = navidromeRepository.username ?: return
-        val account = "${NavidromeCredentials(server, "", "").normalizedServerUrl}|$username"
+        val account = navidromeRepository.accountKey ?: return
         synchronized(stateLock) {
             if (prefs.getString(KEY_ACCOUNT, null) != account) {
                 prefs.edit {
@@ -259,6 +235,5 @@ class NavidromeFavoritesSync @Inject constructor(
         const val KEY_ACCOUNT = "account"
         const val KEY_BASE = "base"
         const val KEY_PENDING = "pending"
-        const val NAVIDROME_URI = "navidrome://"
     }
 }

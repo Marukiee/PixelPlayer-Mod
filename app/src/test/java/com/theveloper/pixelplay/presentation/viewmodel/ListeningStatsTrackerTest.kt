@@ -34,7 +34,8 @@ class ListeningStatsTrackerTest {
     fun `finalizeCurrentSession preserves listening longer than track duration`() {
         val tracker = ListeningStatsTracker(
             dailyMixManager = dailyMixManager,
-            playbackStatsRepository = playbackStatsRepository
+            playbackStatsRepository = playbackStatsRepository,
+            navidromeScrobbles = mockk(relaxed = true)
         )
         val song = song(
             songId = "looped-song",
@@ -67,7 +68,8 @@ class ListeningStatsTrackerTest {
     fun `onProgress accumulates incremental listening time`() {
         val tracker = ListeningStatsTracker(
             dailyMixManager = dailyMixManager,
-            playbackStatsRepository = playbackStatsRepository
+            playbackStatsRepository = playbackStatsRepository,
+            navidromeScrobbles = mockk(relaxed = true)
         )
         val song = song(songId = "song-1")
         val firstChunkMs = 7_000L
