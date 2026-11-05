@@ -26,8 +26,9 @@
     <string name="sonos_menu_edit_group">Group rooms…</string>
     <string name="sonos_menu_ungroup">Ungroup</string>
     <string name="sonos_menu_stop">Stop playing here</string>
-    <string name="sonos_mute">Mute</string>
-    <string name="sonos_unmute">Unmute</string>
+    <string name="sonos_individual_volume">Individual volume</string>
+    <string name="sonos_show_rooms">Show speakers</string>
+    <string name="sonos_hide_rooms">Hide speakers</string>
     <string name="sonos_rooms_count">%1$d rooms</string>
     <string name="cast_connectivity_hint">Wi-Fi and Bluetooth on this phone</string>
 

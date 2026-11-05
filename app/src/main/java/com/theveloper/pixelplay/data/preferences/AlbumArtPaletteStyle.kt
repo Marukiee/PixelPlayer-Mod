@@ -10,7 +10,7 @@ enum class AlbumArtPaletteStyle(
     FRUIT_SALAD("fruit_salad", "Fruit Salad");
 
     companion object {
-        val default: AlbumArtPaletteStyle = TONAL_SPOT
+        val default: AlbumArtPaletteStyle = VIBRANT
 
         fun fromStorageKey(value: String?): AlbumArtPaletteStyle {
             return entries.firstOrNull { it.storageKey == value } ?: default

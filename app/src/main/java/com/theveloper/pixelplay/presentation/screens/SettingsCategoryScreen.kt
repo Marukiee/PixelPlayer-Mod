@@ -532,147 +532,8 @@ fun SettingsCategoryScreen(
                                     leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
 
-                                val navShowInLibrary by settingsViewModel.navidromeShowInLibrary.collectAsStateWithLifecycle()
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.settings_navidrome_show_in_library_title),
-                                    subtitle = stringResource(R.string.settings_navidrome_show_in_library_subtitle),
-                                    checked = navShowInLibrary,
-                                    onCheckedChange = { settingsViewModel.setNavidromeShowInLibrary(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
-                                )
-                                val navFavInterval by settingsViewModel.navidromeFavoritesSyncIntervalHours.collectAsStateWithLifecycle()
-                                val navFavContext = LocalContext.current
-                                ThemeSelectorItem(
-                                    label = stringResource(R.string.settings_navidrome_fav_sync_interval_title),
-                                    description = stringResource(R.string.settings_navidrome_fav_sync_interval_subtitle),
-                                    options = mapOf(
-                                        "0" to stringResource(R.string.settings_navidrome_fav_sync_off),
-                                        "6" to stringResource(R.string.settings_navidrome_fav_sync_6h),
-                                        "12" to stringResource(R.string.settings_navidrome_fav_sync_12h),
-                                        "24" to stringResource(R.string.settings_navidrome_fav_sync_24h)
-                                    ),
-                                    selectedKey = navFavInterval.toString(),
-                                    onSelectionChanged = { key ->
-                                        settingsViewModel.setNavidromeFavoritesSyncIntervalHours(key.toIntOrNull() ?: 24)
-                                    },
-                                    leadingIcon = { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
-                                )
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceContainer,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable {
-                                            settingsViewModel.syncFavoritesToNavidromeNow()
-                                            Toast.makeText(
-                                                navFavContext,
-                                                navFavContext.getString(R.string.settings_navidrome_fav_sync_now),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth().padding(16.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier.padding(end = 16.dp).size(24.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) { Icon(Icons.Outlined.Sync, null, tint = MaterialTheme.colorScheme.secondary) }
-                                        Text(
-                                            text = stringResource(R.string.settings_navidrome_fav_sync_now),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceContainer,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable { settingsViewModel.loadNavidromeStarred() }
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth().padding(16.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier.padding(end = 16.dp).size(24.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
-                                        Text(
-                                            text = stringResource(R.string.settings_navidrome_fav_check_title),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
                             }
 
-                            val navStarred by settingsViewModel.navidromeStarred.collectAsStateWithLifecycle()
-                            val navStarredLoading by settingsViewModel.navidromeStarredLoading.collectAsStateWithLifecycle()
-                            val navStarredError by settingsViewModel.navidromeStarredError.collectAsStateWithLifecycle()
-                            val navSyncSummary by settingsViewModel.navidromeSyncSummary.collectAsStateWithLifecycle()
-                            if (navStarred != null) {
-                                AlertDialog(
-                                    onDismissRequest = { settingsViewModel.dismissNavidromeStarred() },
-                                    confirmButton = {
-                                        TextButton(onClick = { settingsViewModel.dismissNavidromeStarred() }) {
-                                            Text(stringResource(android.R.string.ok))
-                                        }
-                                    },
-                                    title = { Text(stringResource(R.string.settings_navidrome_fav_check_dialog_title)) },
-                                    text = {
-                                        val list = navStarred ?: emptyList()
-                                        when {
-                                            navStarredLoading -> Box(
-                                                modifier = Modifier.fillMaxWidth().padding(24.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) { CircularProgressIndicator() }
-                                            navStarredError != null -> Text(navStarredError ?: "")
-                                            list.isEmpty() -> Column {
-                                                Text(stringResource(R.string.settings_navidrome_fav_check_empty))
-                                                navSyncSummary?.let {
-                                                    Spacer(Modifier.height(8.dp))
-                                                    Text(
-                                                        text = it,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-                                            else -> Column(
-                                                modifier = Modifier
-                                                    .heightIn(max = 400.dp)
-                                                    .verticalScroll(rememberScrollState())
-                                            ) {
-                                                Text(
-                                                    text = stringResource(R.string.settings_navidrome_fav_check_count, list.size),
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.padding(bottom = 2.dp)
-                                                )
-                                                navSyncSummary?.let {
-                                                    Text(
-                                                        text = it,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        modifier = Modifier.padding(bottom = 8.dp)
-                                                    )
-                                                }
-                                                list.forEach { entry ->
-                                                    Text(
-                                                        text = entry,
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        modifier = Modifier.padding(vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                )
-                            }
 
                             SettingsSubsection(
                                 title = stringResource(R.string.settings_lyrics_management_section),
@@ -1066,6 +927,9 @@ fun SettingsCategoryScreen(
                         }
                         SettingsCategory.SONOS -> {
                             SonosSettingsBlock()
+                        }
+                        SettingsCategory.NAVIDROME -> {
+                            NavidromeSettingsBlock(settingsViewModel, navController)
                         }
                         SettingsCategory.BEHAVIOR -> {
                             SettingsSubsection(
@@ -3121,6 +2985,184 @@ private fun PaletteRegenerateSongSheetContent(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun NavidromeSettingsBlock(settingsViewModel: SettingsViewModel, navController: NavController) {
+    val context = LocalContext.current
+    val loggedIn by settingsViewModel.navidromeLoggedIn.collectAsStateWithLifecycle()
+    SettingsSubsection(title = stringResource(R.string.settings_navidrome_account_section)) {
+        SettingsItem(
+            title = stringResource(R.string.settings_navidrome_account_title),
+            subtitle = settingsViewModel.navidromeAccountLabel().takeIf { loggedIn }
+                ?: stringResource(R.string.settings_navidrome_not_connected),
+            leadingIcon = {
+                Icon(
+                    painterResource(R.drawable.ic_navidrome_md3),
+                    null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            onClick = {
+                if (loggedIn) {
+                    navController.navigateSafely(Screen.NavidromeDashboard.route)
+                } else {
+                    context.startActivity(
+                        android.content.Intent(
+                            context,
+                            com.theveloper.pixelplay.presentation.navidrome.auth.NavidromeLoginActivity::class.java
+                        )
+                    )
+                }
+            }
+        )
+    }
+    if (!loggedIn) return
+
+    SettingsSubsection(title = stringResource(R.string.settings_navidrome_favorites_section)) {
+    val navShowInLibrary by settingsViewModel.navidromeShowInLibrary.collectAsStateWithLifecycle()
+    SwitchSettingItem(
+        title = stringResource(R.string.settings_navidrome_show_in_library_title),
+        subtitle = stringResource(R.string.settings_navidrome_show_in_library_subtitle),
+        checked = navShowInLibrary,
+        onCheckedChange = { settingsViewModel.setNavidromeShowInLibrary(it) },
+        leadingIcon = { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
+    )
+    val navFavInterval by settingsViewModel.navidromeFavoritesSyncIntervalHours.collectAsStateWithLifecycle()
+    val navFavContext = LocalContext.current
+    ThemeSelectorItem(
+        label = stringResource(R.string.settings_navidrome_fav_sync_interval_title),
+        description = stringResource(R.string.settings_navidrome_fav_sync_interval_subtitle),
+        options = mapOf(
+            "0" to stringResource(R.string.settings_navidrome_fav_sync_off),
+            "6" to stringResource(R.string.settings_navidrome_fav_sync_6h),
+            "12" to stringResource(R.string.settings_navidrome_fav_sync_12h),
+            "24" to stringResource(R.string.settings_navidrome_fav_sync_24h)
+        ),
+        selectedKey = navFavInterval.toString(),
+        onSelectionChanged = { key ->
+            settingsViewModel.setNavidromeFavoritesSyncIntervalHours(key.toIntOrNull() ?: 24)
+        },
+        leadingIcon = { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
+    )
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable {
+                settingsViewModel.syncFavoritesToNavidromeNow()
+                Toast.makeText(
+                    navFavContext,
+                    navFavContext.getString(R.string.settings_navidrome_fav_sync_now),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier.padding(end = 16.dp).size(24.dp),
+                contentAlignment = Alignment.Center
+            ) { Icon(Icons.Outlined.Sync, null, tint = MaterialTheme.colorScheme.secondary) }
+            Text(
+                text = stringResource(R.string.settings_navidrome_fav_sync_now),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { settingsViewModel.loadNavidromeStarred() }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier.padding(end = 16.dp).size(24.dp),
+                contentAlignment = Alignment.Center
+            ) { Icon(Icons.Outlined.Favorite, null, tint = MaterialTheme.colorScheme.secondary) }
+            Text(
+                text = stringResource(R.string.settings_navidrome_fav_check_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+    }
+
+val navStarred by settingsViewModel.navidromeStarred.collectAsStateWithLifecycle()
+val navStarredLoading by settingsViewModel.navidromeStarredLoading.collectAsStateWithLifecycle()
+val navStarredError by settingsViewModel.navidromeStarredError.collectAsStateWithLifecycle()
+val navSyncSummary by settingsViewModel.navidromeSyncSummary.collectAsStateWithLifecycle()
+if (navStarred != null) {
+    AlertDialog(
+        onDismissRequest = { settingsViewModel.dismissNavidromeStarred() },
+        confirmButton = {
+            TextButton(onClick = { settingsViewModel.dismissNavidromeStarred() }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        title = { Text(stringResource(R.string.settings_navidrome_fav_check_dialog_title)) },
+        text = {
+            val list = navStarred ?: emptyList()
+            when {
+                navStarredLoading -> Box(
+                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
+                navStarredError != null -> Text(navStarredError ?: "")
+                list.isEmpty() -> Column {
+                    Text(stringResource(R.string.settings_navidrome_fav_check_empty))
+                    navSyncSummary?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                else -> Column(
+                    modifier = Modifier
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_navidrome_fav_check_count, list.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                    navSyncSummary?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    list.forEach { entry ->
+                        Text(
+                            text = entry,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

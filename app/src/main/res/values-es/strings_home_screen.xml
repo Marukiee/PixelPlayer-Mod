@@ -3,10 +3,7 @@
     <!-- Top Bar -->
     <string name="topbar_beta_letter">β</string>
     <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_cloud_streaming">Transmisión en la nube</string>
     <string name="topbar_cd_changelog">Registro de cambios</string>
-    <string name="topbar_cloud_streaming_title">Transmisión en la nube</string>
-    <string name="topbar_cloud_streaming_subtitle">Transmite música desde tus cuentas en la nube</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -148,9 +145,6 @@
 
     <!-- RecentlyPlayedScreen -->
     <string name="recently_played_title">Reproducido recientemente</string>
-    <string name="recently_played_action_play_latest">Reproducir lo último</string>
-    <string name="recently_played_empty_title">Sin reproducciones recientes en %1$s</string>
-    <string name="recently_played_empty_subtitle">Cambia el rango o reproduce más canciones para llenar esta línea de tiempo.</string>
     <string name="recently_played_queue_name">Reproducido recientemente</string>
     <string name="recently_played_date_today">Hoy</string>
     <string name="recently_played_date_yesterday">Ayer</string>

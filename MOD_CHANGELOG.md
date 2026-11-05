@@ -1,4 +1,14 @@
+- Likes gaan direct naar Navidrome en sterren komen terug, twee kanten op
+- Navidrome staat nu in Instellingen, de cloudknop bovenin is weg
+- Genrepagina's opnieuw: zelfde opbouw als Your Mix, geen zijbalk, geen menu rechtsonder, geen dubbele nummers
+- Homepage: Listened this week bovenaan, Recently Played als lijst onderaan met See all
+- Geschiedenis per dag met een rij dagen en een kalender om snel naar een datum te gaan
+- Vegen om aan de wachtrij toe te voegen sluit nu netjes aan op de rij
+- Kleuren staan standaard op Vibrant, kwaliteitslabels standaard uit
+- Play it en Shuffle bewegen mee als je ze indrukt
 - Mediakaart in het snelle paneel verdwijnt niet meer even als je naar het volgende nummer gaat
+- Verbinden-paneel opnieuw: gelijke hoeken, individueel volume achter een eigen knop
+- Verbinden-paneel sluit niet meer als je vegend van Devices naar Controls gaat
 
 Ook in deze versie (sinds 0.7.5-mod.1):
 - Pauzeknop werkt nu ook als je net hebt geskipt, en de Sonos start niet meer elk nummer tijdens het skippen
@@ -18,7 +28,7 @@ Ook in deze versie (sinds 0.7.5-mod.1):
 - Mini-speler: speaker-knop in plaats van terugspoelen
 - Overzetten naar Sonos gaat verder op dezelfde plek
 - Speakers staan al klaar als je Verbinden opent
-- Groepsvolume zoals de Sonos-app, dempknop
+- Groepsvolume zoals de Sonos-app
 - Drie puntjes bij een ruimte: groeperen, opheffen, toevoegen
 - Devices toont alle apparaten, Controls het apparaat dat speelt
 - Soepeler scrollen in het verbinden-paneel
@@ -37,7 +47,7 @@ Ook in deze versie (sinds 0.7.5-mod.1):
 - Back-up met likes importeren werkt weer
 - Zoeken zonder accenten en apostrofs: `hakan hellstrom` vindt Håkan Hellström
 - Lang drukken op volgende of vorige spoelt door
-- Kwaliteitslabels in lijsten, uit te zetten in Instellingen > Appearance
+- Kwaliteitslabels in lijsten, aan te zetten in Instellingen > Appearance
 - Meerdere genres per nummer (losse GENRE-velden)
 - Fixes uit open PR's van PixelPlayer en bijgewerkte bibliotheken
 

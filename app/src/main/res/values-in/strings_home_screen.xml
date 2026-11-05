@@ -3,10 +3,7 @@
     <!-- Top Bar -->
     <string name="topbar_beta_letter">β</string>
     <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_cloud_streaming">Cloud Streaming</string>
     <string name="topbar_cd_changelog">Log Perubahan</string>
-    <string name="topbar_cloud_streaming_title">Cloud Streaming</string>
-    <string name="topbar_cloud_streaming_subtitle">Alirkan musik dari akun cloud Anda</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -148,9 +145,6 @@
 
     <!-- RecentlyPlayedScreen -->
     <string name="recently_played_title">Baru Diputar</string>
-    <string name="recently_played_action_play_latest">Putar terbaru</string>
-    <string name="recently_played_empty_title">Belum ada yang diputar di %1$s</string>
-    <string name="recently_played_empty_subtitle">Ubah rentang atau putar lebih banyak lagu untuk mengisi timeline ini.</string>
     <string name="recently_played_queue_name">Baru Diputar</string>
     <string name="recently_played_date_today">Hari ini</string>
     <string name="recently_played_date_yesterday">Kemarin</string>

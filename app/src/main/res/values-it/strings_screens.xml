@@ -202,14 +202,9 @@
 
     <!-- GenreDetailScreen -->
     <string name="genre_quick_fill">Riempimento rapido genere</string>
-    <string name="genre_sort_title">Ordina e riproduci</string>
-    <string name="genre_sort_action_shuffle">Casuale</string>
-    <string name="genre_sort_by_title">Ordina per</string>
     <string name="genre_sort_artist_option">Artista</string>
     <string name="genre_sort_album_option">Album</string>
     <string name="genre_sort_title_option">Titolo</string>
-    <string name="genre_cd_generic_artist">Artista generico</string>
-    <string name="genre_shuffle_label">%1$s Shuffle</string>
 
     <!-- QuickFillScreen -->
     <string name="quick_fill_select_songs">Seleziona brani</string>

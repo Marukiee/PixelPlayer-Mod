@@ -39,7 +39,8 @@ data class SonosSourceInfo(
 class SonosViewModel @Inject constructor(
     private val controller: SonosController,
     private val resolver: SonosTrackResolver,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val dripIslandSignal: com.theveloper.pixelplay.data.service.DripIslandSignal
 ) : ViewModel() {
     val groups: StateFlow<List<SonosGroup>> = controller.groups
     val isScanning: StateFlow<Boolean> = controller.isScanning
@@ -106,6 +107,8 @@ class SonosViewModel @Inject constructor(
         return true
     }
 
+    fun setConnectPanelOpen(open: Boolean) = dripIslandSignal.setHidden(open)
+
     fun setEnabled(enabled: Boolean) = viewModelScope.launch { userPreferencesRepository.setSonosEnabled(enabled) }
     fun setSkipUnavailable(skip: Boolean) = viewModelScope.launch { userPreferencesRepository.setSonosSkipUnavailable(skip) }
     fun setVolumeKeys(enabled: Boolean) = viewModelScope.launch { userPreferencesRepository.setSonosVolumeKeys(enabled) }
@@ -120,5 +123,4 @@ class SonosViewModel @Inject constructor(
         controller.setGroupMembers(groupId, memberUuids)
     fun ungroup(groupId: String) = controller.ungroup(groupId)
     fun addToActiveGroup(groupId: String) = controller.addToActiveGroup(groupId)
-    fun setMuted(muted: Boolean) = controller.setGroupMuted(muted)
 }

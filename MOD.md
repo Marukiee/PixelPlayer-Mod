@@ -28,7 +28,7 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 
 **Bibliotheek**
 - Meerdere ARTIST-tags worden allemaal gelezen
-- Kwaliteitslabels LQ/HQ/SQ/HR, uit te zetten in Instellingen
+- Kwaliteitslabels LQ/HQ/SQ/HR, standaard uit, aan te zetten in Instellingen
 - Sorteren op luistertijd, sorteren met accenten klopt
 
 **Likes en Navidrome**
@@ -47,7 +47,6 @@ Een nieuwe release maken: `APP_VERSION_NAME` en `APP_VERSION_CODE` in `gradle.pr
 - Instellingen > Sonos: hoeveel nummers op Navidrome staan, overslaan of stoppen bij nummers die alleen op je telefoon staan
 - Thuisadres voor Sonos: gebruikt de app Navidrome via Tailscale, dan krijgen alleen de speakers het adres op je thuisnetwerk
 - Menu met drie puntjes: hier afspelen, toevoegen aan wat speelt, ruimtes groeperen, groep opheffen, hier stoppen
-- Dempknop bij het groepsvolume
 - Groepsvolume zoals de Sonos-app: elke speaker houdt zijn aandeel, dus de luide gaat sneller omlaag dan de zachte
 - Speelt Spotify op de speaker, dan pauzeert de app dat eerst, anders pakt Spotify de speaker meteen terug
 - De pil in de speler toont het apparaat als omlijnd icoon en de ruimte met `+1` voor de groep

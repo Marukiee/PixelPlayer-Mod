@@ -3,10 +3,7 @@
     <!-- Top Bar -->
     <string name="topbar_beta_letter">β</string>
     <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_cloud_streaming">Bulut Akışı</string>
     <string name="topbar_cd_changelog">Değişiklik Günlüğü</string>
-    <string name="topbar_cloud_streaming_title">Bulut Akışı</string>
-    <string name="topbar_cloud_streaming_subtitle">Bulut hesaplarınızdan müzik akışı yapın</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -148,9 +145,6 @@
 
     <!-- RecentlyPlayedScreen -->
     <string name="recently_played_title">Son Çalınanlar</string>
-    <string name="recently_played_action_play_latest">En sonuncuyu oynat</string>
-    <string name="recently_played_empty_title">%1$s içinde son oynatılan yok</string>
-    <string name="recently_played_empty_subtitle">Zaman çizelgesini doldurmak için aralığı değiştirin veya daha fazla şarkı çalın.</string>
     <string name="recently_played_queue_name">Son Çalınanlar</string>
     <string name="recently_played_date_today">Bugün</string>
     <string name="recently_played_date_yesterday">Dün</string>

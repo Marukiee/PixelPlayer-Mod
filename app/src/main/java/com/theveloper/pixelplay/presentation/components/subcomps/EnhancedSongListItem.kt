@@ -79,6 +79,7 @@ private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
  * @param customShape Optional custom shape for the surface
  * @param isSelected Whether this item is selected in multi-selection mode
  * @param isSelectionMode Whether multi-selection mode is active
+ * @param trailingLabel Short text at the end of the row
  * @param onLongPress Callback for long press gesture (activates selection)
  * @param onMoreOptionsClick Callback for more options button
  * @param onClick Callback for tap gesture
@@ -99,6 +100,8 @@ fun EnhancedSongListItem(
     selectionIndex: Int? = null,
     isSelectionMode: Boolean = false,
     showMoreOptionsButton: Boolean = true,
+    /** Short text at the end of the row, such as the time a song was played. */
+    trailingLabel: String? = null,
     onLongPress: () -> Unit = {},
     onMoreOptionsClick: (Song) -> Unit,
     onClick: () -> Unit
@@ -181,15 +184,17 @@ fun EnhancedSongListItem(
     )
     val showSelectionDecoration = selectionVisualProgress > 0.001f
 
+    // The margin in [modifier] goes around the swipe, so the action lines up with the row's own edge.
     SongSwipeContainer(
         config = LocalSongSwipeConfig.current,
         song = song,
-        disabled = isSelectionMode || isLoading
+        disabled = isSelectionMode || isLoading,
+        modifier = modifier
     ) {
     if (isLoading) {
         // Shimmer Placeholder Layout
         Surface(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .clip(surfaceShape),
             shape = surfaceShape,
@@ -247,7 +252,7 @@ fun EnhancedSongListItem(
     } else {
         // Actual Song Item Layout
         Surface(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .scale(selectionScale)
                 .clip(surfaceShape)
@@ -377,6 +382,16 @@ fun EnhancedSongListItem(
                     }
                 }
                 
+                if (trailingLabel != null) {
+                    Text(
+                        text = trailingLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = artistColor,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+
                 val showPlayingIndicator = isCurrentSong && !isSelectionMode
                 val showTrailingAction = showMoreOptionsButton && !isSelectionMode
 

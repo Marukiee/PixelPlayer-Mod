@@ -101,7 +101,8 @@ class MusicRepositoryImpl @Inject constructor(
     private val songRepository: SongRepository,
     private val favoritesDao: FavoritesDao,
     private val artistImageRepository: ArtistImageRepository,
-    private val folderTreeBuilder: FolderTreeBuilder
+    private val folderTreeBuilder: FolderTreeBuilder,
+    private val navidromeFavoritesSyncProvider: Lazy<com.theveloper.pixelplay.data.navidrome.NavidromeFavoritesSync>
 ) : MusicRepository {
 
     companion object {
@@ -915,6 +916,7 @@ class MusicRepositoryImpl @Inject constructor(
         } else {
             favoritesDao.removeFavorite(id)
         }
+        navidromeFavoritesSyncProvider.get().onLocalChange(id, isFavorite)
     }
 
     override suspend fun getFavoriteSongIdsOnce(): Set<String> = withContext(Dispatchers.IO) {

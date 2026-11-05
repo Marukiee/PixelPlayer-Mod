@@ -82,7 +82,8 @@ import com.theveloper.pixelplay.presentation.components.home.HomeMixCard
 import com.theveloper.pixelplay.presentation.components.home.HomePlayback
 import com.theveloper.pixelplay.presentation.components.home.HomeMixVisual
 import com.theveloper.pixelplay.presentation.components.home.HomeMixesRow
-import com.theveloper.pixelplay.presentation.components.home.HomeRecentlyPlayedRow
+import com.theveloper.pixelplay.presentation.components.home.HomeRecentlyPlayedList
+import com.theveloper.pixelplay.presentation.components.home.HomeStatsCardPlaceholder
 import com.theveloper.pixelplay.presentation.components.home.HomeRediscoverSection
 import com.theveloper.pixelplay.presentation.components.home.HomeStatsCard
 import com.theveloper.pixelplay.presentation.components.home.HomeTopArtistsRow
@@ -104,16 +105,10 @@ import com.theveloper.pixelplay.presentation.components.AlbumArtCollage
 import com.theveloper.pixelplay.presentation.components.BetaInfoBottomSheet
 import com.theveloper.pixelplay.presentation.components.Beta05CleanInstallDisclaimerDialog
 import com.theveloper.pixelplay.presentation.components.ChangelogBottomSheet
-import com.theveloper.pixelplay.presentation.netease.dashboard.NeteaseDashboardViewModel
-import com.theveloper.pixelplay.presentation.jellyfin.dashboard.JellyfinDashboardViewModel
-import com.theveloper.pixelplay.presentation.navidrome.dashboard.NavidromeDashboardViewModel
-import com.theveloper.pixelplay.presentation.qqmusic.dashboard.QqMusicDashboardViewModel
 import com.theveloper.pixelplay.presentation.components.DailyMixSection
 import com.theveloper.pixelplay.presentation.components.HomeGradientTopBar
 import com.theveloper.pixelplay.presentation.components.HomeOptionsBottomSheet
 import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
-import com.theveloper.pixelplay.presentation.components.RecentlyPlayedSection
-import com.theveloper.pixelplay.presentation.components.RecentlyPlayedSectionMinSongsToShow
 import com.theveloper.pixelplay.presentation.components.SmartImage
 import com.theveloper.pixelplay.presentation.components.StatsOverviewCard
 import com.theveloper.pixelplay.presentation.components.resolveMainScreenBottomGradientHeight
@@ -121,7 +116,6 @@ import com.theveloper.pixelplay.presentation.model.collectRecentlyPlayedSongIds
 import com.theveloper.pixelplay.presentation.model.mapRecentlyPlayedSongs
 import com.theveloper.pixelplay.presentation.components.subcomps.PlayingEqIcon
 import com.theveloper.pixelplay.presentation.navigation.Screen
-import com.theveloper.pixelplay.presentation.components.StreamingProviderSheet
 import com.theveloper.pixelplay.presentation.telegram.auth.TelegramLoginActivity
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
 import com.theveloper.pixelplay.presentation.viewmodel.SettingsViewModel
@@ -147,10 +141,6 @@ fun HomeScreen(
     paddingValuesParent: PaddingValues,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
-    neteaseViewModel: NeteaseDashboardViewModel = hiltViewModel(),
-    qqMusicViewModel: QqMusicDashboardViewModel = hiltViewModel(),
-    navidromeViewModel: NavidromeDashboardViewModel = hiltViewModel(),
-    jellyfinViewModel: JellyfinDashboardViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
     onOpenSidebar: () -> Unit
 ) {
@@ -267,7 +257,6 @@ fun HomeScreen(
     var showOptionsBottomSheet by remember { mutableStateOf(false) }
     var showChangelogBottomSheet by remember { mutableStateOf(false) }
     var showBetaInfoBottomSheet by remember { mutableStateOf(false) }
-    var showStreamingProviderSheet by remember { mutableStateOf(false) }
     var cleanInstallDisclaimerDismissedThisSession by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val betaSheetState = rememberModalBottomSheetState()
@@ -275,6 +264,11 @@ fun HomeScreen(
     LocalContext.current
 
     val homeStatsOverview by statsViewModel.homeOverview.collectAsStateWithLifecycle()
+    var holdStatsSlot by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(STATS_SLOT_HOLD_MS)
+        holdStatsSlot = false
+    }
     val rediscoverSongs by homeViewModel.rediscoverSongs.collectAsStateWithLifecycle()
     val topArtists by homeViewModel.topArtists.collectAsStateWithLifecycle()
     val isPlaying by remember(playerViewModel.stablePlayerState) {
@@ -428,9 +422,6 @@ fun HomeScreen(
                     onSettingsClick = {
                         navController.navigateSafely(Screen.Settings.route)
                     },
-                    onSourcesClick = {
-                        showStreamingProviderSheet = true
-                    },
                     titleStyle = topBarTitleStyle,
                     isScrolled = isScrolledPastThreshold.value
                 )
@@ -510,28 +501,22 @@ fun HomeScreen(
                     }
                 }
 
-                if (recentlyPlayedSongs.size >= RecentlyPlayedSectionMinSongsToShow) {
+                // Its place is kept while it loads, or everything below would jump down when it arrives.
+                val statsSummary = homeStatsOverview
+                if (statsSummary != null || holdStatsSlot) {
                     item(
-                        key = "recently_played_section",
-                        contentType = "recently_played_section"
+                        key = "listening_stats_preview",
+                        contentType = "listening_stats_preview"
                     ) {
-                        HomeRecentlyPlayedRow(
-                            items = recentlyPlayedSongs,
-                            currentSongId = currentSong?.id,
-                            isPlaying = isPlaying,
-                            onSongClick = { song ->
-                                if (recentlyPlayedQueue.isNotEmpty()) {
-                                    playerViewModel.playSongs(
-                                        songsToPlay = recentlyPlayedQueue,
-                                        startSong = song,
-                                        queueName = "Recently Played"
-                                    )
-                                }
-                            },
-                            onOpenAllClick = {
-                                navController.navigateSafely(Screen.RecentlyPlayed.route)
-                            }
-                        )
+                        if (statsSummary != null) {
+                            HomeStatsCard(
+                                summary = statsSummary,
+                                titleStyle = cardTitleStyle,
+                                onClick = { navController.navigateSafely(Screen.Stats.route) }
+                            )
+                        } else {
+                            HomeStatsCardPlaceholder()
+                        }
                     }
                 }
 
@@ -584,15 +569,25 @@ fun HomeScreen(
                     }
                 }
 
-                homeStatsOverview?.let { summary ->
+                if (recentlyPlayedSongs.isNotEmpty()) {
                     item(
-                        key = "listening_stats_preview",
-                        contentType = "listening_stats_preview"
+                        key = "recently_played_section",
+                        contentType = "recently_played_section"
                     ) {
-                        HomeStatsCard(
-                            summary = summary,
-                            titleStyle = cardTitleStyle,
-                            onClick = { navController.navigateSafely(Screen.Stats.route) }
+                        HomeRecentlyPlayedList(
+                            items = recentlyPlayedSongs,
+                            onSongClick = { song ->
+                                if (recentlyPlayedQueue.isNotEmpty()) {
+                                    playerViewModel.playSongs(
+                                        songsToPlay = recentlyPlayedQueue,
+                                        startSong = song,
+                                        queueName = "Recently Played"
+                                    )
+                                }
+                            },
+                            onOpenAllClick = {
+                                navController.navigateSafely(Screen.RecentlyPlayed.route)
+                            }
                         )
                     }
                 }
@@ -652,31 +647,6 @@ fun HomeScreen(
         ) {
             BetaInfoBottomSheet()
         }
-    }
-    if (showStreamingProviderSheet) {
-        val isNeteaseLoggedIn by neteaseViewModel.isLoggedIn.collectAsStateWithLifecycle()
-        val isQqMusicLoggedIn by qqMusicViewModel.isLoggedIn.collectAsStateWithLifecycle()
-        val isNavidromeLoggedIn by navidromeViewModel.isLoggedIn.collectAsStateWithLifecycle()
-        val isJellyfinLoggedIn by jellyfinViewModel.isLoggedIn.collectAsStateWithLifecycle()
-        StreamingProviderSheet(
-            onDismissRequest = { showStreamingProviderSheet = false },
-            isNeteaseLoggedIn = isNeteaseLoggedIn,
-            onNavigateToNeteaseDashboard = {
-                navController.navigateSafely(Screen.NeteaseDashboard.route)
-            },
-            isQqMusicLoggedIn = isQqMusicLoggedIn,
-            onNavigateToQqMusicDashboard = {
-                navController.navigateSafely(Screen.QqMusicDashboard.route)
-            },
-            isNavidromeLoggedIn = isNavidromeLoggedIn,
-            onNavigateToNavidromeDashboard = {
-                navController.navigateSafely(Screen.NavidromeDashboard.route)
-            },
-            isJellyfinLoggedIn = isJellyfinLoggedIn,
-            onNavigateToJellyfinDashboard = {
-                navController.navigateSafely(Screen.JellyfinDashboard.route)
-            }
-        )
     }
     if (shouldShowCleanInstallDisclaimer) {
         Beta05CleanInstallDisclaimerDialog(
@@ -993,3 +963,5 @@ internal fun rememberYourMixTitleStyle(
         )
     }
 }
+
+private const val STATS_SLOT_HOLD_MS = 3_000L

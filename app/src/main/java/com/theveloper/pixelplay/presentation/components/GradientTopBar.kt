@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,7 +21,6 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
@@ -101,7 +101,6 @@ fun GenreGradientTopBar(
 @Composable
 fun HomeGradientTopBar(
     onSettingsClick: () -> Unit,
-    onSourcesClick: () -> Unit,
     titleStyle: TextStyle,
     isScrolled: Boolean = false,
 ) {
@@ -127,22 +126,12 @@ fun HomeGradientTopBar(
             )
         },
         actions = {
-            // Sources and settings share one tonal pill instead of separate round buttons.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            Box(
                 modifier = Modifier
                     .padding(end = 14.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .padding(horizontal = 4.dp)
             ) {
-                IconButton(onClick = onSourcesClick) {
-                    Icon(
-                        imageVector = Icons.Rounded.Cloud,
-                        contentDescription = stringResource(R.string.topbar_cd_cloud_streaming),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         painter = painterResource(R.drawable.rounded_settings_24),

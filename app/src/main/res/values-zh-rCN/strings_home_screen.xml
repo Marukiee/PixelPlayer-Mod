@@ -3,10 +3,7 @@
     <!-- Top Bar -->
     <string name="topbar_beta_letter">β</string>
     <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_cloud_streaming">云端串流</string>
     <string name="topbar_cd_changelog">更新日志</string>
-    <string name="topbar_cloud_streaming_title">云端串流</string>
-    <string name="topbar_cloud_streaming_subtitle">从您的云端账户串流音乐</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -148,9 +145,6 @@
 
     <!-- RecentlyPlayedScreen -->
     <string name="recently_played_title">最近播放</string>
-    <string name="recently_played_action_play_latest">播放最新</string>
-    <string name="recently_played_empty_title">在 %1$s 内无最近播放记录</string>
-    <string name="recently_played_empty_subtitle">更改时间范围或播放更多歌曲以填充此时间轴。</string>
     <string name="recently_played_queue_name">最近播放</string>
     <string name="recently_played_date_today">今天</string>
     <string name="recently_played_date_yesterday">昨天</string>

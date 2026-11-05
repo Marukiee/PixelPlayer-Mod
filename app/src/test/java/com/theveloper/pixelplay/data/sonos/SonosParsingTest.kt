@@ -237,4 +237,17 @@ class SonosParsingTest {
         path = "",
         dateAdded = 0
     )
+
+    @Test
+    fun coverSuggestion_usesAPublicHttpsLogin() {
+        assertThat(SonosTrackResolver.suggestCoverAddress("https://music.example.org/")).isEqualTo("https://music.example.org")
+    }
+
+    @Test
+    fun coverSuggestion_givesNothingForTailscaleOrPlainHttp() {
+        assertThat(SonosTrackResolver.suggestCoverAddress("https://box.tail1234.ts.net")).isNull()
+        assertThat(SonosTrackResolver.suggestCoverAddress("http://100.100.1.2:4533")).isNull()
+        assertThat(SonosTrackResolver.suggestCoverAddress("http://192.168.1.10:4533")).isNull()
+        assertThat(SonosTrackResolver.suggestCoverAddress(null)).isNull()
+    }
 }

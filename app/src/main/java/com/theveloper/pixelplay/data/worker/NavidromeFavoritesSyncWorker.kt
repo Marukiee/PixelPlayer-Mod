@@ -10,78 +10,53 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
-import com.theveloper.pixelplay.data.model.Song
-import com.theveloper.pixelplay.data.navidrome.NavidromeRepository
-import com.theveloper.pixelplay.data.network.navidrome.NavidromeApiService
-import com.theveloper.pixelplay.data.repository.MusicRepository
+import androidx.work.workDataOf
+import com.theveloper.pixelplay.data.navidrome.NavidromeFavoritesSync
+import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import org.json.JSONObject
-import timber.log.Timber
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
 /**
- * Pushes the user's local favorites to their Navidrome/Subsonic server as "starred" songs.
- *
- * Local favorites are keyed on the MediaStore `_ID`, which is meaningless to the server, so each
- * favorite is matched to its Navidrome song by metadata (title + artist, album as a tie-breaker)
- * via `search3`, then starred with the server's own song id. This is a one-directional push
- * (favorite -> star); it never unstars, so nothing the user starred directly on the server is lost.
- * Runs roughly once a day (and can be kicked manually via [oneTimeWork]).
+ * Runs [NavidromeFavoritesSync] in the background, so it gets a connection and retries when there is none.
  */
 @HiltWorker
 class NavidromeFavoritesSyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val navidromeRepository: NavidromeRepository,
-    private val api: NavidromeApiService,
-    private val musicRepository: MusicRepository
+    private val favoritesSync: NavidromeFavoritesSync,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        // NavidromeRepository restores saved credentials into the shared api client on init.
-        if (!navidromeRepository.isLoggedIn || !api.hasCredentials()) {
-            Timber.d("$TAG: Navidrome not configured — skipping favorites sync")
-            return Result.success()
-        }
-
-        val favorites = runCatching { musicRepository.getFavoriteSongsOnce() }
-            .getOrElse {
-                Timber.e(it, "$TAG: Failed to load favorites")
-                return Result.retry()
-            }
-        if (favorites.isEmpty()) {
-            Timber.d("$TAG: No favorites to sync")
-            return Result.success()
-        }
-
-        var starred = 0
-        var unmatched = 0
-        for (song in favorites) {
-            val navidromeId = resolveNavidromeId(song)
-            if (navidromeId == null) {
-                unmatched++
-                continue
-            }
-            val result = api.star(id = navidromeId)
-            if (result.isSuccess) starred++ else {
-                Timber.w("$TAG: star failed for '${song.title}': ${result.exceptionOrNull()?.message}")
+        val outcome = when (inputData.getString(KEY_MODE)) {
+            MODE_PUSH -> favoritesSync.pushPending()
+            MODE_MANUAL -> favoritesSync.sync()
+            else -> {
+                if (userPreferencesRepository.navidromeFavoritesSyncIntervalHoursFlow.first() <= 0) return Result.success()
+                favoritesSync.sync()
             }
         }
-        Timber.i("$TAG: Favorites sync done — starred=$starred, unmatched=$unmatched, total=${favorites.size}")
-        navidromeRepository.setLastFavoritesSyncSummary(starred = starred, total = favorites.size)
-        return Result.success()
+        // What is left stays remembered, so giving up here only means the next sync picks it up.
+        return if (outcome == NavidromeFavoritesSync.Outcome.TRY_AGAIN && runAttemptCount < MAX_ATTEMPTS) {
+            Result.retry()
+        } else {
+            Result.success()
+        }
     }
 
-    /** Match a local favorite to its server song id via the shared metadata matcher. */
-    private suspend fun resolveNavidromeId(song: Song): String? =
-        com.theveloper.pixelplay.data.navidrome.NavidromeSongMatcher
-            .resolveNavidromeId(api, song.title, song.artist, song.album)
-
     companion object {
-        private const val TAG = "NavidromeFavSync"
         const val PERIODIC_WORK_NAME = "navidrome_favorites_sync_periodic"
         const val ONE_TIME_WORK_NAME = "navidrome_favorites_sync_now"
+        const val PUSH_WORK_NAME = "navidrome_favorites_push"
+
+        private const val KEY_MODE = "mode"
+        private const val MODE_PUSH = "push"
+        private const val MODE_MANUAL = "manual"
+        private const val MAX_ATTEMPTS = 5
+        /** Long enough for a burst of taps to become one run, short enough to feel right away. */
+        private const val PUSH_DELAY_MS = 1_000L
 
         private val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -94,8 +69,22 @@ class NavidromeFavoritesSyncWorker @AssistedInject constructor(
                 .setConstraints(constraints)
                 .build()
 
+        /** The user asked for it, so it also runs when the automatic sync is off. */
         fun oneTimeWork(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<NavidromeFavoritesSyncWorker>()
+                .setInputData(workDataOf(KEY_MODE to MODE_MANUAL))
+                .setConstraints(constraints)
+                .build()
+
+        fun foregroundWork(): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<NavidromeFavoritesSyncWorker>()
+                .setConstraints(constraints)
+                .build()
+
+        fun pushWork(): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<NavidromeFavoritesSyncWorker>()
+                .setInputData(workDataOf(KEY_MODE to MODE_PUSH))
+                .setInitialDelay(PUSH_DELAY_MS, TimeUnit.MILLISECONDS)
                 .setConstraints(constraints)
                 .build()
     }

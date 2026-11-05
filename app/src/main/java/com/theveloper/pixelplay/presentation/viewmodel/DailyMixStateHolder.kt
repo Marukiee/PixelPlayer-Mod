@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.viewmodel
 
+import com.theveloper.pixelplay.data.model.withoutDuplicateTracks
 import com.theveloper.pixelplay.data.DailyMixManager
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
@@ -75,12 +76,12 @@ class DailyMixStateHolder @Inject constructor(
                 val favoriteIds = favoriteSongIdsFlow.first()
 
                 // Generate daily mix
-                val mix = dailyMixManager.generateDailyMix(allSongs, favoriteIds)
+                val mix = dailyMixManager.generateDailyMix(allSongs, favoriteIds).withoutDuplicateTracks()
                 _dailyMixSongs.value = mix.toImmutableList()
                 userPreferencesRepository.saveDailyMixSongIds(mix.map { it.id })
 
                 // Generate your mix
-                val yourMix = dailyMixManager.generateYourMix(allSongs, favoriteIds)
+                val yourMix = dailyMixManager.generateYourMix(allSongs, favoriteIds).withoutDuplicateTracks()
                 _yourMixSongs.value = yourMix.toImmutableList()
                 userPreferencesRepository.saveYourMixSongIds(yourMix.map { it.id })
             } else {
@@ -104,7 +105,7 @@ class DailyMixStateHolder @Inject constructor(
                 if (songs.isNotEmpty()) {
                     // Maintain persisted order
                     val songMap = songs.associateBy { it.id }
-                    val orderedSongs = dailyMixIds.mapNotNull { songMap[it] }
+                    val orderedSongs = dailyMixIds.mapNotNull { songMap[it] }.withoutDuplicateTracks()
                     _dailyMixSongs.value = orderedSongs.toImmutableList()
                 }
             }
@@ -119,7 +120,7 @@ class DailyMixStateHolder @Inject constructor(
                 }
                 if (songs.isNotEmpty()) {
                     val songMap = songs.associateBy { it.id }
-                    val orderedSongs = yourMixIds.mapNotNull { songMap[it] }
+                    val orderedSongs = yourMixIds.mapNotNull { songMap[it] }.withoutDuplicateTracks()
                     _yourMixSongs.value = orderedSongs.toImmutableList()
                 }
             }

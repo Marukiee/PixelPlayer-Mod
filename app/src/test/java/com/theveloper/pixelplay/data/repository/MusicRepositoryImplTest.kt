@@ -101,6 +101,7 @@ class MusicRepositoryImplTest {
 
 
 
+        every { mockMusicDao.observeSongSearchRows() } returns flowOf(emptyList())
         musicRepository = MusicRepositoryImpl(
             context = mockContext,
             userPreferencesRepository = mockUserPreferencesRepository,
@@ -115,7 +116,8 @@ class MusicRepositoryImplTest {
 
             favoritesDao = mockFavoritesDao,
             artistImageRepository = mockArtistImageRepository,
-            folderTreeBuilder = mockk(relaxed = true)
+            folderTreeBuilder = mockk(relaxed = true),
+            navidromeFavoritesSyncProvider = mockk(relaxed = true)
         )
     }
 

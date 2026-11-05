@@ -172,6 +172,16 @@ class SonosTrackResolver @Inject constructor(
             return normalizeAddress(withScheme)?.takeIf { it.startsWith("https://") }
         }
 
+        /**
+         * A first value for the cover address after logging in: the login address, when that is https and the speakers
+         * can reach it. Nothing else can be told from a login, so a Tailscale or plain http one gives no suggestion.
+         */
+        fun suggestCoverAddress(loginAddress: String?): String? {
+            val url = loginAddress?.toHttpUrlOrNull() ?: return null
+            if (!url.isHttps || isTailscaleHost(url.host)) return null
+            return normalizeCoverAddress(loginAddress)
+        }
+
         /** Swaps the [loginBase] at the start of [url] for [homeBase]; other URLs stay as they are. */
         fun rebase(url: String, loginBase: String, homeBase: String): String =
             if (url.startsWith("$loginBase/")) homeBase + url.removePrefix(loginBase) else url

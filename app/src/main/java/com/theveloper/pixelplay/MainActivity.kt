@@ -272,7 +272,7 @@ class MainActivity : ComponentActivity() {
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
             val showScrollbar by userPreferencesRepository.showScrollbarFlow.collectAsStateWithLifecycle(initialValue = true)
-            val showSongQualityBadge by userPreferencesRepository.showSongQualityBadgeFlow.collectAsStateWithLifecycle(initialValue = true)
+            val showSongQualityBadge by userPreferencesRepository.showSongQualityBadgeFlow.collectAsStateWithLifecycle(initialValue = false)
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false

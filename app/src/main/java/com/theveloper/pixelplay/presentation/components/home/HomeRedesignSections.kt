@@ -1,5 +1,10 @@
 package com.theveloper.pixelplay.presentation.components.home
 
+import androidx.compose.foundation.indication
+import androidx.compose.material3.ripple
+import com.theveloper.pixelplay.presentation.components.subcomps.rememberPressFraction
+import androidx.compose.ui.unit.lerp
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -36,9 +41,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,10 +60,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
@@ -86,6 +90,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.theveloper.pixelplay.R
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.stats.PlaybackStatsRepository
@@ -107,16 +112,6 @@ private fun artistShapes(): List<Shape> = listOf(
     MaterialShapes.Cookie9Sided.toShape(), MaterialShapes.Clover4Leaf.toShape(), MaterialShapes.Sunny.toShape(),
     MaterialShapes.Gem.toShape(), MaterialShapes.Cookie6Sided.toShape(), MaterialShapes.Flower.toShape(),
     MaterialShapes.SoftBurst.toShape(), MaterialShapes.Pentagon.toShape()
-)
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun coverShapes(): List<Shape> = listOf(
-    smoothShape(26.dp),
-    MaterialShapes.Arch.toShape(),
-    MaterialShapes.Cookie4Sided.toShape(),
-    MaterialShapes.Slanted.toShape(),
-    MaterialShapes.Square.toShape()
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -149,14 +144,14 @@ data class HomePlayback(
     val onPlayPause: () -> Unit
 )
 
-private class HomePlayButton(val showPause: Boolean, val onClick: () -> Unit)
+internal class HomePlayButton(val showPause: Boolean, val onClick: () -> Unit)
 
 /**
  * A play button that shows its mix is on: pause right after the tap, also while the songs still
  * load (it goes back when nothing starts), and for as long as the mix plays. A second tap pauses.
  */
 @Composable
-private fun rememberHomePlayButton(queueName: String, playback: HomePlayback, onPlay: () -> Unit): HomePlayButton {
+internal fun rememberHomePlayButton(queueName: String, playback: HomePlayback, onPlay: () -> Unit): HomePlayButton {
     var starting by remember(queueName) { mutableStateOf(false) }
     val isCurrent = playback.queueName == queueName
     val isOn = isCurrent && playback.isPlaying
@@ -204,41 +199,12 @@ private fun PlayStateIcon(showPause: Boolean, iconSize: Dp, icon: @Composable ()
     }
 }
 
-/** Three dancing bars for what is playing now. The heights change in the draw phase only. */
-@Composable
-private fun PlayingBars(color: Color, modifier: Modifier = Modifier) {
-    val bars = remember { List(3) { Animatable(0.35f) } }
-    LaunchedEffect(Unit) {
-        bars.forEachIndexed { i, bar ->
-            launch {
-                delay(i * 120L)
-                while (true) {
-                    bar.animateTo(Random.nextDouble(0.6, 1.0).toFloat(), tween(Random.nextInt(240, 420)))
-                    bar.animateTo(Random.nextDouble(0.3, 0.55).toFloat(), tween(Random.nextInt(240, 420)))
-                }
-            }
-        }
-    }
-    Canvas(modifier = modifier) {
-        val barWidth = size.width / 4.2f
-        val gap = (size.width - barWidth * 3) / 2
-        bars.forEachIndexed { i, bar ->
-            val height = size.height * bar.value
-            drawRoundRect(
-                color = color,
-                topLeft = Offset(i * (barWidth + gap), (size.height - height) / 2),
-                size = GeometrySize(barWidth, height),
-                cornerRadius = CornerRadius(barWidth / 2f)
-            )
-        }
-    }
-}
-
-/** Same layout as the Recently played header: title left, tonal arrow button right. */
+/** Title left, tonal button right. */
 @Composable
 fun HomeSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     actionIcon: ImageVector = Icons.AutoMirrored.Rounded.ArrowForward,
     actionContentDescription: String? = null,
     actionPlaying: Boolean = false,
@@ -251,16 +217,27 @@ fun HomeSectionHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 6.dp),
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+                .padding(start = 6.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
         if (onActionClick != null) {
             FilledIconButton(
                 modifier = Modifier
@@ -428,92 +405,60 @@ private fun ShapedCover(
     )
 }
 
-/** Recently played as a row of covers instead of the stacked pills. */
+/** Recently played as plain rows. The full history, per day, is behind the button. */
 @Composable
-fun HomeRecentlyPlayedRow(
+fun HomeRecentlyPlayedList(
     items: List<RecentlyPlayedSongUiModel>,
-    currentSongId: String?,
-    isPlaying: Boolean,
     onSongClick: (Song) -> Unit,
     onOpenAllClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         HomeSectionHeader(
             title = stringResource(R.string.home_recently_played_title),
-            actionContentDescription = stringResource(R.string.home_open_all),
-            onActionClick = onOpenAllClick
+            modifier = Modifier.padding(bottom = 4.dp)
         )
-        val coverShapes = coverShapes()
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        items.take(RECENTLY_PLAYED_VISIBLE_ROWS).forEach { item ->
+            EnhancedSongListItem(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                song = item.song,
+                isPlaying = false,
+                showMoreOptionsButton = false,
+                onMoreOptionsClick = {},
+                onClick = { onSongClick(item.song) }
+            )
+        }
+        val interaction = remember { MutableInteractionSource() }
+        val press by rememberPressFraction(interaction)
+        FilledTonalButton(
+            onClick = onOpenAllClick,
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(lerp(28.dp, 14.dp, press)),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.secondary
+            ),
+            interactionSource = interaction
         ) {
-            itemsIndexed(items, key = { _, item -> item.song.id }, contentType = { _, _ -> "recent_cover" }) { index, item ->
-                val song = item.song
-                val coverShape = coverShapes[index % coverShapes.size]
-                // The ripple stays inside the cover's shape, or holding an item shows a grey box around its text.
-                val interaction = remember { MutableInteractionSource() }
-                Column(
-                    modifier = Modifier
-                        .width(132.dp)
-                        .clickable(interactionSource = interaction, indication = null) { onSongClick(song) }
-                ) {
-                    Box {
-                        SmartImage(
-                            model = song.albumArtUriString,
-                            contentDescription = song.title,
-                            shape = coverShape,
-                            targetSize = HomeCardThumbSize,
-                            modifier = Modifier
-                                .size(132.dp)
-                                .clip(coverShape)
-                                .indication(interaction, ripple())
-                        )
-                        if (song.id == currentSongId) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(8.dp)
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isPlaying) {
-                                    PlayingBars(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Rounded.GraphicEq,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 8.dp, start = 2.dp, end = 2.dp)
-                    )
-                    Text(
-                        text = song.displayArtist,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 2.dp)
-                    )
-                }
-            }
+            Text(
+                text = stringResource(R.string.home_open_all),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize)
+            )
         }
     }
 }
+
+private const val RECENTLY_PLAYED_VISIBLE_ROWS = 5
 
 sealed interface HomeMixVisual {
     /** Tonal card with a playful shape in the corner (Daily Mix). */
@@ -923,6 +868,19 @@ fun HomeRediscoverSection(
 
 private const val REDISCOVER_VISIBLE_ROWS = 3
 
+/** The same surface as [HomeStatsCard], for while its numbers load. */
+@Composable
+fun HomeStatsCardPlaceholder(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .height(122.dp)
+            .clip(smoothShape(28.dp))
+            .background(MaterialTheme.colorScheme.tertiaryContainer)
+    )
+}
+
 /** Listening time for the period with one bar per day (or per bucket for longer ranges). */
 @Composable
 fun HomeStatsCard(
@@ -952,11 +910,12 @@ fun HomeStatsCard(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.labelLarge, color = colors.onTertiaryContainer.copy(alpha = 0.8f))
-            Text(
+            // At full size "1 h 58 m" is wider than the room beside the bars, and a plain Text drops the last word.
+            BasicText(
                 text = formatListeningDuration(summary.totalDurationMs),
-                style = titleStyle,
-                color = colors.onTertiaryContainer,
-                maxLines = 1
+                style = titleStyle.copy(color = colors.onTertiaryContainer),
+                maxLines = 1,
+                autoSize = TextAutoSize.StepBased(minFontSize = 20.sp, maxFontSize = titleStyle.fontSize, stepSize = 1.sp)
             )
             summary.topArtists.firstOrNull()?.let { top ->
                 Text(
@@ -1017,7 +976,8 @@ fun topGenreNames(genres: List<PlaybackStatsRepository.GenrePlaybackSummary>, li
     genres.forEach { summary ->
         summary.genre.split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach { part ->
             val key = part.lowercase()
-            if (key == "unknown") return@forEach
+            // The stats call songs without a genre "Unknown Genre". There is no such genre to open as a mix.
+            if (key == "unknown" || key == "unknown genre") return@forEach
             displayName.putIfAbsent(key, part)
             durationByGenre[key] = (durationByGenre[key] ?: 0L) + summary.totalDurationMs
         }

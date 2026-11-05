@@ -113,7 +113,7 @@ class SyncManager @Inject constructor(
     }
 
     /**
-     * Schedules the periodic push of local favorites to the user's Navidrome server (star sync),
+     * Schedules the periodic sync of favorites with the user's Navidrome server,
      * honouring the user's chosen interval (0 = off). Reschedules whenever the preference changes.
      * The worker itself no-ops when Navidrome isn't configured, so scheduling it is always safe.
      */
@@ -137,7 +137,7 @@ class SyncManager @Inject constructor(
     }
 
     /**
-     * Manually pushes favorites to Navidrome now (e.g. from a settings action), outside the
+     * Manually syncs favorites with Navidrome now (e.g. from a settings action), outside the
      * daily cadence. Deduplicated by unique work name so rapid taps collapse to one run.
      */
     fun syncFavoritesToNavidromeNow() {
@@ -364,6 +364,12 @@ class SyncManager @Inject constructor(
         }
         lastForegroundSyncTime = now
         Log.i(TAG, "Foreground catch-up - scheduling local incremental sync")
+        // Nothing tells the app about a star set on the server, so this is when it looks.
+        workManager.enqueueUniqueWork(
+            NavidromeFavoritesSyncWorker.ONE_TIME_WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            NavidromeFavoritesSyncWorker.foregroundWork()
+        )
         enqueueSyncWork(
             request = SyncWorker.incrementalSyncWork(runMaintenance = false),
             policy = ExistingWorkPolicy.KEEP,

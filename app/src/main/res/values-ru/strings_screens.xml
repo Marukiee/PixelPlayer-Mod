@@ -202,14 +202,9 @@
 
     <!-- GenreDetailScreen -->
     <string name="genre_quick_fill">Быстро заполнить жанр</string>
-    <string name="genre_sort_title">Сортировка и воспроизведение</string>
-    <string name="genre_sort_action_shuffle">Перемешать</string>
-    <string name="genre_sort_by_title">Сортировать по</string>
     <string name="genre_sort_artist_option">Исполнитель</string>
     <string name="genre_sort_album_option">Альбом</string>
     <string name="genre_sort_title_option">Название</string>
-    <string name="genre_cd_generic_artist">Неизвестный исполнитель</string>
-    <string name="genre_shuffle_label">Перемешать %1$s</string>
 
     <!-- QuickFillScreen -->
     <string name="quick_fill_select_songs">Выбрать песни</string>

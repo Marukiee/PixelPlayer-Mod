@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ import com.theveloper.pixelplay.ui.theme.GoogleSansRounded
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -108,6 +110,7 @@ fun SwipeToActionRow(
     val exitCollapse = remember { Animatable(1f) }
     var rowWidthPx by remember { mutableFloatStateOf(0f) }
     var contentHeightPx by remember { mutableFloatStateOf(0f) }
+    var labelWidthPx by remember { mutableIntStateOf(0) }
 
     val bothInert = !leftSpec.enabled && !rightSpec.enabled
 
@@ -150,7 +153,8 @@ fun SwipeToActionRow(
     Box(
         modifier = modifier
             .onSizeChanged { rowWidthPx = it.width.toFloat() }
-            .clipToBounds()
+            // Only while collapsing: an inset row has to be able to slide past its own margin.
+            .then(if (exitCollapse.value < 1f) Modifier.clipToBounds() else Modifier)
             // Collapse the item's laid-out height as it flings off, so neighbours slide up smoothly
             // instead of the row vanishing in one instant.
             .layout { measurable, constraints ->
@@ -167,6 +171,8 @@ fun SwipeToActionRow(
                 (revealWidthPx / (56.dp.value * density.density)).coerceIn(0f, 1f)
             } else 0f
             val committed = revealWidthPx > rowWidthPx * 0.40f
+            val iconHugPad = 18.dp
+            val labelInsetPad = 52.dp // iconHugPad + icon width + gap
 
             val panelColor by animateColorAsState(
                 targetValue = if (committed) activeSpec.container else activeSpec.container.copy(alpha = 0.82f),
@@ -179,15 +185,19 @@ fun SwipeToActionRow(
                 label = "swipeIconAlpha"
             )
 
-            // Label shows together with the icon (no delayed slide-in), same on both sides.
-            val textAlpha = iconAlpha
+            // The label waits until all of it fits, so it never shows cut off.
+            val labelFits = labelWidthPx > 0 &&
+                revealWidthPx >= with(density) { (labelInsetPad + 16.dp).toPx() } + labelWidthPx
+            val textAlpha by animateFloatAsState(
+                targetValue = if (labelFits) iconAlpha else 0f,
+                animationSpec = tween(durationMillis = 120),
+                label = "swipeLabelAlpha"
+            )
             // `edge` = the swiped edge the reveal grows from. Icon and label are pinned there
             // ABSOLUTELY (align + explicit padding) instead of via a Row, so both directions are
             // guaranteed identical: icon hugs the edge, label sits a fixed distance inward. This
             // avoids the earlier bug where a right-side reveal pushed the icon off-screen.
             val edge = if (swipingRight) Alignment.CenterStart else Alignment.CenterEnd
-            val iconHugPad = 18.dp
-            val labelInsetPad = 52.dp // iconHugPad + icon width + gap
             Box(
                 modifier = Modifier
                     .align(edge)
@@ -196,8 +206,15 @@ fun SwipeToActionRow(
                         end = if (swipingRight) 0.dp else edgeInset
                     )
                     .height(heightDp)
-                    .width(revealWidthDp)
-                    .clip(RoundedCornerShape(22.dp))
+                    // Reaches under the row, so its round corners sit against the panel without a gap.
+                    .width(revealWidthDp + heightDp / 2)
+                    .clip(
+                        if (swipingRight) {
+                            RoundedCornerShape(topStart = 22.dp, bottomStart = 22.dp)
+                        } else {
+                            RoundedCornerShape(topEnd = 22.dp, bottomEnd = 22.dp)
+                        }
+                    )
                     .background(panelColor)
             ) {
                 Icon(
@@ -227,6 +244,11 @@ fun SwipeToActionRow(
                             start = if (swipingRight) labelInsetPad else 0.dp,
                             end = if (swipingRight) 0.dp else labelInsetPad
                         )
+                        .wrapContentWidth(
+                            align = if (swipingRight) Alignment.Start else Alignment.End,
+                            unbounded = true
+                        )
+                        .onSizeChanged { labelWidthPx = it.width }
                         .graphicsLayer { alpha = textAlpha }
                 )
             }
@@ -330,18 +352,20 @@ fun SongSwipeContainer(
     config: SongSwipeConfig?,
     song: Song,
     disabled: Boolean,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val inert = config == null ||
         (config.leftAction == SwipeAction.NONE && config.rightAction == SwipeAction.NONE)
     if (disabled || inert) {
-        content()
+        Box(modifier) { content() }
         return
     }
     SwipeToActionRow(
         swipeLeftAction = config!!.leftAction,
         swipeRightAction = config.rightAction,
         onAction = { action -> config.onAction(action, song) },
+        modifier = modifier,
         content = content
     )
 }

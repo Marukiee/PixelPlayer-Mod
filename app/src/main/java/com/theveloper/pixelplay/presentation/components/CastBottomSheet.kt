@@ -34,13 +34,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -87,11 +85,9 @@ import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -101,8 +97,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -126,7 +120,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -253,6 +246,10 @@ fun CastBottomSheet(
     val isRemoteSession = (isRemotePlaybackActive || isCastConnecting) && activeRoute != null
 
     val sonosViewModel: SonosViewModel = hiltViewModel()
+    DisposableEffect(Unit) {
+        sonosViewModel.setConnectPanelOpen(true)
+        onDispose { sonosViewModel.setConnectPanelOpen(false) }
+    }
     val sonosEnabled by sonosViewModel.isEnabled.collectAsStateWithLifecycle()
     val sonosGroups by sonosViewModel.groups.collectAsStateWithLifecycle()
     val sonosScanning by sonosViewModel.isScanning.collectAsStateWithLifecycle()
@@ -481,8 +478,7 @@ fun CastBottomSheet(
                                     onDisconnect = { sonosViewModel.switchToPhone() },
                                     onOpenGroup = { sonosGroupSheetFor = state.group.coordinatorUuid },
                                     onGroupVolume = sonosViewModel::setGroupVolume,
-                                    onSpeakerVolume = sonosViewModel::setSpeakerVolume,
-                                    onToggleMute = { sonosViewModel.setMuted(!state.isMuted) }
+                                    onSpeakerVolume = sonosViewModel::setSpeakerVolume
                                 )
                             }
                         },
@@ -739,7 +735,8 @@ private val CastTabSwitchSpec = tween<Float>(durationMillis = 450, easing = Fast
  * finger is still moving fast as it lets go, so a short swipe that slows down at the end springs back. This
  * reports a short swipe down with where the sheet was when it began, and the caller checks the sheet followed,
  * so dragging a slider never counts. A list scrolled first counts from where the sheet took over. Pulling back
- * up before letting go keeps the panel open.
+ * up before letting go keeps the panel open. A swipe that goes more sideways than down is a switch between the
+ * tabs: the sheet shrinks along with it on the way to Controls, so a finger sinking a little would look like a pull.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 private fun Modifier.closesOnShortPull(sheetState: SheetState, close: (rest: Float) -> Unit): Modifier =
@@ -754,9 +751,11 @@ private fun Modifier.closesOnShortPull(sheetState: SheetState, close: (rest: Flo
             var followed = false
             var travel = 0f
             var deepest = 0f
+            var sideways = 0f
             do {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
                 val finger = event.changes.firstOrNull { it.id == down.id } ?: break
+                sideways = maxOf(sideways, abs(finger.position.x - down.position.x))
                 val pulled = sheetState.requireOffset() - rest
                 // The content moves along with the sheet, so the sheet's own move is added to the finger's.
                 val y = finger.position.y + pulled
@@ -767,7 +766,7 @@ private fun Modifier.closesOnShortPull(sheetState: SheetState, close: (rest: Flo
                 travel = y - start
                 deepest = maxOf(deepest, travel)
             } while (event.changes.any { it.pressed })
-            if (travel >= closeDistance && deepest - travel < pullBack) close(rest)
+            if (travel >= closeDistance && deepest - travel < pullBack && sideways < travel) close(rest)
         }
     }
 
@@ -993,7 +992,6 @@ private fun CastControlsTabContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Material fade through between the phone card and the Sonos card.
         AnimatedContent(
@@ -1558,144 +1556,69 @@ private fun ActiveDeviceHero(
     }.coerceAtLeast(0)
     var lastStep by remember(device.id) { mutableIntStateOf(-1) }
 
-    val heroShape = AbsoluteSmoothCornerShape(
-        cornerRadiusTL = 42.dp,
-        cornerRadiusTR = 20.dp,
-        cornerRadiusBL = 20.dp,
-        cornerRadiusBR = 42.dp,
-        smoothnessAsPercentTL = 70,
-        smoothnessAsPercentTR = 70,
-        smoothnessAsPercentBL = 70,
-        smoothnessAsPercentBR = 70
-    )
-
     Card(
-        shape = heroShape,
+        shape = DeviceCardShape,
         colors = CardDefaults.cardColors(
             containerColor = if (device.isRemote) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.tertiaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(DeviceCardPadding),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(62.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(
-                                    alpha = if (device.isConnecting) 0.18f else 0.12f
-                                ),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (device.isConnecting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(34.dp),
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                trackColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f),
-                                strokeWidth = 4.dp,
-                                strokeCap = StrokeCap.Round
-                            )
-                        } else {
-                            Icon(
-                                imageVector = device.icon,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
+            DeviceCardHeader(
+                icon = {
+                    if (device.isConnecting) {
+                        DeviceCardSpinner()
+                    } else {
+                        Icon(
+                            imageVector = device.icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
                     }
-                }
-
-                // La columna de texto dicta la altura de la Row
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                },
+                title = {
                     Text(
                         text = device.title,
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        maxLines = 2
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-
+                },
+                status = {
                     val statusText = buildString {
                         append(device.subtitle)
                         append(" • ")
                         append(device.connectionLabel)
                     }
-
                     Text(
                         text = if (device.isConnecting && device.isRemote) stringResource(R.string.cast_connecting_ellipsis) else statusText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                },
+                actions = {
                     if (device.isRemote) {
-                        Button(
-                            onClick = onDisconnect,
-                            enabled = !device.isConnecting,
-                            shape = RoundedCornerShape(50),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                            ),
-                            modifier = Modifier
-                                .height(46.dp)
-                                .padding(top = 4.dp)
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(22.dp),
-                                painter = painterResource(R.drawable.rounded_mimo_disconnect_24),
-                                contentDescription = stringResource(R.string.cast_disconnect),
-                            )
-                            Spacer(
-                                modifier = Modifier.width(6.dp)
-                            )
-                            Text(stringResource(R.string.cast_disconnect))
-                        }
+                        DeviceCardDisconnectButton(onClick = onDisconnect, enabled = !device.isConnecting)
                     }
                 }
-            }
+            )
 
-            // Sección de Volumen (Sin cambios)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (device.isRemote) stringResource(R.string.cast_volume_device) else stringResource(R.string.cast_volume_phone),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                    Text(
-                        text = buildVolumeLabel(sliderValue, device.volumeRange.endInclusive),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-                val interactionSource = remember { MutableInteractionSource() }
-                Slider(
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DeviceVolumeSlider(
                     value = sliderValue.coerceIn(device.volumeRange.start, device.volumeRange.endInclusive),
+                    valueRange = device.volumeRange,
+                    description = if (device.isRemote) stringResource(R.string.cast_volume_device) else stringResource(R.string.cast_volume_phone),
                     onValueChange = { newValue ->
                         sliderValue = newValue
                         val quantized = if (device.volumeRange.endInclusive <= 1f) {
@@ -1709,36 +1632,9 @@ private fun ActiveDeviceHero(
                         }
                         onVolumeChange(newValue)
                     },
-                    valueRange = device.volumeRange,
-                    track = { sliderState ->
-                        SliderDefaults.Track(
-                            sliderState = sliderState,
-                            modifier = Modifier
-                                .height(30.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            colors = SliderDefaults.colors(
-                                activeTrackColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                                inactiveTrackColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.2f),
-                                thumbColor = MaterialTheme.colorScheme.onTertiary
-                            )
-                        )
-                    },
-                    thumb = { sliderState ->
-                        SliderDefaults.Thumb(
-                            modifier = Modifier
-                                .height(36.dp),
-                            interactionSource = interactionSource,
-                            sliderState = sliderState,
-                            colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.onTertiaryContainer)
-                        )
-                    },
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = MaterialTheme.colorScheme.tertiary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
-                        thumbColor = MaterialTheme.colorScheme.onTertiary
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.weight(1f)
                 )
+                DeviceCardVolumeNumber(buildVolumeLabel(sliderValue, device.volumeRange.endInclusive))
             }
         }
     }

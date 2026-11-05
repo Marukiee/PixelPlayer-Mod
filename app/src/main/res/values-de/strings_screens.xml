@@ -202,14 +202,9 @@
 
     <!-- GenreDetailScreen -->
     <string name="genre_quick_fill">Genre schnell befüllen</string>
-    <string name="genre_sort_title">Sortieren &amp; Abspielen</string>
-    <string name="genre_sort_action_shuffle">Mischen</string>
-    <string name="genre_sort_by_title">Sortieren nach</string>
     <string name="genre_sort_artist_option">Künstler</string>
     <string name="genre_sort_album_option">Album</string>
     <string name="genre_sort_title_option">Titel</string>
-    <string name="genre_cd_generic_artist">Unbekannter Künstler</string>
-    <string name="genre_shuffle_label">%1$s Mischen</string>
 
     <!-- QuickFillScreen -->
     <string name="quick_fill_select_songs">Songs auswählen</string>

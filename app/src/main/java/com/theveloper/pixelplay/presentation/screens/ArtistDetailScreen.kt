@@ -70,8 +70,6 @@ import androidx.navigation.NavController
 import com.theveloper.pixelplay.data.model.Artist
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.presentation.components.CollapsibleCommonTopBar
-import com.theveloper.pixelplay.presentation.components.ExpressiveScrollBar
-import com.theveloper.pixelplay.ui.theme.LocalShowScrollbar
 import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
 import com.theveloper.pixelplay.presentation.components.PlaylistBottomSheet
 import com.theveloper.pixelplay.presentation.components.SmartImageCompactListTargetSize
@@ -283,15 +281,6 @@ fun ArtistDetailScreen(
                             .forEach { staleKey -> expandedSections.remove(staleKey) }
                     }
 
-                    val isScrollbarEnabled = LocalShowScrollbar.current
-                    val showScrollBar by remember(isScrollbarEnabled) {
-                        derivedStateOf {
-                            isScrollbarEnabled &&
-                            collapseFraction > 0.95f &&
-                                (lazyListState.canScrollForward || lazyListState.canScrollBackward)
-                        }
-                    }
-
                     LazyColumn(
                         state = lazyListState,
                         modifier = Modifier
@@ -304,7 +293,7 @@ fun ArtistDetailScreen(
                         contentPadding = PaddingValues(
                             top = minTopBarHeight + 8.dp,
                             start = 16.dp,
-                            end = if (showScrollBar) 24.dp else 16.dp,
+                            end = 16.dp,
                             bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp
                         )
                     ) {
@@ -391,18 +380,6 @@ fun ArtistDetailScreen(
                         }
 
 
-                    }
-
-                    if (showScrollBar) {
-                        ExpressiveScrollBar(
-                            listState = lazyListState,
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(
-                                    top = minTopBarHeight + 12.dp,
-                                    bottom = MiniPlayerHeight + systemNavBarInset + 8.dp
-                                )
-                        )
                     }
 
                     if (UseSharedCollapsibleTopBarProbe) {

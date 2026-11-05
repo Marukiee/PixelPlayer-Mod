@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.viewmodel
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -115,7 +116,7 @@ data class SettingsUiState(
     val replayGainUseAlbumGain: Boolean = false,
     val isSafeTokenLimitEnabled: Boolean = true,
     val showScrollbar: Boolean = true,
-    val showSongQualityBadge: Boolean = true
+    val showSongQualityBadge: Boolean = false
 )
 
 data class FailedSongInfo(
@@ -1403,6 +1404,15 @@ class SettingsViewModel @Inject constructor(
 
     fun setNavidromeFavoritesSyncIntervalHours(hours: Int) {
         viewModelScope.launch { userPreferencesRepository.setNavidromeFavoritesSyncIntervalHours(hours) }
+    }
+
+    val navidromeLoggedIn: StateFlow<Boolean> = navidromeRepository.isLoggedInFlow
+
+    /** Who is logged in where, for the settings row. */
+    fun navidromeAccountLabel(): String? {
+        val username = navidromeRepository.username ?: return null
+        val host = navidromeRepository.serverUrl?.toHttpUrlOrNull()?.host ?: return username
+        return "$username, $host"
     }
 
     fun syncFavoritesToNavidromeNow() {

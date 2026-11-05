@@ -202,14 +202,9 @@
 
     <!-- GenreDetailScreen -->
     <string name="genre_quick_fill">Türü Hızlı Doldur</string>
-    <string name="genre_sort_title">Sırala &amp; Oynat</string>
-    <string name="genre_sort_action_shuffle">Karıştır</string>
-    <string name="genre_sort_by_title">Sıralama Kriteri</string>
     <string name="genre_sort_artist_option">Sanatçı</string>
     <string name="genre_sort_album_option">Albüm</string>
     <string name="genre_sort_title_option">Başlık</string>
-    <string name="genre_cd_generic_artist">Genel sanatçı</string>
-    <string name="genre_shuffle_label">%1$s Karışık</string>
 
     <!-- QuickFillScreen -->
     <string name="quick_fill_select_songs">Şarkıları Seç</string>

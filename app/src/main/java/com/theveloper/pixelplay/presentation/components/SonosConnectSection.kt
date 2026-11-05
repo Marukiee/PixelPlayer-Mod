@@ -1,12 +1,28 @@
 package com.theveloper.pixelplay.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.material.icons.automirrored.rounded.VolumeOff
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AddLink
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.MoreVert
@@ -45,7 +61,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,10 +79,10 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.material.icons.rounded.SpeakerGroup
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -80,7 +95,6 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -485,45 +499,27 @@ internal fun SonosActiveCard(
     onDisconnect: () -> Unit,
     onOpenGroup: () -> Unit,
     onGroupVolume: (Int) -> Unit,
-    onSpeakerVolume: (String, Int) -> Unit,
-    onToggleMute: () -> Unit
+    onSpeakerVolume: (String, Int) -> Unit
 ) {
-    val heroShape = AbsoluteSmoothCornerShape(
-        cornerRadiusTL = 42.dp,
-        cornerRadiusTR = 20.dp,
-        cornerRadiusBL = 20.dp,
-        cornerRadiusBR = 42.dp,
-        smoothnessAsPercentTL = 70,
-        smoothnessAsPercentTR = 70,
-        smoothnessAsPercentBL = 70,
-        smoothnessAsPercentBR = 70
-    )
     val onContainer = MaterialTheme.colorScheme.onTertiaryContainer
-    val iconShape = MaterialShapes.Cookie9Sided.toShape()
-    Card(
-        shape = heroShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    val container = MaterialTheme.colorScheme.tertiaryContainer
+    val haptics = LocalHapticFeedback.current
+    val grouped = state.group.members.size > 1
+    var roomsOpen by rememberSaveable { mutableStateOf(false) }
+    val showRooms = grouped && roomsOpen
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            shape = DeviceCardShape,
+            colors = CardDefaults.cardColors(containerColor = container)
         ) {
-            // No intrinsic height here: it would hold on to the old two-line title and end in a jump.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(DeviceCardPadding),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(62.dp)
-                        .background(onContainer.copy(alpha = 0.12f), iconShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                        val grouped = state.group.members.size > 1
+                DeviceCardHeader(
+                    icon = {
                         AnimatedContent(
                             targetState = if (state.isConnecting) 0 else if (grouped) 2 else 1,
                             transitionSpec = {
@@ -533,13 +529,7 @@ internal fun SonosActiveCard(
                             label = "sonosCardIcon"
                         ) { kind ->
                             if (kind == 0) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(34.dp),
-                                    color = onContainer,
-                                    trackColor = onContainer.copy(alpha = 0.2f),
-                                    strokeWidth = 4.dp,
-                                    strokeCap = StrokeCap.Round
-                                )
+                                DeviceCardSpinner()
                             } else {
                                 Icon(
                                     imageVector = if (kind == 2) Icons.Rounded.SpeakerGroup else Icons.Rounded.Speaker,
@@ -548,115 +538,179 @@ internal fun SonosActiveCard(
                                 )
                             }
                         }
-                }
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AnimatedContent(
-                        targetState = state.group.stackedNames,
-                        transitionSpec = {
-                            (fadeIn(sonosMotion.defaultEffectsSpec()) + slideInVertically(sonosMotion.defaultSpatialSpec()) { it / 3 }) togetherWith
-                                (fadeOut(sonosMotion.fastEffectsSpec()) + slideOutVertically(sonosMotion.fastSpatialSpec()) { -it / 3 }) using
-                                SizeTransform(clip = false) { _, _ -> sonosMotion.defaultSpatialSpec() }
-                        },
-                        label = "sonosCardTitle"
-                    ) { name ->
-                        Text(
-                            text = name,
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = onContainer,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    },
+                    title = {
+                        // The same name and count as the pill in the player.
+                        AnimatedContent(
+                            targetState = state.group.coordinator.name to state.group.members.size - 1,
+                            transitionSpec = {
+                                (fadeIn(sonosMotion.defaultEffectsSpec()) + slideInVertically(sonosMotion.defaultSpatialSpec()) { it / 3 }) togetherWith
+                                    (fadeOut(sonosMotion.fastEffectsSpec()) + slideOutVertically(sonosMotion.fastSpatialSpec()) { -it / 3 }) using
+                                    SizeTransform(clip = false) { _, _ -> sonosMotion.defaultSpatialSpec() }
+                            },
+                            label = "sonosCardTitle"
+                        ) { (name, extra) ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = onContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                // Apart from the name, so a long room name can never cut the count off.
+                                if (extra > 0) {
+                                    Text(
+                                        text = "+$extra",
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = onContainer,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    status = {
+                        val status = when {
+                            state.isConnecting -> stringResource(R.string.sonos_connecting)
+                            else -> stringResource(R.string.sonos_section_title) + " • " +
+                                stringResource(if (state.isPlaying) R.string.sonos_playing else R.string.sonos_paused)
+                        }
+                        AnimatedContent(
+                            targetState = status,
+                            transitionSpec = { fadeIn(sonosMotion.defaultEffectsSpec()) togetherWith fadeOut(sonosMotion.fastEffectsSpec()) },
+                            label = "sonosCardStatus"
+                        ) { text ->
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = onContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    },
+                    actions = {
+                        DeviceCardButton(
+                            description = stringResource(R.string.sonos_group_button),
+                            onClick = onOpenGroup,
+                            enabled = !state.isConnecting,
+                            containerColor = onContainer,
+                            contentColor = container
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_output_speaker_add),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        DeviceCardDisconnectButton(onClick = onDisconnect, enabled = !state.isConnecting)
                     }
-                    val status = when {
-                        state.isConnecting -> stringResource(R.string.sonos_connecting)
-                        else -> stringResource(R.string.sonos_section_title) + " • " +
-                            stringResource(if (state.isPlaying) R.string.sonos_playing else R.string.sonos_paused)
-                    }
-                    AnimatedContent(
-                        targetState = status,
-                        transitionSpec = { fadeIn(sonosMotion.defaultEffectsSpec()) togetherWith fadeOut(sonosMotion.fastEffectsSpec()) },
-                        label = "sonosCardStatus"
-                    ) { text ->
-                        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = onContainer, maxLines = 1)
-                    }
-                }
-            }
-
-            // Full width so neither label gets cut off, also in Dutch.
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = onDisconnect,
-                    enabled = !state.isConnecting,
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(46.dp)
-                ) {
-                    Icon(
-                        modifier = Modifier.size(22.dp),
-                        painter = painterResource(R.drawable.rounded_mimo_disconnect_24),
-                        contentDescription = null
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.cast_disconnect), maxLines = 1)
-                }
-                Button(
-                    onClick = onOpenGroup,
-                    enabled = !state.isConnecting,
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = onContainer,
-                        contentColor = MaterialTheme.colorScheme.tertiaryContainer
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(46.dp)
-                ) {
-                    Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.sonos_group_button), maxLines = 1)
-                }
-            }
-
-            val grouped = state.group.members.size > 1
-            VolumeRow(
-                label = stringResource(if (grouped) R.string.sonos_group_volume else R.string.sonos_volume),
-                value = state.groupVolume,
-                onValueChange = onGroupVolume,
-                prominent = true,
-                muted = state.isMuted,
-                onToggleMute = onToggleMute.takeIf { !state.isConnecting }
-            )
-            AnimatedRows(
-                items = if (grouped) state.group.members else emptyList(),
-                key = { it.uuid },
-                spacing = 10.dp
-            ) { speaker ->
-                VolumeRow(
-                    label = speaker.name,
-                    value = state.speakerVolumes[speaker.uuid],
-                    onValueChange = { onSpeakerVolume(speaker.uuid, it) },
-                    prominent = false
                 )
+
+                VolumeRow(
+                    value = state.groupVolume,
+                    description = stringResource(if (grouped) R.string.sonos_group_volume else R.string.sonos_volume),
+                    onValueChange = onGroupVolume,
+                    prominent = true,
+                    muted = state.isMuted
+                )
+            }
+        }
+        AnimatedVisibility(
+            visible = grouped,
+            enter = expandVertically(RowSizeSpec) + fadeIn(sonosMotion.defaultEffectsSpec()),
+            exit = shrinkVertically(RowSizeSpec) + fadeOut(sonosMotion.fastEffectsSpec())
+        ) {
+            Card(
+                modifier = Modifier.padding(top = DeviceCardGap),
+                shape = DeviceCardShape,
+                colors = CardDefaults.cardColors(containerColor = container)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // The sheet grows upward, so the speakers open above the button and the button stays under the finger.
+                    AnimatedVisibility(
+                        visible = showRooms,
+                        enter = expandVertically(RowSizeSpec, expandFrom = Alignment.Bottom) + fadeIn(sonosMotion.defaultEffectsSpec()),
+                        exit = shrinkVertically(RowSizeSpec, shrinkTowards = Alignment.Bottom) + fadeOut(sonosMotion.fastEffectsSpec())
+                    ) {
+                        Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
+                            AnimatedRows(items = state.group.members, key = { it.uuid }) { speaker ->
+                                // A thin slider on a line of its own needs less height than the 48.dp a slider asks for.
+                                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 40.dp) {
+                                    VolumeRow(
+                                        value = state.speakerVolumes[speaker.uuid],
+                                        description = speaker.name,
+                                        onValueChange = { onSpeakerVolume(speaker.uuid, it) },
+                                        prominent = false,
+                                        leading = { VolumeName(speaker.name) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    val arrowTurn by animateFloatAsState(
+                        targetValue = if (showRooms) 0f else 180f,
+                        animationSpec = sonosMotion.defaultEffectsSpec(),
+                        label = "speakersArrow"
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                onClickLabel = stringResource(if (showRooms) R.string.sonos_hide_rooms else R.string.sonos_show_rooms),
+                                role = Role.Button
+                            ) {
+                                haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                                roomsOpen = !roomsOpen
+                            }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.sonos_individual_volume),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = onContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(onContainer.copy(alpha = 0.12f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.ExpandMore,
+                                contentDescription = null,
+                                tint = onContainer,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .graphicsLayer { rotationZ = arrowTurn }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+/** One line: what it is about, the slider, the number. Keeps the slider's own value while dragging. */
 @Composable
 private fun VolumeRow(
-    label: String,
     value: Int?,
+    description: String,
     onValueChange: (Int) -> Unit,
     prominent: Boolean,
-    muted: Boolean = false,
-    onToggleMute: (() -> Unit)? = null
+    leading: @Composable () -> Unit = {},
+    muted: Boolean = false
 ) {
-    val onContainer = MaterialTheme.colorScheme.onTertiaryContainer
     val haptics = LocalHapticFeedback.current
     var sliderValue by remember { mutableFloatStateOf(value?.toFloat() ?: 0f) }
     var dragging by remember { mutableStateOf(false) }
@@ -667,56 +721,9 @@ private fun VolumeRow(
         animationSpec = sonosMotion.defaultEffectsSpec(),
         label = "volumeMutedAlpha"
     )
-    Column(verticalArrangement = Arrangement.spacedBy(if (prominent) 8.dp else 2.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = if (prominent) MaterialTheme.typography.titleSmall else MaterialTheme.typography.labelLarge,
-                color = onContainer,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = value?.let { sliderValue.toInt().toString() } ?: "",
-                style = MaterialTheme.typography.labelMedium,
-                color = onContainer
-            )
-            if (onToggleMute != null) {
-                IconButton(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
-                        onToggleMute()
-                    },
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (muted) onContainer else onContainer.copy(alpha = 0.12f),
-                        contentColor = if (muted) MaterialTheme.colorScheme.tertiaryContainer else onContainer
-                    ),
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    AnimatedContent(
-                        targetState = muted,
-                        transitionSpec = {
-                            (fadeIn(sonosMotion.defaultEffectsSpec()) + scaleIn(sonosMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
-                                (fadeOut(sonosMotion.fastEffectsSpec()) + scaleOut(sonosMotion.fastSpatialSpec(), targetScale = 0.6f))
-                        },
-                        label = "muteIcon"
-                    ) { isMuted ->
-                        Icon(
-                            imageVector = if (isMuted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
-                            contentDescription = stringResource(if (isMuted) R.string.sonos_unmute else R.string.sonos_mute),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-        }
-        val interactionSource = remember { MutableInteractionSource() }
-        Slider(
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        leading()
+        DeviceVolumeSlider(
             value = sliderValue,
             onValueChange = { v ->
                 dragging = true
@@ -729,36 +736,215 @@ private fun VolumeRow(
                 }
             },
             onValueChangeFinished = { dragging = false },
-            valueRange = 0f..100f,
+            description = description,
+            prominent = prominent,
             enabled = value != null,
-            interactionSource = interactionSource,
-            track = { sliderState ->
-                SliderDefaults.Track(
-                    sliderState = sliderState,
-                    modifier = Modifier
-                        .height(if (prominent) 30.dp else 18.dp)
-                        .clip(RoundedCornerShape(if (prominent) 12.dp else 8.dp)),
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = onContainer,
-                        inactiveTrackColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.2f),
-                        disabledActiveTrackColor = onContainer.copy(alpha = 0.3f),
-                        disabledInactiveTrackColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.1f)
-                    )
-                )
-            },
-            thumb = { sliderState ->
-                SliderDefaults.Thumb(
-                    modifier = Modifier.height(if (prominent) 36.dp else 24.dp),
-                    interactionSource = interactionSource,
-                    sliderState = sliderState,
-                    colors = SliderDefaults.colors(thumbColor = onContainer)
-                )
-            },
             modifier = Modifier
-                .fillMaxWidth()
+                .weight(1f)
                 .graphicsLayer { alpha = sliderAlpha }
         )
+        Spacer(Modifier.width(8.dp))
+        DeviceCardVolumeNumber(value?.let { sliderValue.toInt().toString() } ?: "")
     }
+}
+
+/** The name in front of a slider, so the sliders of all speakers start on one line. */
+@Composable
+private fun VolumeName(name: String) {
+    Text(
+        text = name,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onTertiaryContainer,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .width(VolumeNameWidth + 8.dp)
+            .padding(end = 8.dp)
+    )
+}
+
+internal val DeviceCardIconSize = 48.dp
+internal val DeviceCardColumnGap = 12.dp
+
+/** Four equal corners, small enough to keep as much room around the number as along the edges. */
+internal val DeviceCardShape = AbsoluteSmoothCornerShape(
+    cornerRadiusTL = 24.dp,
+    cornerRadiusTR = 24.dp,
+    cornerRadiusBL = 24.dp,
+    cornerRadiusBR = 24.dp,
+    smoothnessAsPercentTL = 70,
+    smoothnessAsPercentTR = 70,
+    smoothnessAsPercentBL = 70,
+    smoothnessAsPercentBR = 70
+)
+internal val DeviceCardGap = 6.dp
+
+/** A volume line keeps touch room below itself, so the bottom looks as wide as the top. */
+internal val DeviceCardPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 12.dp)
+
+private val VolumeNameWidth = 96.dp
+
+/** Icon, name and status on one line with the buttons: the same for Sonos, Cast and this phone. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun DeviceCardHeader(
+    icon: @Composable () -> Unit,
+    title: @Composable () -> Unit,
+    status: @Composable () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {}
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .size(DeviceCardIconSize)
+                .background(
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.12f),
+                    shape = MaterialShapes.Cookie9Sided.toShape()
+                ),
+            contentAlignment = Alignment.Center
+        ) { icon() }
+        Spacer(Modifier.width(DeviceCardColumnGap))
+        Column(modifier = Modifier.weight(1f)) {
+            title()
+            status()
+        }
+        Spacer(Modifier.width(8.dp))
+        // The 8.dp keeps a 48.dp touch room around every 40.dp button, without overlap.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            content = actions
+        )
+    }
+}
+
+@Composable
+internal fun DeviceCardSpinner() {
+    val color = MaterialTheme.colorScheme.onTertiaryContainer
+    CircularProgressIndicator(
+        modifier = Modifier.size(28.dp),
+        color = color,
+        trackColor = color.copy(alpha = 0.2f),
+        strokeWidth = 3.dp,
+        strokeCap = StrokeCap.Round
+    )
+}
+
+/** A long press says what a control does, like in the library row. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DeviceCardTooltip(description: String, content: @Composable () -> Unit) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(description) } },
+        state = rememberTooltipState()
+    ) { content() }
+}
+
+/** A round button in the device card. */
+@Composable
+internal fun DeviceCardButton(
+    description: String,
+    onClick: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    DeviceCardTooltip(description) {
+        IconButton(
+            onClick = onClick,
+            enabled = enabled,
+            // The default disabled colours drop the surface, and the Group icon has the colour of the card.
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+                disabledContainerColor = containerColor.copy(alpha = containerColor.alpha * 0.38f),
+                disabledContentColor = contentColor.copy(alpha = 0.6f)
+            ),
+            modifier = Modifier
+                .size(40.dp)
+                .semantics { contentDescription = description }
+        ) { content() }
+    }
+}
+
+@Composable
+internal fun DeviceCardDisconnectButton(onClick: () -> Unit, enabled: Boolean = true) {
+    DeviceCardButton(
+        description = stringResource(R.string.cast_disconnect),
+        onClick = onClick,
+        enabled = enabled,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    ) {
+        Icon(
+            modifier = Modifier.size(24.dp),
+            imageVector = Icons.Rounded.Close,
+            contentDescription = null
+        )
+    }
+}
+
+/** The slider of the device card: thick for the main volume, thin for a room. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun DeviceVolumeSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    description: String,
+    modifier: Modifier = Modifier,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
+    prominent: Boolean = true,
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null
+) {
+    val onContainer = MaterialTheme.colorScheme.onTertiaryContainer
+    val interactionSource = remember { MutableInteractionSource() }
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        onValueChangeFinished = onValueChangeFinished,
+        valueRange = valueRange,
+        enabled = enabled,
+        interactionSource = interactionSource,
+        track = { sliderState ->
+            SliderDefaults.Track(
+                sliderState = sliderState,
+                modifier = Modifier
+                    .height(if (prominent) 30.dp else 18.dp)
+                    .clip(RoundedCornerShape(if (prominent) 12.dp else 8.dp)),
+                colors = SliderDefaults.colors(
+                    activeTrackColor = onContainer,
+                    inactiveTrackColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.2f),
+                    disabledActiveTrackColor = onContainer.copy(alpha = 0.3f),
+                    disabledInactiveTrackColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.1f)
+                )
+            )
+        },
+        thumb = { sliderState ->
+            SliderDefaults.Thumb(
+                modifier = Modifier.height(if (prominent) 36.dp else 24.dp),
+                interactionSource = interactionSource,
+                sliderState = sliderState,
+                colors = SliderDefaults.colors(thumbColor = onContainer)
+            )
+        },
+        modifier = modifier.semantics { contentDescription = description }
+    )
+}
+
+@Composable
+internal fun DeviceCardVolumeNumber(number: String) {
+    Text(
+        text = number,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onTertiaryContainer,
+        maxLines = 1,
+        textAlign = TextAlign.End,
+        // Room for 100%, so the slider keeps its width while it moves.
+        modifier = Modifier.widthIn(min = 36.dp)
+    )
 }
 
 /** The Sonos app's Group screen: tick the rooms that should play together. */

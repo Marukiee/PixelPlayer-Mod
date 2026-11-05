@@ -178,6 +178,8 @@ class MusicService : MediaLibraryService() {
     lateinit var sonosController: SonosController
     @Inject
     lateinit var sonosOutputRoute: SonosOutputRoute
+    @Inject
+    lateinit var dripIslandSignal: DripIslandSignal
 
     @Inject
     @AppScope
@@ -270,6 +272,7 @@ class MusicService : MediaLibraryService() {
     companion object {
         private const val TAG = "MusicService_PixelPlay"
         private const val DRIP_REMOTE_NAME = "nl.markmaaktmedia.drip.REMOTE_NAME"
+        private const val DRIP_HIDE_ISLAND = "nl.markmaaktmedia.drip.HIDE_ISLAND"
 
         /** Also used by [LocalOnlyMediaNotificationProvider]; the IDs must stay in sync. */
         const val NOTIFICATION_ID = 101
@@ -923,10 +926,16 @@ class MusicService : MediaLibraryService() {
             }
         }
         serviceScope.launch {
-            // Drip shows this name with the volume in its island.
-            sonosController.remoteVolume.map { it?.group?.displayName }.distinctUntilChanged().collect { name ->
-                mediaSession?.setSessionExtras(name?.let { bundleOf(DRIP_REMOTE_NAME to it) } ?: Bundle.EMPTY)
-            }
+            // Drip shows this name with the volume in its island, and moves away while our panel is open.
+            kotlinx.coroutines.flow.combine(
+                sonosController.remoteVolume.map { it?.group?.displayName }.distinctUntilChanged(),
+                dripIslandSignal.hidden
+            ) { name, hidden ->
+                Bundle().apply {
+                    name?.let { putString(DRIP_REMOTE_NAME, it) }
+                    if (hidden) putBoolean(DRIP_HIDE_ISLAND, true)
+                }
+            }.collect { mediaSession?.setSessionExtras(it) }
         }
 
         val localOnlyProvider = LocalOnlyMediaNotificationProvider(this).also {

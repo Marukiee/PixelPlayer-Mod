@@ -26,8 +26,9 @@
     <string name="sonos_menu_edit_group">Ruimtes groeperen…</string>
     <string name="sonos_menu_ungroup">Groep opheffen</string>
     <string name="sonos_menu_stop">Hier stoppen</string>
-    <string name="sonos_mute">Dempen</string>
-    <string name="sonos_unmute">Dempen opheffen</string>
+    <string name="sonos_individual_volume">Individueel volume</string>
+    <string name="sonos_show_rooms">Speakers tonen</string>
+    <string name="sonos_hide_rooms">Speakers verbergen</string>
     <string name="sonos_rooms_count">%1$d ruimtes</string>
     <string name="cast_connectivity_hint">Wifi en Bluetooth van deze telefoon</string>
 

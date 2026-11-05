@@ -22,5 +22,8 @@
     <string name="home_duration_minutes">%1$d m</string>
     <string name="home_duration_under_minute">&lt;1 m</string>
     <string name="home_open_all">See all</string>
-    <string name="recently_played_header_count">%1$d songs</string>
+    <string name="recently_played_empty">Nothing played yet</string>
+    <string name="recently_played_pick_date">Go to a date</string>
+    <string name="recently_played_play_day">Play this day</string>
+    <string name="recently_played_count_and_time">%1$dx %2$s</string>
 </resources>

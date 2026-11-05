@@ -805,7 +805,7 @@ suspend fun markDirectoryRulesVersionApplied(version: Int) {
     // Flow / setter：
     val showSongQualityBadgeFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
-            preferences[PreferencesKeys.SHOW_SONG_QUALITY_BADGE] ?: true
+            preferences[PreferencesKeys.SHOW_SONG_QUALITY_BADGE] ?: false
         }
     suspend fun setShowSongQualityBadge(enabled: Boolean) {
         dataStore.edit { preferences ->

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 sealed interface NavidromeLoginState {
@@ -19,7 +20,8 @@ sealed interface NavidromeLoginState {
 
 @HiltViewModel
 class NavidromeLoginViewModel @Inject constructor(
-    private val repository: NavidromeRepository
+    private val repository: NavidromeRepository,
+    private val userPreferencesRepository: com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<NavidromeLoginState>(NavidromeLoginState.Idle)
@@ -32,12 +34,20 @@ class NavidromeLoginViewModel @Inject constructor(
             _state.value = NavidromeLoginState.Loading
 
             val result = repository.login(serverUrl, username, password)
+            if (result.isSuccess) suggestCoverAddress()
 
             _state.value = result.fold(
                 onSuccess = { NavidromeLoginState.Success(it) },
                 onFailure = { NavidromeLoginState.Error(it.message ?: "Login failed") }
             )
         }
+    }
+
+    /** Fills in an empty field only: an address somebody saved themselves stays. */
+    private suspend fun suggestCoverAddress() {
+        if (userPreferencesRepository.sonosCoverAddressFlow.first().isNotBlank()) return
+        com.theveloper.pixelplay.data.sonos.SonosTrackResolver.suggestCoverAddress(repository.serverUrl)
+            ?.let { userPreferencesRepository.setSonosCoverAddress(it) }
     }
 
     fun clearError() {

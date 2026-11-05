@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.viewmodel
 
+import com.theveloper.pixelplay.data.model.withoutDuplicateTracks
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.theveloper.pixelplay.data.database.MusicDao
@@ -58,8 +59,9 @@ class HomeViewModel @Inject constructor(
                 val playedBefore = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(REDISCOVER_MIN_AGE_DAYS)
                 musicDao.getFavoriteSongsNotPlayedSince(playedBefore)
                     .shuffled(Random(LocalDate.now().toEpochDay()))
-                    .take(REDISCOVER_POOL_SIZE)
                     .map { it.toSong() }
+                    .withoutDuplicateTracks()
+                    .take(REDISCOVER_POOL_SIZE)
             }
         }
     }
@@ -104,7 +106,7 @@ class HomeViewModel @Inject constructor(
     }
 
     suspend fun songsForGenre(genre: String): List<Song> =
-        withContext(Dispatchers.IO) { musicRepository.getMusicByGenre(genre).first() }
+        withContext(Dispatchers.IO) { musicRepository.getMusicByGenre(genre).first().withoutDuplicateTracks() }
 
     suspend fun songsForArtist(artistId: Long): List<Song> =
         withContext(Dispatchers.IO) { musicRepository.getSongsForArtist(artistId).first() }

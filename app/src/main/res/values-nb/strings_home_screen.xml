@@ -3,10 +3,7 @@
     <!-- Top Bar -->
     <string name="topbar_beta_letter">β</string>
     <string name="topbar_beta_label">Beta</string>
-    <string name="topbar_cd_cloud_streaming">Skystrømming</string>
     <string name="topbar_cd_changelog">Endringslogg</string>
-    <string name="topbar_cloud_streaming_title">Skystrømming</string>
-    <string name="topbar_cloud_streaming_subtitle">Strøm musikk fra dine skykontoer</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -148,9 +145,6 @@
 
     <!-- RecentlyPlayedScreen -->
     <string name="recently_played_title">Nylig spilt</string>
-    <string name="recently_played_action_play_latest">Spill siste</string>
-    <string name="recently_played_empty_title">Ingen nylige avspillinger i %1$s</string>
-    <string name="recently_played_empty_subtitle">Endre tidsrommet eller spill flere sanger for å fylle denne oversikten.</string>
     <string name="recently_played_queue_name">Nylig spilt</string>
     <string name="recently_played_date_today">I dag</string>
     <string name="recently_played_date_yesterday">I går</string>

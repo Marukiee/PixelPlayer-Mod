@@ -44,6 +44,12 @@ enum class SettingsCategory(
         subtitleRes = R.string.settings_category_sonos_subtitle,
         icon = Icons.Rounded.Speaker
     ),
+    NAVIDROME(
+        id = "navidrome",
+        titleRes = R.string.settings_category_navidrome_title,
+        subtitleRes = R.string.settings_category_navidrome_subtitle,
+        iconRes = R.drawable.ic_navidrome_md3
+    ),
     BEHAVIOR(
         id = "behavior",
         titleRes = R.string.settings_category_behavior_title,

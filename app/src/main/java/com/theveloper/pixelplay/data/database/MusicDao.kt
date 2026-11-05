@@ -1722,6 +1722,9 @@ interface MusicDao {
     suspend fun deleteOrphanedArtists()
 
     // --- Favorite Operations ---
+    @Query("SELECT id, title, artist_name AS artist, album_name AS album, duration AS durationMs, content_uri_string AS contentUri FROM songs")
+    suspend fun getSongsForFavoritesSync(): List<FavoriteSyncSongRow>
+
     @Query("UPDATE songs SET is_favorite = :isFavorite WHERE id = :songId")
     suspend fun setFavoriteStatus(songId: Long, isFavorite: Boolean)
 

@@ -202,14 +202,9 @@
 
     <!-- GenreDetailScreen -->
     <string name="genre_quick_fill">Hurtigutfylling av sjanger</string>
-    <string name="genre_sort_title">Sorter og spill</string>
-    <string name="genre_sort_action_shuffle">Bland</string>
-    <string name="genre_sort_by_title">Sorter etter</string>
     <string name="genre_sort_artist_option">Artist</string>
     <string name="genre_sort_album_option">Album</string>
     <string name="genre_sort_title_option">Tittel</string>
-    <string name="genre_cd_generic_artist">Artist</string>
-    <string name="genre_shuffle_label">%1$s-blanding</string>
 
     <!-- QuickFillScreen -->
     <string name="quick_fill_select_songs">Velg sanger</string>

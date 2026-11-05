@@ -3,10 +3,7 @@
     <!-- Top Bar -->
     <string name="topbar_beta_letter">β</string>
     <string name="topbar_beta_label">베타</string>
-    <string name="topbar_cd_cloud_streaming">클라우드 스트리밍</string>
     <string name="topbar_cd_changelog">변경 로그</string>
-    <string name="topbar_cloud_streaming_title">클라우드 스트리밍</string>
-    <string name="topbar_cloud_streaming_subtitle">클라우드 계정에서 음악 스트리밍</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Beta 0.7.5</string>
@@ -147,9 +144,6 @@
 
     <!-- RecentlyPlayedScreen -->
     <string name="recently_played_title">최근 재생한 곡</string>
-    <string name="recently_played_action_play_latest">최신 곡 재생</string>
-    <string name="recently_played_empty_title">%1$s 동안 재생한 곡이 없습니다</string>
-    <string name="recently_played_empty_subtitle">기간을 변경하거나 곡을 더 재생하여 타임라인을 채워보세요.</string>
     <string name="recently_played_queue_name">최근 재생한 곡</string>
     <string name="recently_played_date_today">오늘</string>
     <string name="recently_played_date_yesterday">어제</string>

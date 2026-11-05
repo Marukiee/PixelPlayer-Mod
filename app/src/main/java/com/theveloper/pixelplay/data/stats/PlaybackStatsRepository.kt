@@ -478,6 +478,13 @@ class PlaybackStatsRepository @Inject constructor(
             .toList()
     }
 
+    /** Everything still kept, for looking back through it. [loadPlaybackHistory] is the recent part. */
+    suspend fun loadAllPlaybackHistory(): List<PlaybackHistoryEntry> = withContext(Dispatchers.IO) {
+        readEvents().map { event ->
+            PlaybackHistoryEntry(songId = event.songId, timestamp = event.timestamp.coerceAtLeast(0L))
+        }
+    }
+
     suspend fun importEventsFromBackup(
         events: List<PlaybackEvent>,
         clearExisting: Boolean = true

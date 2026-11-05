@@ -202,14 +202,9 @@
 
     <!-- GenreDetailScreen -->
     <string name="genre_quick_fill">快速填充流派</string>
-    <string name="genre_sort_title">排序与播放</string>
-    <string name="genre_sort_action_shuffle">随机播放</string>
-    <string name="genre_sort_by_title">排序依据</string>
     <string name="genre_sort_artist_option">艺术家</string>
     <string name="genre_sort_album_option">专辑</string>
     <string name="genre_sort_title_option">标题</string>
-    <string name="genre_cd_generic_artist">通用艺术家</string>
-    <string name="genre_shuffle_label">随机播放 %1$s</string>
 
     <!-- QuickFillScreen -->
     <string name="quick_fill_select_songs">选择歌曲</string>

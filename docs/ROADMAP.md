@@ -12,6 +12,7 @@ Volgorde gekozen door Mark (2026-11-02):
    - [ ] Vanaf die volumeschuif ook het volume van de andere speakers in de groep regelen
    - [ ] Animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
    - [x] **Ronde mod.11 en mod.12** (wensen van Mark, 2026-11-02 en 2026-11-04): overzetten op dezelfde plek, speakers vooraf klaar, groepsvolume zoals de Sonos-app, dempknop, drie puntjes, nieuwe indeling, soepel scrollen en krimpen, artiestfoto's, speaker-pil, Spotify overnemen, geen grijze box op de homepage
+   - [x] **Ronde mod.16** (wensen van Mark, 2026-11-05): likes twee kanten op met Navidrome, Navidrome in Instellingen, genrepagina's, homepage en geschiedenis, swipe in lijsten, mediakaart, nieuw Verbinden-paneel
    - [x] Hoes in de Drip-pil: lag aan Drip (koos de mediasessie van de Sonos-app). Opgelost aan de Drip-kant; PixelPlayer hoeft niets
    - [x] Hoesjes in de Sonos-app (zie "Hoesjes in de Sonos-app" hieronder): eigen hoezen via een https-adres dat alleen thuis werkt, geen Deezer
    - [ ] Pauze in het eiland van Drip blijft soms op play staan: lag aan Drip, de kaart bleef op `expandedFallback` hangen zodra er een tweede sessie was. Met een sessie klopt het (12 van 12 op de emulator). Oplossing staat in de Drip-repo op branch `claude/pauze-icoon`, nog niet uitgebracht. PixelPlayer moet `DRIP_REMOTE_NAME` in de session extras blijven zetten zolang hij cast. Afvinken als Mark het met die Drip-versie niet meer ziet
@@ -22,6 +23,29 @@ Volgorde gekozen door Mark (2026-11-02):
 6. [ ] Spotify en PixelPlayer: luisterstatistieken samenvoegen
 7. [ ] Hele app in het Nederlands vertalen
 8. [ ] Tweede variant van de crash na herstarten van de telefoon
+9. [ ] Luistergegevens bij elkaar op de server, gepland voor mod.17 (Mark, 2026-11-04, zie "Luistergegevens naar Navidrome")
+
+## Luistergegevens naar Navidrome
+
+Wens: alles wat Mark luistert op een plek, dus ook offline op de telefoon, later op de server samen met wat via Navidrome op de Sonos speelt. Komt in mod.17, niet in mod.16.
+
+Hoe het nu is:
+
+- **Telefoon:** `ListeningStatsTracker` schrijft elke luisterbeurt naar `files/playback_history.json` (tot ongeveer 730 dagen), ook lokale bestanden en Sonos, want de telefoon speelt dan stil mee. Dit zit in de back-up van de app.
+- **Server:** `MusicService` stuurt alleen `scrobble` voor nummers met een `navidrome://`-id, en alleen als een nummer vanzelf afloopt. Zonder tijdstip en zonder nieuwe poging als er geen verbinding is. Overslaan telt niet. Lokale bestanden gaan nooit mee, ook niet als ze via hun Navidrome-kopie op de Sonos spelen.
+
+Plan als Mark het wil:
+
+- Een wachtrij met luisterbeurten die een herstart overleeft (zoals `pending` bij de likes), gevuld op de plek waar `recordPlayback` al beslist dat iets telt. De losse `scrobble`-aanroepen in `MusicService` vervallen dan, anders telt alles dubbel.
+- Versturen met `scrobble(id, time, submission = true)` via WorkManager zodra er verbinding is. Koppelen met `FavoriteSongIndex`, dezelfde koppeling als de likes.
+- De oude geschiedenis eenmalig meesturen is een aparte keuze: de play counts lopen dan in een keer op, en Navidrome-nummers die al een scrobble kregen tellen dubbel als dat niet wordt uitgesloten.
+
+Grenzen:
+
+- Alleen wat op de server staat, want `scrobble` vraagt een song-id. Een nummer dat alleen op de telefoon staat blijft lokaal, tenzij het rechtstreeks naar ListenBrainz of Last.fm gaat (die werken op titel en artiest).
+- Navidrome bewaart een volledige geschiedenis met tijdstippen pas sinds 0.59.0, daarvoor alleen play count en laatst gespeeld. Versie op de server eerst nakijken.
+- De documentatie noemt nog geen manier om die geschiedenis terug te lezen ("future features"). De app blijft dus zijn eigen geschiedenis tonen en de server krijgt een kopie. Navidrome kan per gebruiker doorsturen naar Last.fm of ListenBrainz; of een late scrobble daar met het oude tijdstip aankomt moet nog getest worden.
+- Raakt punt 6 hierboven: Last.fm of ListenBrainz kan de gezamenlijke plek worden, ook voor Spotify.
 
 ## Hele app in het Nederlands vertalen
 
@@ -85,6 +109,16 @@ Gebouwd in 0.7.5-mod.9. Hoe het werkt:
 - Sessiespeler (0.7.5-mod.15): een nieuwe `SonosSessionPlayer` na een spelerwissel had nog niets gemeld. Na een disconnect bleef de sessie dan op remote staan, dus `announceDevice` na elke wissel.
 - Korte veeg in Connect device (0.7.5-mod.15): `ModalBottomSheet` in Material3 1.5.0-alpha22 negeert de drempels van `SheetState`. Hij sluit pas voorbij de helft van het paneel of als de vinger bij het loslaten nog snel gaat, dus een korte veeg die afremt veert terug. `closesOnShortPull` telt de vinger vanaf het neerzetten en sluit vanaf 24 dp omlaag, als de sheet echt meebewoog (een lijst of schuif telt dus niet). Testen: met een sessie opent het paneel op Controls en is het korter, dus een veeg op de plek van de Devices-tab raakt dan de scrim, en daar sluit een tik ook.
 - Mediakaart bij volgend nummer (0.7.5-mod.16): `DefaultMediaNotificationProvider` levert de hoes later via de callback, onder zijn eigen id 1001. `startForeground` met een ander id laat Android de melding 101 weghalen, en SysUI zet de kaart dan even op zijn resume-stand (`Converting ... to resume` in de log). `LocalOnlyMediaNotificationProvider` zet nu ook op de callback id 101. Testen: `notification_canceled` en `notification_enqueue ...,1001` in `logcat -b events`, met een nummer dat echt een hoes in de sessie heeft. Navidrome-nummers op de emulator hebben die niet (`navidrome_cover://` staat niet in de artwork-schema's), dus daar zie je de fout niet.
+- Likes met Navidrome (0.7.5-mod.16): `NavidromeFavoritesSync` en `NavidromeFavoritesMerge`. Drierichtingsmerge met een base per account, dus een eerste sync voegt alleen toe. Een unlike in de app is een eigen gebeurtenis in `pending` en wordt nooit afgeleid uit een verschil, want een nummer dat uit de bibliotheek verdwijnt is geen unlike. Verdwijnt in een keer 20 of meer en meer dan de helft van de base, dan blijven de likes staan en gaan de sterren terug (Navidrome leidt id's af van bestandspaden). Koppelen via de cache `navidrome_songs`: naar de server mag een remaster nog matchen, terug alleen dezelfde titel. App naar server duurt ongeveer 2 s, server naar app gebeurt bij openen van de app (60 s pauze ertussen) en op het interval.
+- Navidrome in Instellingen (0.7.5-mod.16): eigen categorie, de cloudknop op de homepage is weg. Accounts staat onderaan Instellingen.
+- Hoesadres-suggestie (0.7.5-mod.16): `SonosTrackResolver.suggestCoverAddress`, alleen bij een https-login die niet via Tailscale loopt en alleen in een leeg veld. Bij inloggen via Tailscale http is er niets af te leiden.
+- Drip (0.7.5-mod.16): Boolean `nl.markmaaktmedia.drip.HIDE_ISLAND` in de session extras zolang Connect device open staat (`DripIslandSignal`), naast `nl.markmaaktmedia.drip.REMOTE_NAME`.
+- Dubbele nummers (0.7.5-mod.16): `withoutDuplicateTracks`, zelfde titel, zelfde artiest en hooguit 3 s verschil is hetzelfde nummer, het lokale bestand wint. Live-versies met een andere lengte blijven. Geldt voor genre-pagina's, Daily Mix, Your Mix en Herontdekken.
+- Homepage en geschiedenis (0.7.5-mod.16): volgorde Your Mix, Listened this week, Made for you, artiesten, Rediscover, Recently Played als lijst met See all. Het scherm toont alle dagen uit `playback_history.json` met dagstrip en kalender. Genre-mixen slaan "Unknown Genre" over: die naam komt uit de statistieken en bestaat niet als genre, dus de kaart opende een lege pagina.
+- Swipe in lijsten (0.7.5-mod.16): `modifier` van `EnhancedSongListItem` zit nu buiten de swipe (`SongSwipeContainer`), en het paneel loopt door tot onder de rij. Geldt voor alle lijsten.
+- Standaardinstellingen (0.7.5-mod.16): palet Vibrant (`AlbumArtPaletteStyle.default`), kwaliteitslabels uit. Wie zelf al iets koos, houdt dat.
+- Luistertijd op de homepage (0.7.5-mod.16): `BasicText` met `TextAutoSize`. Een gewone `Text` met `maxLines = 1` liet het laatste woord stil wegvallen ("1 h 58" zonder m).
+- Apparaatpaneel (0.7.5-mod.16): `DeviceCardHeader`, `DeviceVolumeSlider` en `DeviceCardShape` (vier gelijke hoeken) in `SonosConnectSection.kt`, gedeeld door de Sonos-kaart en `ActiveDeviceHero`, zodat telefoon, Cast en Sonos dezelfde opbouw hebben. De schuiven zijn de oude; het getal staat er los naast. Bij een groep staat onder de kaart een tweede kaart met de knop Individueel volume. De speakers openen boven de knop, omdat het vel omhoog groeit; zo blijft de knop onder de vinger en raakt een tweede tik nooit een schuif. Geen dempknop in de kaart en geen schaduw: de kaart ligt in het vel en zweeft niet, en een schaduw zou in het gat tussen de twee kaarten vallen. Verbreken is het kruisje (`Icons.Rounded.Close`). Groeperen is een speaker met een plusje over de hoek (`ic_output_speaker_add`), omdat de schakel op een paperclip leek. Rond het plusje loopt een smalle uitsparing in dezelfde vorm, gemaakt met een `clip-path`. De iconen in de ronde knoppen zijn 24 dp; in het menu met drie puntjes staan nog de schakels (`Link`, `AddLink`, `LinkOff`). `closesOnShortPull` sluit alleen als de vinger meer omlaag dan opzij ging, anders sloot een trage veeg van Devices naar Controls het paneel. Lang indrukken toont het label, zoals in `LibraryActionRow`.
 
 ### Hoesjes in de Sonos-app
 

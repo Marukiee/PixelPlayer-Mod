@@ -3,10 +3,7 @@
         <!-- Top Bar -->
     <string name="topbar_beta_letter">β</string>
     <string name="topbar_beta_label">Бета</string>
-    <string name="topbar_cd_cloud_streaming">Облачный стриминг</string>
     <string name="topbar_cd_changelog">Список изменений</string>
-    <string name="topbar_cloud_streaming_title">Облачный стриминг</string>
-    <string name="topbar_cloud_streaming_subtitle">Слушайте музыку из своих облачных аккаунтов</string>
 
     <!-- BetaInfoBottomSheet -->
     <string name="beta_sheet_version">Бета 0.7.5</string>
@@ -150,9 +147,6 @@
 
     <!-- RecentlyPlayedScreen -->
     <string name="recently_played_title">Недавно прослушанные</string>
-    <string name="recently_played_action_play_latest">Воспроизвести последнее</string>
-    <string name="recently_played_empty_title">Нет недавних прослушиваний за %1$s</string>
-    <string name="recently_played_empty_subtitle">Измените период или прослушайте больше песен, чтобы заполнить эту временную шкалу.</string>
     <string name="recently_played_queue_name">Недавно прослушанные</string>
     <string name="recently_played_date_today">Сегодня</string>
     <string name="recently_played_date_yesterday">Вчера</string>
