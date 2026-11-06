@@ -28,9 +28,12 @@ Volgorde gekozen door Mark (2026-11-02):
    - [ ] Oude scrobbles op de server staan dubbel (zelfde seconde, van voor mod.17). Opruimen is een keuze van Mark
    - [ ] Oude geschiedenis eenmalig meesturen: aparte keuze van Mark, zie hieronder
 10. [ ] Site en screenshots bijwerken naar het Verbinden-paneel van mod.16: `scherm-3` en de hero op de site, en de map met screenshots. Pas als Mark het zegt (Mark, 2026-11-05)
-11. [ ] Muziek bedienen in het Verbinden-paneel, zonder het eerst weg te drukken: mooi geïntegreerd aan de onderkant of bovenkant, met een soepele overgang in en uit het paneel. Eerst voorbeelden maken en Mark laten kiezen (Mark, 2026-11-06)
+11. [x] Muziek bedienen in het Verbinden-paneel, zonder het eerst weg te drukken (0.7.5-mod.19): Mark koos variant A, de mini player boven het paneel. Een kopie van de mini ligt precies over de echte tot de rand van het paneel hem bereikt, en rijdt dan mee. Knoppen, vegen en omlaag trekken werken. De kopie staat buiten de grenzen van het paneel, dus uiautomator ziet hem niet, en een schermlezer misschien ook niet
 12. [x] Volumeschuif gaat met de volumetoetsen soepel naar het nieuwe volume in plaats van in sprongen (0.7.5-mod.18, `glidingVolume`)
 13. [x] Hapering bij het uitklappen van individueel volume: de schuiven worden nu vooraf gebouwd, de veer loopt korter uit, en de ring onder het paneel tikt nog maar eens per seconde (0.7.5-mod.18). Gemeten op de emulator; Mark kijkt op de telefoon of het goed voelt
+14. [ ] Genrepagina opnieuw (Mark, 2026-11-06): de hoezen in de kop hoger en beter te zien, ze mogen in hun vormen blijven maar de kop krijgt een nieuw ontwerp. Eerst voorbeelden laten kiezen
+15. [ ] Knoppen Play it en Shuffle krijgen dezelfde animatie als de knoppen in de speler (Mark, 2026-11-06)
+16. [ ] Totale duur onder de naam als "3 uur en 3 minuten" in plaats van 03:03:12 (Mark, 2026-11-06)
 
 ## Luistergegevens naar Navidrome
 

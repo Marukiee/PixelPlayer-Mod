@@ -1,5 +1,9 @@
 package com.theveloper.pixelplay.presentation.components
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.geometry.Rect
 import android.widget.Toast
 import com.theveloper.pixelplay.presentation.components.ExpressiveOfflineDialog
 import androidx.activity.compose.BackHandler
@@ -421,6 +425,7 @@ fun UnifiedPlayerSheetV2(
     val onQueueSheetHeightPxChange = queueSheetState.onQueueSheetHeightPxChange
 
     val castSheetState = rememberCastSheetState()
+    val miniPlayerBounds = remember { mutableStateOf<Rect?>(null) }
     val sheetBackAndDragState = rememberSheetBackAndDragState(
         showPlayerContentArea = showPlayerContentArea,
         currentSheetContentState = currentSheetContentState
@@ -675,6 +680,7 @@ fun UnifiedPlayerSheetV2(
                                     placeable.placeRelative(startPaddingPx, 0)
                                 }
                             }
+                            .onGloballyPositioned { miniPlayerBounds.value = it.boundsInWindow() }
                             // Always apply Modifier.shadow with the dynamic elevation
                             // (0.dp renders nothing). Keeping the modifier chain
                             // structurally stable avoids the costly relayout/redraw
@@ -865,7 +871,36 @@ fun UnifiedPlayerSheetV2(
         albumColorScheme = albumColorScheme,
         playerViewModel = playerViewModel,
         onDismiss = castSheetState.dismissCastSheet,
-        onExpansionChanged = castSheetState.onCastExpansionChanged
+        onExpansionChanged = castSheetState.onCastExpansionChanged,
+        // Opened from the full player there is no mini player on the screen to take over from.
+        miniPlayerRest = { miniPlayerBounds.value.takeIf { currentSheetContentState == PlayerSheetState.COLLAPSED } },
+        miniPlayerAbovePanel = { close, modifier ->
+            val song = infrequentPlayerState.currentSong
+            val scheme = miniPlayerScheme
+            if (song != null && scheme != null) {
+                MiniPlayerAbovePanel(
+                    song = song,
+                    scheme = scheme,
+                    shape = if (currentSheetContentState == PlayerSheetState.COLLAPSED) {
+                        sheetInteractionState.playerShadowShape
+                    } else {
+                        RoundedCornerShape(24.dp)
+                    },
+                    infrequentPlayerState = infrequentPlayerState,
+                    isCastConnecting = isCastConnecting,
+                    isPreparingPlayback = isPreparingPlayback,
+                    playerViewModel = playerViewModel,
+                    currentPositionProvider = positionToDisplayProvider,
+                    swipeHandler = miniPlayerSwipeGestureHandler,
+                    onOutputClick = close,
+                    onBodyClick = {
+                        close()
+                        if (currentSheetContentState == PlayerSheetState.COLLAPSED) playerViewModel.togglePlayerSheetState()
+                    },
+                    modifier = modifier
+                )
+            }
+        }
     )
 
     UnifiedPlayerSaveQueueLayer(

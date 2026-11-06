@@ -119,6 +119,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -188,7 +195,9 @@ import kotlin.math.roundToInt
 fun CastBottomSheet(
     playerViewModel: PlayerViewModel,
     onDismiss: () -> Unit,
-    onExpansionChanged: (Float) -> Unit = {}
+    onExpansionChanged: (Float) -> Unit = {},
+    miniPlayerRest: () -> Rect? = { null },
+    miniPlayerAbovePanel: (@Composable (close: () -> Unit, modifier: Modifier) -> Unit)? = null
 ) {
     val routes by playerViewModel.castRoutes.collectAsStateWithLifecycle()
     val selectedRoute by playerViewModel.selectedRoute.collectAsStateWithLifecycle()
@@ -402,6 +411,12 @@ fun CastBottomSheet(
         }
     }
 
+    val closePanel: () -> Unit = {
+        closeScope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+    }
+    val panelColor = MaterialTheme.colorScheme.surfaceContainerLow
+    var handleHeightPx by remember { mutableIntStateOf(0) }
+
     DisposableEffect(Unit) {
         onExpansionChanged(1f)
         playerViewModel.setConnectPanelOpen(true)
@@ -415,13 +430,22 @@ fun CastBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         dragHandle = {
-            Box(Modifier.fillMaxWidth().then(closeOnShortPull), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { handleHeightPx = it.height }
+                    .background(panelColor, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .then(closeOnShortPull),
+                contentAlignment = Alignment.Center
+            ) {
                 BottomSheetDefaults.DragHandle()
             }
         },
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 12.dp
+        // The sheet itself is see-through and clips nothing, so the mini player can stand above its edge.
+        shape = UnclippedSheetShape,
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
+        contentWindowInsets = { WindowInsets(0) }
     ) {
         // The sheet is its own window, so the activity never sees the volume keys while it is open.
         val sonosVolumeKeys by sonosViewModel.volumeKeys.collectAsStateWithLifecycle()
@@ -433,6 +457,7 @@ fun CastBottomSheet(
         ) {
             Box(
                 modifier = Modifier
+                    .background(panelColor)
                     .then(closeOnShortPull)
                     .padding(bottom = 18.dp)
                     .focusRequester(keyFocus)
@@ -556,6 +581,31 @@ fun CastBottomSheet(
                         startWithControls = isRemoteSession || currentSonos != null
                     )
                 }
+                if (miniPlayerAbovePanel != null) {
+                    // Lies exactly over the real mini player until the sheet's edge reaches it, then rides on that
+                    // edge, and the other way round on the way down. Worked out while drawing, so it keeps up with the sheet.
+                    Box(
+                        modifier = Modifier.layout { measurable, constraints ->
+                            val height = MiniPlayerHeight.roundToPx()
+                            val margin = CastPanelMiniMargin.roundToPx()
+                            val rest = miniPlayerRest()
+                            val width = rest?.width?.roundToInt() ?: (constraints.maxWidth - 2 * margin)
+                            val placeable = measurable.measure(Constraints.fixed(width, height))
+                            val gap = CastPanelMiniGap.toPx()
+                            layout(0, 0) {
+                                placeable.placeWithLayer(rest?.left?.roundToInt() ?: margin, 0) {
+                                    val sheetTop = runCatching { sheetState.requireOffset() }.getOrDefault(size.height * 100f)
+                                    val riding = sheetTop - gap - height
+                                    val resting = miniPlayerRest()?.top
+                                    val at = if (resting != null) minOf(riding, resting) else riding
+                                    translationY = at - sheetTop - handleHeightPx
+                                }
+                            }
+                        }
+                    ) {
+                        miniPlayerAbovePanel(closePanel, Modifier.closesOnPullDown(closePanel))
+                    }
+                }
             }
         }
         val groupTarget = sonosGroupSheetFor?.let { uuid ->
@@ -574,6 +624,15 @@ fun CastBottomSheet(
             )
         }
     }
+}
+
+private val CastPanelMiniGap = 8.dp
+private val CastPanelMiniMargin = 20.dp
+
+/** A clip far larger than the sheet: Material's sheet always clips to its shape, and this lets the mini player out. */
+private object UnclippedSheetShape : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density) =
+        Outline.Rectangle(Rect(-5000f, -5000f, size.width + 5000f, size.height + 5000f))
 }
 
 private data class CastDeviceUi(
@@ -774,6 +833,29 @@ private fun Modifier.closesOnShortPull(sheetState: SheetState, close: (rest: Flo
         }
     }
 
+/**
+ * For what stands outside the sheet, where a drag does not reach the sheet itself. As soon as the finger clearly
+ * goes down it takes the touch for itself, or what lies under it would still count a short pull as a tap.
+ */
+private fun Modifier.closesOnPullDown(close: () -> Unit): Modifier = pointerInput(Unit) {
+    val closeDistance = CastSheetCloseDistance.toPx()
+    val slop = viewConfiguration.touchSlop
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        var finger = down.position
+        do {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            event.changes.firstOrNull { it.id == down.id }?.let { change ->
+                finger = change.position
+                val moved = finger - down.position
+                if (moved.y > slop && abs(moved.x) < moved.y) change.consume()
+            }
+        } while (event.changes.any { it.pressed })
+        val travel = finger.y - down.position.y
+        if (travel >= closeDistance && abs(finger.x - down.position.x) < travel) close()
+    }
+}
+
 @Composable
 private fun CastSheetContent(
     state: CastSheetUiState,
@@ -796,7 +878,9 @@ private fun CastSheetContent(
         configuration.screenHeightDp.dp -
             safeInsets.calculateTopPadding() -
             safeInsets.calculateBottomPadding() -
-            212.dp
+            212.dp -
+            MiniPlayerHeight -
+            CastPanelMiniGap
         ).coerceAtLeast(280.dp)
     val pagerState = rememberPagerState(
         initialPage = if (startWithControls) 0 else 1,

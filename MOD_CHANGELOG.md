@@ -1,7 +1,8 @@
-- Volumeschuif gaat soepel mee met de volumetoetsen in plaats van in sprongen
-- Individueel volume klapt soepel uit, zonder hapering
+- Muziek bedienen in Connect device: de mini player gaat mee boven het paneel
 
 Ook in deze versie (sinds 0.7.5-mod.1):
+- Volumeschuif gaat soepel mee met de volumetoetsen in plaats van in sprongen
+- Individueel volume klapt soepel uit, zonder hapering
 - Wat je luistert gaat nu naar Navidrome met het echte tijdstip, ook de Sonos en lokale bestanden die ook op de server staan
 - Geen verbinding of een herstart: de luisterbeurt blijft bewaard en gaat later alsnog mee
 - Niets telt meer dubbel op de server, doorskippen telt niet

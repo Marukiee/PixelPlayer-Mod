@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.components
 
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
@@ -502,7 +503,9 @@ internal fun UnifiedPlayerCastLayer(
     albumColorScheme: ColorScheme,
     playerViewModel: PlayerViewModel,
     onDismiss: () -> Unit,
-    onExpansionChanged: (Float) -> Unit
+    onExpansionChanged: (Float) -> Unit,
+    miniPlayerRest: () -> Rect?,
+    miniPlayerAbovePanel: @Composable (close: () -> Unit, modifier: Modifier) -> Unit
 ) {
     if (!showCastSheet || internalIsKeyboardVisible) return
 
@@ -518,7 +521,9 @@ internal fun UnifiedPlayerCastLayer(
             CastBottomSheet(
                 playerViewModel = playerViewModel,
                 onDismiss = onDismiss,
-                onExpansionChanged = onExpansionChanged
+                onExpansionChanged = onExpansionChanged,
+                miniPlayerRest = miniPlayerRest,
+                miniPlayerAbovePanel = miniPlayerAbovePanel
             )
         }
     }

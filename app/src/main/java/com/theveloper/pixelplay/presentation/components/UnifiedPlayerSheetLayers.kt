@@ -6,6 +6,9 @@ import com.theveloper.pixelplay.presentation.viewmodel.SonosViewModel
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,7 +26,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Dp
@@ -38,10 +44,104 @@ import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.preferences.FullPlayerLoadingTweaks
 import com.theveloper.pixelplay.presentation.components.player.FullPlayerContent
 import com.theveloper.pixelplay.presentation.components.scoped.FullPlayerVisualState
+import com.theveloper.pixelplay.presentation.components.scoped.MiniPlayerSwipeGestureHandler
+import com.theveloper.pixelplay.presentation.components.scoped.miniPlayerSwipeHorizontalGesture
 import com.theveloper.pixelplay.presentation.components.scoped.rememberFullPlayerRuntimePolicy
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerSheetState
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
 import com.theveloper.pixelplay.presentation.viewmodel.StablePlayerState
+
+/** What the mini player shows, the same in the player and above the connect panel. */
+@Composable
+private fun MiniPlayerRow(
+    song: Song,
+    infrequentPlayerState: StablePlayerState,
+    isCastConnecting: Boolean,
+    isPreparingPlayback: Boolean,
+    playerViewModel: PlayerViewModel,
+    currentPositionProvider: () -> Long,
+    onOutputClick: () -> Unit,
+    canScroll: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val sonosViewModel: SonosViewModel = hiltViewModel()
+    val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
+    val isRemotePlaybackActive by playerViewModel.isRemotePlaybackActive.collectAsStateWithLifecycle()
+    val isBluetoothEnabled by playerViewModel.isBluetoothEnabled.collectAsStateWithLifecycle()
+    val bluetoothName by playerViewModel.bluetoothName.collectAsStateWithLifecycle()
+    val miniPlayerStyle by playerViewModel.miniPlayerStyle.collectAsStateWithLifecycle()
+    val latestDuration = rememberUpdatedState(infrequentPlayerState.totalDuration)
+    MiniPlayerContentInternal(
+        song = song,
+        isPlaying = infrequentPlayerState.showsPause,
+        isCastConnecting = isCastConnecting,
+        isPreparingPlayback = isPreparingPlayback,
+        output = PlayerOutputIcon.of(
+            sonosRooms = sonosSession?.group?.members?.size,
+            isCasting = isCastConnecting || isRemotePlaybackActive,
+            isBluetoothActive = isBluetoothEnabled && !bluetoothName.isNullOrEmpty()
+        ),
+        progressRing = miniPlayerStyle == MiniPlayerStyle.RING,
+        progress = {
+            val duration = latestDuration.value
+            if (duration > 0L) currentPositionProvider().toFloat() / duration else 0f
+        },
+        onPlayPause = { playerViewModel.playPause() },
+        onOutputClick = onOutputClick,
+        onNext = { playerViewModel.nextSong() },
+        canScroll = canScroll,
+        modifier = modifier
+    )
+}
+
+/**
+ * The mini player above the connect panel, so the music can be controlled without closing it. It has to look the
+ * same as the real one, which it covers until the panel takes it along.
+ */
+@Composable
+internal fun MiniPlayerAbovePanel(
+    song: Song,
+    scheme: ColorScheme,
+    shape: Shape,
+    infrequentPlayerState: StablePlayerState,
+    isCastConnecting: Boolean,
+    isPreparingPlayback: Boolean,
+    playerViewModel: PlayerViewModel,
+    currentPositionProvider: () -> Long,
+    swipeHandler: MiniPlayerSwipeGestureHandler,
+    onOutputClick: () -> Unit,
+    onBodyClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    CompositionLocalProvider(LocalMaterialTheme provides scheme) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .miniPlayerSwipeHorizontalGesture(enabled = true, handler = swipeHandler)
+                .graphicsLayer { translationX = swipeHandler.offsetX.value }
+                .shadow(elevation = 3.dp, shape = shape, clip = false)
+                .background(scheme.primaryContainer, shape)
+                .clip(shape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onBodyClick
+                )
+        ) {
+            MiniPlayerRow(
+                song = song,
+                infrequentPlayerState = infrequentPlayerState,
+                isCastConnecting = isCastConnecting,
+                isPreparingPlayback = isPreparingPlayback,
+                playerViewModel = playerViewModel,
+                currentPositionProvider = currentPositionProvider,
+                onOutputClick = onOutputClick,
+                canScroll = infrequentPlayerState.isPlaying,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -122,31 +222,14 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                     val isMiniPlayerVisible by remember {
                         derivedStateOf { playerContentExpansionFraction.value < 0.01f }
                     }
-                    val sonosViewModel: SonosViewModel = hiltViewModel()
-                    val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
-                    val isRemotePlaybackActive by playerViewModel.isRemotePlaybackActive.collectAsStateWithLifecycle()
-                    val isBluetoothEnabled by playerViewModel.isBluetoothEnabled.collectAsStateWithLifecycle()
-                    val bluetoothName by playerViewModel.bluetoothName.collectAsStateWithLifecycle()
-                    val miniPlayerStyle by playerViewModel.miniPlayerStyle.collectAsStateWithLifecycle()
-                    val latestDuration = rememberUpdatedState(infrequentPlayerState.totalDuration)
-                    MiniPlayerContentInternal(
+                    MiniPlayerRow(
                         song = currentSongNonNull,
-                        isPlaying = infrequentPlayerState.showsPause,
+                        infrequentPlayerState = infrequentPlayerState,
                         isCastConnecting = isCastConnecting,
                         isPreparingPlayback = isPreparingPlayback,
-                        output = PlayerOutputIcon.of(
-                            sonosRooms = sonosSession?.group?.members?.size,
-                            isCasting = isCastConnecting || isRemotePlaybackActive,
-                            isBluetoothActive = isBluetoothEnabled && !bluetoothName.isNullOrEmpty()
-                        ),
-                        progressRing = miniPlayerStyle == MiniPlayerStyle.RING,
-                        progress = {
-                            val duration = latestDuration.value
-                            if (duration > 0L) currentPositionProvider().toFloat() / duration else 0f
-                        },
-                        onPlayPause = { playerViewModel.playPause() },
+                        playerViewModel = playerViewModel,
+                        currentPositionProvider = currentPositionProvider,
                         onOutputClick = onShowCastClicked,
-                        onNext = { playerViewModel.nextSong() },
                         canScroll = isMiniPlayerVisible && infrequentPlayerState.isPlaying,
                         modifier = Modifier.fillMaxSize()
                     )
