@@ -24,9 +24,13 @@ Volgorde gekozen door Mark (2026-11-02):
 7. [ ] Hele app in het Nederlands vertalen
 8. [ ] Tweede variant van de crash na herstarten van de telefoon
 9. [x] Luistergegevens bij elkaar op de server (0.7.5-mod.17, zie "Luistergegevens naar Navidrome")
-   - [ ] Mark kijkt thuis na: play count loopt op na een heel nummer, niet na overslaan
+   - [x] Getest op de echte server via de Sonos (2026-11-06): een heel nummer telt een keer met de begintijd, overslaan telt niet. Offline en herstart zijn alleen tegen de nepserver getest
+   - [ ] Oude scrobbles op de server staan dubbel (zelfde seconde, van voor mod.17). Opruimen is een keuze van Mark
    - [ ] Oude geschiedenis eenmalig meesturen: aparte keuze van Mark, zie hieronder
 10. [ ] Site en screenshots bijwerken naar het Verbinden-paneel van mod.16: `scherm-3` en de hero op de site, en de map met screenshots. Pas als Mark het zegt (Mark, 2026-11-05)
+11. [ ] Muziek bedienen in het Verbinden-paneel, zonder het eerst weg te drukken: mooi geïntegreerd aan de onderkant of bovenkant, met een soepele overgang in en uit het paneel. Eerst voorbeelden maken en Mark laten kiezen (Mark, 2026-11-06)
+12. [x] Volumeschuif gaat met de volumetoetsen soepel naar het nieuwe volume in plaats van in sprongen (0.7.5-mod.18, `glidingVolume`)
+13. [x] Hapering bij het uitklappen van individueel volume: de schuiven worden nu vooraf gebouwd, de veer loopt korter uit, en de ring onder het paneel tikt nog maar eens per seconde (0.7.5-mod.18). Gemeten op de emulator; Mark kijkt op de telefoon of het goed voelt
 
 ## Luistergegevens naar Navidrome
 

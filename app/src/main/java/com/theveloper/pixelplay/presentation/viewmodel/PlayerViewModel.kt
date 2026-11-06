@@ -2499,6 +2499,10 @@ class PlayerViewModel @Inject constructor(
         playbackStateHolder.setSliderUiMounted(mounted)
     }
 
+    fun setConnectPanelOpen(open: Boolean) {
+        playbackStateHolder.setConnectPanelOpen(open)
+    }
+
     fun playPause() = playbackDispatchStateHolder.playPause()
 
     fun seekTo(position: Long) {

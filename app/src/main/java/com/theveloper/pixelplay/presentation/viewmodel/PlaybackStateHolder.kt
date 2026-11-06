@@ -94,6 +94,13 @@ class PlaybackStateHolder @Inject constructor(
         _sliderUiMounted.value = mounted
     }
 
+    /** The panel covers the player, and each tick makes a second window draw during its animations. */
+    @Volatile
+    private var connectPanelOpen = false
+    fun setConnectPanelOpen(open: Boolean) {
+        connectPanelOpen = open
+    }
+
     // Internal State
     private var isSeeking = false
     private var remoteSeekUnlockJob: Job? = null
@@ -793,7 +800,7 @@ class PlaybackStateHolder @Inject constructor(
         if (!powerManager.isInteractive) return BACKGROUND_TICK_MS
         // Interactive but the slider isn't mounted (mini-player / lock-screen
         // notification only) — second-level precision is enough.
-        return if (_sliderUiMounted.value) SLIDER_TICK_MS else MINIPLAYER_TICK_MS
+        return if (_sliderUiMounted.value && !connectPanelOpen) SLIDER_TICK_MS else MINIPLAYER_TICK_MS
     }
 
     fun stopProgressUpdates() {

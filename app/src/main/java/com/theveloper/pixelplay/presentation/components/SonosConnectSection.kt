@@ -2,6 +2,7 @@ package com.theveloper.pixelplay.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -53,6 +54,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -102,7 +104,6 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -110,9 +111,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -127,6 +130,8 @@ import com.theveloper.pixelplay.data.sonos.SonosSessionState
 import com.theveloper.pixelplay.data.sonos.SonosSpeaker
 import com.theveloper.pixelplay.utils.shapes.RoundedStarShape
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 /** "This phone" at the top of the Devices tab, to bring the music back from Sonos or Cast. */
 @Composable
@@ -300,6 +305,16 @@ private val RowSizeSpec = spring<IntSize>(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessLow
 )
+
+/** Quick enough that the end of the fold does not creep up pixel by pixel. */
+private val RoomsFoldSpec = spring(
+    dampingRatio = Spring.DampingRatioNoBouncy,
+    stiffness = Spring.StiffnessMediumLow,
+    visibilityThreshold = 0.002f
+)
+
+/** Long enough for the sheet to have come up, so the extra work does not end up in that animation. */
+private const val RoomsBuildDelayMs = 500L
 
 /** Material 3 Expressive motion, the same scheme the player sheet and range chips use. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -632,13 +647,31 @@ internal fun SonosActiveCard(
                 colors = CardDefaults.cardColors(containerColor = container)
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // The sheet grows upward, so the speakers open above the button and the button stays under the finger.
-                    AnimatedVisibility(
-                        visible = showRooms,
-                        enter = expandVertically(RowSizeSpec, expandFrom = Alignment.Bottom) + fadeIn(sonosMotion.defaultEffectsSpec()),
-                        exit = shrinkVertically(RowSizeSpec, shrinkTowards = Alignment.Bottom) + fadeOut(sonosMotion.fastEffectsSpec())
-                    ) {
-                        Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
+                    val foldOpen by animateFloatAsState(
+                        targetValue = if (showRooms) 1f else 0f,
+                        animationSpec = RoomsFoldSpec,
+                        label = "roomsFold"
+                    )
+                    // Built ahead, once the sheet is up. Making the sliders on the tap made the fold stumble every time.
+                    var roomsBuilt by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        delay(RoomsBuildDelayMs)
+                        roomsBuilt = true
+                    }
+                    if (roomsBuilt || showRooms) {
+                        // The sheet grows upward, so the speakers open above the button and the button stays under the finger.
+                        Box(
+                            modifier = Modifier
+                                .clipToBounds()
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    val height = (placeable.height * foldOpen).roundToInt()
+                                    layout(placeable.width, height) { placeable.place(0, height - placeable.height) }
+                                }
+                                .graphicsLayer { alpha = foldOpen }
+                                .then(if (showRooms) Modifier else Modifier.clearAndSetSemantics {})
+                                .padding(start = 16.dp, end = 16.dp, top = 8.dp)
+                        ) {
                             AnimatedRows(items = state.group.members, key = { it.uuid }) { speaker ->
                                 // A thin slider on a line of its own needs less height than the 48.dp a slider asks for.
                                 CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 40.dp) {
@@ -712,10 +745,9 @@ private fun VolumeRow(
     muted: Boolean = false
 ) {
     val haptics = LocalHapticFeedback.current
-    var sliderValue by remember { mutableFloatStateOf(value?.toFloat() ?: 0f) }
-    var dragging by remember { mutableStateOf(false) }
+    var fingerValue by remember { mutableStateOf<Float?>(null) }
     var lastStep by remember { mutableIntStateOf(-1) }
-    LaunchedEffect(value) { if (!dragging && value != null) sliderValue = value.toFloat() }
+    val sliderValue = glidingVolume(target = value?.toFloat() ?: 0f, fingerValue = fingerValue)
     val sliderAlpha by animateFloatAsState(
         targetValue = if (muted) 0.4f else 1f,
         animationSpec = sonosMotion.defaultEffectsSpec(),
@@ -726,8 +758,7 @@ private fun VolumeRow(
         DeviceVolumeSlider(
             value = sliderValue,
             onValueChange = { v ->
-                dragging = true
-                sliderValue = v
+                fingerValue = v
                 val step = v.toInt()
                 if (step != lastStep) {
                     lastStep = step
@@ -735,7 +766,7 @@ private fun VolumeRow(
                     onValueChange(step)
                 }
             },
-            onValueChangeFinished = { dragging = false },
+            onValueChangeFinished = { fingerValue = null },
             description = description,
             prominent = prominent,
             enabled = value != null,
@@ -744,9 +775,29 @@ private fun VolumeRow(
                 .graphicsLayer { alpha = sliderAlpha }
         )
         Spacer(Modifier.width(8.dp))
-        DeviceCardVolumeNumber(value?.let { sliderValue.toInt().toString() } ?: "")
+        DeviceCardVolumeNumber(value?.let { (fingerValue?.toInt() ?: it).toString() } ?: "")
     }
 }
+
+/**
+ * What a volume slider shows: under the finger it keeps up at once, otherwise it glides to a volume that was
+ * changed elsewhere, such as with the volume keys. Holding a key keeps the movement going instead of restarting it.
+ */
+@Composable
+internal fun glidingVolume(target: Float, fingerValue: Float?): Float {
+    val glide by animateFloatAsState(
+        targetValue = fingerValue ?: target,
+        animationSpec = if (fingerValue != null) snap() else VolumeGlideSpec,
+        label = "volumeGlide"
+    )
+    return fingerValue ?: glide
+}
+
+/** No bounce: a slider that passes the volume and comes back would show a volume that was never set. */
+private val VolumeGlideSpec = spring<Float>(
+    dampingRatio = Spring.DampingRatioNoBouncy,
+    stiffness = Spring.StiffnessMediumLow
+)
 
 /** The name in front of a slider, so the sliders of all speakers start on one line. */
 @Composable

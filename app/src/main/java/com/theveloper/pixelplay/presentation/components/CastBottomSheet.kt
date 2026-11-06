@@ -404,7 +404,11 @@ fun CastBottomSheet(
 
     DisposableEffect(Unit) {
         onExpansionChanged(1f)
-        onDispose { onExpansionChanged(0f) }
+        playerViewModel.setConnectPanelOpen(true)
+        onDispose {
+            onExpansionChanged(0f)
+            playerViewModel.setConnectPanelOpen(false)
+        }
     }
 
     ModalBottomSheet(
@@ -1546,8 +1550,8 @@ private fun ActiveDeviceHero(
     onDisconnect: () -> Unit,
     onVolumeChange: (Float) -> Unit
 ) {
-    var sliderValue by remember(device.id, device.volume) { mutableFloatStateOf(device.volume) }
-    LaunchedEffect(device.volume) { sliderValue = device.volume }
+    var fingerValue by remember(device.id) { mutableStateOf<Float?>(null) }
+    val sliderValue = glidingVolume(target = device.volume, fingerValue = fingerValue)
     val haptics = LocalHapticFeedback.current
 
     val discreteSteps = remember(device.volumeRange) {
@@ -1620,7 +1624,7 @@ private fun ActiveDeviceHero(
                     valueRange = device.volumeRange,
                     description = if (device.isRemote) stringResource(R.string.cast_volume_device) else stringResource(R.string.cast_volume_phone),
                     onValueChange = { newValue ->
-                        sliderValue = newValue
+                        fingerValue = newValue
                         val quantized = if (device.volumeRange.endInclusive <= 1f) {
                             (newValue * 20).toInt()
                         } else {
@@ -1632,9 +1636,10 @@ private fun ActiveDeviceHero(
                         }
                         onVolumeChange(newValue)
                     },
+                    onValueChangeFinished = { fingerValue = null },
                     modifier = Modifier.weight(1f)
                 )
-                DeviceCardVolumeNumber(buildVolumeLabel(sliderValue, device.volumeRange.endInclusive))
+                DeviceCardVolumeNumber(buildVolumeLabel(fingerValue ?: device.volume, device.volumeRange.endInclusive))
             }
         }
     }

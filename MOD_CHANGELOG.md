@@ -1,10 +1,12 @@
+- Volumeschuif gaat soepel mee met de volumetoetsen in plaats van in sprongen
+- Individueel volume klapt soepel uit, zonder hapering
+
+Ook in deze versie (sinds 0.7.5-mod.1):
 - Wat je luistert gaat nu naar Navidrome met het echte tijdstip, ook de Sonos en lokale bestanden die ook op de server staan
 - Geen verbinding of een herstart: de luisterbeurt blijft bewaard en gaat later alsnog mee
 - Niets telt meer dubbel op de server, doorskippen telt niet
 - Veiliger: geen inloggegevens meer in de logs, serveradres en thuisadressen niet meer in de back-up
 - Ongebruikte code opgeruimd
-
-Ook in deze versie (sinds 0.7.5-mod.1):
 - Likes gaan direct naar Navidrome en sterren komen terug, twee kanten op
 - Navidrome staat nu in Instellingen, de cloudknop bovenin is weg
 - Genrepagina's opnieuw: zelfde opbouw als Your Mix, geen zijbalk, geen menu rechtsonder, geen dubbele nummers
