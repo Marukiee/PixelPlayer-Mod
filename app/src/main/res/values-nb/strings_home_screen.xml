@@ -243,8 +243,6 @@
     <string name="stats_show_all_tracks">Vis alle spor</string>
 
     <!-- Time and Duration Formatting -->
-    <string name="duration_hours_minutes_long">%1$d t %2$02d min</string>
-    <string name="duration_minutes_long">%1$d min</string>
     <string name="duration_hours_minutes_medium">%1$d t %2$02d m</string>
     <string name="duration_hours_medium">%1$d t</string>
     <string name="duration_minutes_medium">%1$d m</string>

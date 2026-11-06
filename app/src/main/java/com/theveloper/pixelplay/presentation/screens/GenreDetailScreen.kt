@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,18 +49,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,14 +69,10 @@ import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.preferences.AlbumArtPaletteStyle
 import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
 import com.theveloper.pixelplay.presentation.components.MultiSelectionBottomSheet
-import com.theveloper.pixelplay.presentation.components.SmartImage
 import com.theveloper.pixelplay.presentation.components.SongInfoBottomSheet
-import com.theveloper.pixelplay.presentation.components.home.GenreFlag
-import com.theveloper.pixelplay.presentation.components.home.GenreFlagSticker
-import com.theveloper.pixelplay.presentation.components.home.flagStickerShape
-import com.theveloper.pixelplay.presentation.components.home.genreIllustration
 import com.theveloper.pixelplay.presentation.components.subcomps.EnhancedSongListItem
 import com.theveloper.pixelplay.presentation.components.subcomps.PlayShuffleButtons
+import com.theveloper.pixelplay.presentation.components.subcomps.rememberPressFraction
 import com.theveloper.pixelplay.presentation.components.subcomps.SelectionActionRow
 import com.theveloper.pixelplay.presentation.components.subcomps.SelectionCountPill
 import com.theveloper.pixelplay.presentation.navigation.navigateSafelyReplacing
@@ -201,10 +195,6 @@ fun GenreDetailScreen(
                 .background(surface)
                 .background(backgroundBrush)
         ) {
-            val headerFlag = remember(genreDisplayName) { GenreFlag.forGenre(genreDisplayName) }
-            val headerIllustration = remember(genreDisplayName, customGenreIcons) {
-                genreIllustration(genreDisplayName, customGenreIcons)
-            }
             val songs = uiState.sortedSongs
 
             LazyColumn(
@@ -217,15 +207,7 @@ fun GenreDetailScreen(
                     ExpressiveDailyMixHeader(
                         title = genreDisplayName,
                         songs = uiState.songs,
-                        scrollState = lazyListState,
-                        trailing = {
-                            GenreHeaderDecoration(
-                                illustration = headerIllustration,
-                                flag = headerFlag,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(88.dp)
-                            )
-                        }
+                        scrollState = lazyListState
                     )
                 }
 
@@ -564,6 +546,9 @@ private fun GenreSortRow(
 @Composable
 private fun GenreSortChip(label: String, selected: Boolean, onClick: () -> Unit) {
     val motion = MotionScheme.expressive()
+    val source = remember { MutableInteractionSource() }
+    val press by rememberPressFraction(source)
+    val haptics = LocalHapticFeedback.current
     val corner by animateDpAsState(
         targetValue = if (selected) 20.dp else 12.dp,
         animationSpec = motion.defaultSpatialSpec(),
@@ -580,41 +565,19 @@ private fun GenreSortChip(label: String, selected: Boolean, onClick: () -> Unit)
         label = "sortChipContent"
     )
     Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(corner),
+        onClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onClick()
+        },
+        shape = RoundedCornerShape(lerp(corner, 20.dp, press)),
         color = container,
         contentColor = content,
-        modifier = Modifier.height(40.dp)
+        modifier = Modifier.height(40.dp),
+        interactionSource = source
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 18.dp)) {
+        // Grows while pressed and pushes its neighbours along, like the controls in the full player.
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = lerp(18.dp, 26.dp, press))) {
             Text(text = label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         }
-    }
-}
-
-/** Same visual language as the genre mix cards on Home: a flag sticker or the genre's instrument. */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun GenreHeaderDecoration(
-    illustration: Any?,
-    flag: GenreFlag?,
-    tint: Color,
-    modifier: Modifier = Modifier
-) {
-    if (flag != null) {
-        GenreFlagSticker(
-            flag = flag,
-            shape = flagStickerShape(),
-            modifier = modifier.padding(10.dp)
-        )
-    } else if (illustration != null && illustration != R.drawable.rounded_library_music_24) {
-        SmartImage(
-            model = illustration,
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(tint),
-            contentScale = ContentScale.Fit,
-            placeHolderBackgroundColor = Color.Transparent,
-            modifier = modifier.alpha(0.55f)
-        )
     }
 }

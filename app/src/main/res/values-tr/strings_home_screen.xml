@@ -243,8 +243,6 @@
     <string name="stats_show_all_tracks">Tüm parçaları göster</string>
 
     <!-- Time and Duration Formatting -->
-    <string name="duration_hours_minutes_long">%1$d sa %2$02d dk</string>
-    <string name="duration_minutes_long">%1$d dk</string>
     <string name="duration_hours_minutes_medium">%1$d sa %2$02d dk</string>
     <string name="duration_hours_medium">%1$d sa</string>
     <string name="duration_minutes_medium">%1$d dk</string>

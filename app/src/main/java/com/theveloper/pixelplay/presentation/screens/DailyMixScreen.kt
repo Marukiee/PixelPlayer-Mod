@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.screens
 
+import coil.size.Size
 import com.theveloper.pixelplay.presentation.navigation.navigateSafely
 
 import androidx.compose.foundation.background
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -35,7 +38,9 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeExtendedFloatingActionButton
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.toShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +52,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -58,14 +67,13 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -79,13 +87,12 @@ import com.theveloper.pixelplay.presentation.components.MiniPlayerHeight
 import com.theveloper.pixelplay.presentation.components.PlaylistBottomSheet
 import com.theveloper.pixelplay.presentation.components.SmartImage
 import com.theveloper.pixelplay.presentation.components.SongInfoBottomSheet
-import com.theveloper.pixelplay.presentation.components.threeShapeSwitch
 import com.theveloper.pixelplay.presentation.components.resolveNavBarOccupiedHeight
 import com.theveloper.pixelplay.presentation.navigation.Screen
 import com.theveloper.pixelplay.presentation.viewmodel.MainViewModel
 import com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel
 import com.theveloper.pixelplay.presentation.viewmodel.PlaylistViewModel
-import com.theveloper.pixelplay.utils.formatDuration
+import com.theveloper.pixelplay.utils.formatTotalDuration
 import com.theveloper.pixelplay.utils.shapes.RoundedStarShape
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -414,7 +421,7 @@ fun DailyMixScreen(
 }
 
 
-/** Covers fanned out above the title. [trailing] sits next to the title, on the right. */
+/** The covers, fully visible above the title. [trailing] sits next to the title, on the right. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ExpressiveDailyMixHeader(
@@ -426,7 +433,6 @@ internal fun ExpressiveDailyMixHeader(
     val dailyMixHeaderTitle = title
     Trace.beginSection("ExpressiveDailyMixHeader.Composition")
     val albumArts = remember(songs) { songs.map { it.albumArtUriString }.distinct().take(3) }
-    val totalDuration = remember(songs) { songs.sumOf { it.duration } }
 
     val parallaxOffset by remember { derivedStateOf { if (scrollState.firstVisibleItemIndex == 0) scrollState.firstVisibleItemScrollOffset * 0.5f else 0f } }
 
@@ -438,99 +444,17 @@ internal fun ExpressiveDailyMixHeader(
 
     val titleStyle = rememberDailyMixTitleStyle()
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(340.dp)
             .graphicsLayer {
                 translationY = parallaxOffset
                 alpha = headerAlpha
             }
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy((-80).dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                albumArts.forEachIndexed { index, artUrl ->
-                    val size = when (index) {
-                        0 -> 180.dp
-                        1 -> 220.dp
-                        2 -> 180.dp
-                        else -> 150.dp
-                    }
-                    val rotation = when (index) {
-                        0 -> -15f
-                        1 -> 0f
-                        2 -> 15f
-                        else -> 0f
-                    }
-                    val shape = threeShapeSwitch(index, thirdShapeCornerRadius = 30.dp)
-
-                    if (index == 2) {
-                        Box(
-                            modifier = Modifier.layout { measurable, constraints ->
-                                val placeable = measurable.measure(
-                                    Constraints.fixed(width = size.roundToPx(), height = size.roundToPx())
-                                )
-                                layout(constraints.maxWidth, placeable.height) {
-                                    val xOffset = (constraints.maxWidth - placeable.width) / 2
-                                    placeable.placeRelative(xOffset, 0)
-                                }
-                            }
-                        ) {
-                            // Este es el contenido que se mide y se dibuja.
-                            Box(
-                                modifier = Modifier
-                                    .graphicsLayer { rotationZ = rotation }
-                                    .clip(shape)
-                            ) {
-                                SmartImage(
-                                    model = artUrl ?: R.drawable.rounded_album_24,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(size)
-                                .graphicsLayer { rotationZ = rotation }
-                                .clip(shape)
-                        ) {
-                            SmartImage(
-                                model = artUrl ?: R.drawable.rounded_album_24,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
-                            Color.Transparent,
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                            MaterialTheme.colorScheme.surface
-                        ),
-                        startY = 0f,
-                        endY = 900f
-                    )
-                )
-        )
+        DailyMixHeaderCovers(albumArts)
         Row(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 22.dp),
             horizontalArrangement = Arrangement.Absolute.SpaceBetween,
@@ -559,7 +483,7 @@ internal fun ExpressiveDailyMixHeader(
                         R.plurals.daily_mix_songs_dot_duration,
                         songs.size,
                         songs.size,
-                        formatDuration(totalDuration)
+                        formatTotalDuration(songs)
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
@@ -569,6 +493,78 @@ internal fun ExpressiveDailyMixHeader(
         }
     }
     Trace.endSection()
+}
+
+/** One big cover with up to two small ones lying on its edge. Scales with the screen, and starts just under the status bar. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun DailyMixHeaderCovers(albumArts: List<String?>) {
+    val width = LocalConfiguration.current.screenWidthDp.dp
+    val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val bigSize = width * 0.64f
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(topInset + bigSize + 12.dp)
+    ) {
+        if (albumArts.isNotEmpty()) {
+            DailyMixHeaderCover(
+                art = albumArts[0],
+                shape = MaterialShapes.Cookie9Sided.toShape(),
+                size = bigSize,
+                elevation = 0.dp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = topInset + 4.dp)
+                    .offset(x = width * 0.02f)
+            )
+        }
+        if (albumArts.size > 1) {
+            DailyMixHeaderCover(
+                art = albumArts[1],
+                shape = CircleShape,
+                size = width * 0.25f,
+                elevation = 4.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = width * 0.03f, bottom = 8.dp)
+            )
+        }
+        if (albumArts.size > 2) {
+            DailyMixHeaderCover(
+                art = albumArts[2],
+                shape = RoundedCornerShape(width * 0.05f),
+                size = width * 0.2f,
+                elevation = 4.dp,
+                rotation = 12f,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = topInset + 14.dp, end = width * 0.04f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DailyMixHeaderCover(
+    art: String?,
+    shape: Shape,
+    size: Dp,
+    elevation: Dp,
+    modifier: Modifier = Modifier,
+    rotation: Float = 0f
+) {
+    val pixels = with(LocalDensity.current) { size.roundToPx() }
+    SmartImage(
+        model = art ?: R.drawable.rounded_album_24,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        targetSize = Size(pixels, pixels),
+        modifier = modifier
+            .size(size)
+            .graphicsLayer { rotationZ = rotation }
+            .shadow(elevation, shape, clip = true)
+    )
 }
 
 @OptIn(ExperimentalTextApi::class)

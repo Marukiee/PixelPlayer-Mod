@@ -243,8 +243,6 @@
     <string name="stats_show_all_tracks">Alle Titel anzeigen</string>
 
     <!-- Time and Duration Formatting -->
-    <string name="duration_hours_minutes_long">%1$d Std. %2$02d Min.</string>
-    <string name="duration_minutes_long">%1$d Min.</string>
     <string name="duration_hours_minutes_medium">%1$d Std. %2$02d Min.</string>
     <string name="duration_hours_medium">%1$d Std.</string>
     <string name="duration_minutes_medium">%1$d Min.</string>

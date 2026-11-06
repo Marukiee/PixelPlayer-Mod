@@ -1,9 +1,8 @@
 package com.theveloper.pixelplay.presentation.components.subcomps
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,8 +16,10 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -26,6 +27,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,10 +36,12 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import com.theveloper.pixelplay.R
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterIsInstance
 
 /**
- * The two buttons at the top of a mix or playlist. The pressed one grows into its neighbour and rounds off, like the
- * buttons in the song sheet.
+ * The two buttons at the top of a mix or playlist. They move like the controls in the full player: the pressed one
+ * grows and rounds off, its neighbour makes way.
  */
 @Composable
 fun PlayShuffleButtons(
@@ -51,13 +56,17 @@ fun PlayShuffleButtons(
     val shuffleSource = remember { MutableInteractionSource() }
     val playPress by rememberPressFraction(playSource)
     val shufflePress by rememberPressFraction(shuffleSource)
+    val haptics = LocalHapticFeedback.current
 
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val playInner = lerp(14.dp, 60.dp, playPress)
         Button(
-            onClick = onPlay,
+            onClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onPlay()
+            },
             modifier = Modifier
-                .weight(0.5f + PRESS_GROWTH * (playPress - shufflePress))
+                .weight(1f + PRESS_GROWTH * playPress - PRESS_MAKE_WAY * shufflePress)
                 .fillMaxHeight(),
             enabled = enabled,
             shape = RoundedCornerShape(topStart = 60.dp, topEnd = playInner, bottomStart = 60.dp, bottomEnd = playInner),
@@ -80,9 +89,12 @@ fun PlayShuffleButtons(
         }
         val shuffleInner = lerp(14.dp, 60.dp, shufflePress)
         FilledTonalButton(
-            onClick = onShuffle,
+            onClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onShuffle()
+            },
             modifier = Modifier
-                .weight(0.5f + PRESS_GROWTH * (shufflePress - playPress))
+                .weight(1f + PRESS_GROWTH * shufflePress - PRESS_MAKE_WAY * playPress)
                 .fillMaxHeight(),
             enabled = enabled,
             shape = RoundedCornerShape(topStart = shuffleInner, topEnd = 60.dp, bottomStart = shuffleInner, bottomEnd = 60.dp),
@@ -106,25 +118,33 @@ fun PlayShuffleButtons(
     }
 }
 
-/** Stays pressed a little longer than the finger, or a quick tap would be over before anything moved. */
+/**
+ * Stays pressed a little longer than the finger, or a quick tap would be over before anything moved. Reads every
+ * press itself: in a scrolling list a quick tap reports press and release at once, so a pressed state never shows it.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun rememberPressFraction(source: MutableInteractionSource): State<Float> {
-    val pressed by source.collectIsPressedAsState()
     val held = remember { mutableStateOf(false) }
-    LaunchedEffect(pressed) {
-        if (pressed) {
-            held.value = true
-        } else {
-            delay(PRESS_HOLD_MS)
-            held.value = false
+    LaunchedEffect(source) {
+        source.interactions.filterIsInstance<PressInteraction>().collectLatest { press ->
+            if (press is PressInteraction.Press) {
+                held.value = true
+            } else {
+                delay(PRESS_HOLD_MS)
+                held.value = false
+            }
         }
     }
+    val spec = remember { MotionScheme.expressive().fastSpatialSpec<Float>() }
     return animateFloatAsState(
         targetValue = if (held.value) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+        animationSpec = spec,
         label = "pressFraction"
     )
 }
 
-private const val PRESS_GROWTH = 0.08f
-private const val PRESS_HOLD_MS = 180L
+// The same as AnimatedPlaybackControls in the full player.
+private const val PRESS_GROWTH = 0.1f
+private const val PRESS_MAKE_WAY = 0.35f
+private const val PRESS_HOLD_MS = 220L

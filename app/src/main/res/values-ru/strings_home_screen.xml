@@ -245,8 +245,6 @@
     <string name="stats_show_all_tracks">Показать все треки</string>
 
     <!-- Time and Duration Formatting -->
-    <string name="duration_hours_minutes_long">%1$d ч %2$02d мин</string>
-    <string name="duration_minutes_long">%1$d мин</string>
     <string name="duration_hours_minutes_medium">%1$d ч %2$02d м</string>
     <string name="duration_hours_medium">%1$d ч</string>
     <string name="duration_minutes_medium">%1$d м</string>

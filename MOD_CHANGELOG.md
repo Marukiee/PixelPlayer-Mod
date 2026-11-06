@@ -1,6 +1,9 @@
-- Muziek bedienen in Connect device: de mini player gaat mee boven het paneel
+- Genrepagina en Your Mix: nieuwe kop met de hoezen groot en helemaal in beeld
+- Play it, Shuffle en de sorteerknoppen bewegen nu net als de knoppen in de speler
+- Duur in woorden: 3 hours and 3 minutes
 
 Ook in deze versie (sinds 0.7.5-mod.1):
+- Muziek bedienen in Connect device: de mini player gaat mee boven het paneel
 - Volumeschuif gaat soepel mee met de volumetoetsen in plaats van in sprongen
 - Individueel volume klapt soepel uit, zonder hapering
 - Wat je luistert gaat nu naar Navidrome met het echte tijdstip, ook de Sonos en lokale bestanden die ook op de server staan

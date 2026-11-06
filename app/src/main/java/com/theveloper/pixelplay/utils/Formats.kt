@@ -20,15 +20,18 @@ fun formatDuration(milliseconds: Long): String {
     }
 }
 
+/** In words, for under a title: "3 hours and 3 minutes". */
 fun formatTotalDuration(songs: List<Song>): String {
-    val totalMillis = songs.sumOf { it.duration }
-    val hours = TimeUnit.MILLISECONDS.toHours(totalMillis)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(totalMillis) % 60
-    val context = PixelPlayApplication.instance.applicationContext
-    return if (hours > 0) {
-        context.getString(R.string.duration_hours_minutes_long, hours, minutes)
-    } else {
-        context.getString(R.string.duration_minutes_long, minutes)
+    val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(songs.sumOf { it.duration }).toInt()
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    val resources = PixelPlayApplication.instance.applicationContext.resources
+    val hoursText = resources.getQuantityString(R.plurals.duration_hours_words, hours, hours)
+    val minutesText = resources.getQuantityString(R.plurals.duration_minutes_words, minutes, minutes)
+    return when {
+        hours == 0 -> minutesText
+        minutes == 0 -> hoursText
+        else -> resources.getString(R.string.duration_hours_and_minutes_words, hoursText, minutesText)
     }
 }
 

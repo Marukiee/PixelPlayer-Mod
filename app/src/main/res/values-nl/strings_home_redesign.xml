@@ -23,4 +23,13 @@
     <string name="home_duration_minutes">%1$d m</string>
     <string name="home_duration_under_minute">&lt;1 m</string>
     <string name="home_open_all">Alles bekijken</string>
+    <plurals name="duration_hours_words">
+        <item quantity="one">%d uur</item>
+        <item quantity="other">%d uur</item>
+    </plurals>
+    <plurals name="duration_minutes_words">
+        <item quantity="one">%d minuut</item>
+        <item quantity="other">%d minuten</item>
+    </plurals>
+    <string name="duration_hours_and_minutes_words">%1$s en %2$s</string>
 </resources>

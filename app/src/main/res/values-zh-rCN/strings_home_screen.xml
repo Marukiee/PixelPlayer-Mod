@@ -243,8 +243,6 @@
     <string name="stats_show_all_tracks">显示所有曲目</string>
 
     <!-- Time and Duration Formatting -->
-    <string name="duration_hours_minutes_long">%1$d 小时 %2$02d 分钟</string>
-    <string name="duration_minutes_long">%1$d 分钟</string>
     <string name="duration_hours_minutes_medium">%1$d 小时 %2$02d 分</string>
     <string name="duration_hours_medium">%1$d 小时</string>
     <string name="duration_minutes_medium">%1$d 分</string>

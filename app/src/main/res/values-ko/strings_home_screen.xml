@@ -242,8 +242,6 @@
     <string name="stats_show_all_tracks">모든 트랙 표시</string>
 
     <!-- Time and Duration Formatting -->
-    <string name="duration_hours_minutes_long">%1$d시간 %2$02d분</string>
-    <string name="duration_minutes_long">%1$d분</string>
     <string name="duration_hours_minutes_medium">%1$d시간 %2$02d분</string>
     <string name="duration_hours_medium">%1$d시간</string>
     <string name="duration_minutes_medium">%1$d분</string>

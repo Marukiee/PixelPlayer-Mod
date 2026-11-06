@@ -243,8 +243,15 @@
     <string name="stats_show_all_tracks">Show all tracks</string>
 
     <!-- Time and Duration Formatting -->
-    <string name="duration_hours_minutes_long">%1$d h %2$02d min</string>
-    <string name="duration_minutes_long">%1$d min</string>
+    <plurals name="duration_hours_words">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="duration_minutes_words">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <string name="duration_hours_and_minutes_words">%1$s and %2$s</string>
     <string name="duration_hours_minutes_medium">%1$d h %2$02d m</string>
     <string name="duration_hours_medium">%1$d h</string>
     <string name="duration_minutes_medium">%1$d m</string>
