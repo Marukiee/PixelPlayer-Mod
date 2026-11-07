@@ -34,6 +34,8 @@ Volgorde gekozen door Mark (2026-11-02):
 14. [x] Genrepagina opnieuw (0.7.5-mod.20): Mark koos variant B, een grote hoes in een koekjesvorm met twee kleine eromheen, helemaal in beeld boven de titel. Icoontje naast de titel is weg. Your Mix gebruikt dezelfde kop
 15. [x] Knoppen bewegen als in de speler (0.7.5-mod.20): Play it en Shuffle, ook de sorteerknoppen. Ze deden het eerst niet doordat een korte tik in een lijst indrukken en loslaten tegelijk meldt, en `collectIsPressedAsState` dat niet ziet. `rememberPressFraction` leest nu elke tik zelf
 16. [x] Totale duur onder de naam in woorden (0.7.5-mod.20): `formatTotalDuration`, ook op de afspeellijstpagina. Engels en Nederlands; de andere talen vallen terug op Engels
+17. [ ] Spotify vanuit PixelPlayer op de Sonos: zoeken, een los nummer in dezelfde wachtrij, podcasts (Mark, 2026-11-07). Uitgezocht, zie "Spotify in de Sonos-wachtrij". Ligt stil op verzoek van Mark; de proef op de echte speaker is niet gedaan
+18. [x] Play-knop van Your Mix groeit en krimpt als hele pil (0.7.5-mod.21): `animateContentSize` stond om de knop, dus de pil sprong en alleen het knipvlak bewoog. Het woord regelt nu zelf zijn breedte, in `PlayStateLabel`. Shuffle blijft op elke breedte een rondje: de knoppenrij is niet meer aan de kolom gebonden en loopt op een smal scherm door in het lege hoekje onder de hoezen
 
 ## Luistergegevens naar Navidrome
 
@@ -102,6 +104,22 @@ Wens: Spotify- en PixelPlayer-luistergedrag samen, zodat de Wrapped bij stats.fm
 - Afspeellijst exporteren naar Spotify, om te delen.
 
 Beperkingen: afspelen van Spotify-audio in PixelPlayer kan niet, alleen de Spotify-app bedienen. Aanbevelingen en "gerelateerde artiesten" zijn sinds eind 2024 dicht voor nieuwe apps.
+
+Regels sinds februari 2026 voor een app in Development Mode: de eigenaar moet Premium hebben, maximaal 5 gebruikers, zoeken geeft maximaal 10 resultaten per keer, en nummers kunnen alleen nog een voor een worden opgehaald (geen batch). De nieuwe releases-lijst en artiest-toptracks zijn weg, dus "Nieuwe releases" hierboven gaat via MusicBrainz of ListenBrainz. `external_ids` (ISRC) blijft wel bestaan.
+
+### Spotify in de Sonos-wachtrij (uitgezocht 2026-11-07, nog niet op een speaker geprobeerd)
+
+Wens: zoeken op Spotify in PixelPlayer en een los nummer of een podcast in dezelfde wachtrij zetten, zonder naar de Spotify- of Sonos-app te gaan.
+
+- **Afspelen op de Sonos:** kan zonder dat de audio door de app gaat. De speaker haalt het nummer zelf op met het Spotify-account dat in de Sonos-app gekoppeld is. Het is dezelfde `AddURIToQueue` die `SonosController.addToQueue` al gebruikt, met als URI `spotify%3atrack%3a<id>` en in de DIDL `SA_RINCON2311_X_#Svc2311-0-Token` (VS: 3079). Bron: `ShareLinkPlugin` van SoCo. Geen Spotify-inlog nodig voor deze aanroep. Bekende fouten: 804 bij een gratis account, en een melding van 800 op een Roam.
+- **Zoeken:** Web API met PKCE, `GET /search` voor nummers, shows en afleveringen. Mark maakt zelf de app aan op developer.spotify.com; de Client ID komt via `local.properties` of een CI-secret.
+- **Het echte werk:** de telefoon speelt elk nummer stil mee, maar heeft van een Spotify-nummer geen audio. Er moet dus een stille vervanger met de juiste duur in de speler (`SilenceMediaSource` van Media3), met hoes en titel uit de Web API, en `SonosTrackResolver` moet zulke items herkennen. Ook kiezen: niet naar Navidrome scrobbelen, en wat er gebeurt als de Sonos-sessie stopt terwijl er zo'n nummer in de wachtrij staat.
+- **Zonder Sonos:** het kan niet op de telefoon zelf spelen, alleen doorgeven aan de Spotify-app. Wat niet kan is grijs en zegt waarom.
+- **`POST /me/player/queue` is niet de weg:** die zet het nummer in de wachtrij van een Spotify-sessie, en die neemt de speaker over van onze wachtrij (zie Sonos, `x-sonos-vli:`).
+- **Podcasts:** tonen is makkelijk, de endpoints voor shows, afleveringen en `resume_point` zijn er nog. Afspelen op de Sonos: SoCo bouwt een aflevering op dezelfde manier (`spotify%3aepisode%3a<id>`), maar of dat goed speelt en of de plek in de aflevering bewaard blijft, moet de proef uitwijzen. Terugval: de open RSS-feed, die werkt ook op de telefoon en zonder Spotify, behalve voor exclusieve podcasts.
+- **Jam:** kan niet. Er is geen API om een Jam te starten, te volgen of eraan mee te doen. Een Jam loopt via Spotify Connect, en dan staat de speaker niet meer op de wachtrij van PixelPlayer. Idee voor later, los van Spotify: een eigen gastpagina met QR-code waarop vrienden nummers aan de wachtrij toevoegen.
+- **Voorwaarden:** de Developer Policy verbiedt een product dat Spotify integreert met streams van een andere dienst (III.5). Een eigen wachtrij met Navidrome en Spotify valt daar waarschijnlijk onder. Het gevolg zou zijn dat Spotify de Client ID blokkeert; de aanroep naar de Sonos gaat niet via Spotify's API. Keuze van Mark.
+- **Volgorde als de proef lukt:** eerst zoeken plus los nummer in de wachtrij, daarna podcasts.
 
 ## Sonos
 

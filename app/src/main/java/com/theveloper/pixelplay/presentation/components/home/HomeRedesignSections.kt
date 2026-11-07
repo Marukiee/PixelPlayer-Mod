@@ -4,6 +4,7 @@ import androidx.compose.foundation.indication
 import androidx.compose.material3.ripple
 import com.theveloper.pixelplay.presentation.components.subcomps.rememberPressFraction
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.zIndex
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,7 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import com.theveloper.pixelplay.ui.theme.GenreThemeUtils
 import com.theveloper.pixelplay.ui.theme.LocalPixelPlayDarkTheme
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -56,6 +57,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -199,6 +201,30 @@ private fun PlayStateIcon(showPause: Boolean, iconSize: Dp, icon: @Composable ()
     }
 }
 
+/**
+ * The word on a play button. It sizes itself here, inside the button, so the whole pill grows and shrinks with its
+ * round ends. Around the button a size animation only moves a clip: the pill jumps and the clip cuts it off.
+ */
+@Composable
+private fun PlayStateLabel(showPause: Boolean) {
+    AnimatedContent(
+        targetState = showPause,
+        transitionSpec = {
+            (fadeIn(homeMotion.defaultEffectsSpec()) togetherWith fadeOut(homeMotion.fastEffectsSpec())) using
+                SizeTransform(clip = false) { _, _ -> homeMotion.defaultSpatialSpec() }
+        },
+        contentAlignment = Alignment.CenterStart,
+        label = "homePlayLabel"
+    ) { pause ->
+        Text(
+            stringResource(if (pause) R.string.home_pause else R.string.home_play),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            softWrap = false
+        )
+    }
+}
+
 /** Title left, tonal button right. */
 @Composable
 fun HomeSectionHeader(
@@ -289,7 +315,8 @@ fun HomeYourMixCard(
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        // On top of the covers: on a narrow screen the buttons reach into them.
+        Column(modifier = Modifier.weight(1f).zIndex(1f)) {
             Text(
                 text = stringResource(R.string.home_your_mix_title),
                 style = titleStyle,
@@ -316,7 +343,10 @@ fun HomeYourMixCard(
                     modifier = Modifier.size(20.dp)
                 )
             }
+            // Not bound to this column: on a narrow screen the row runs into the empty corner under the covers, or the
+            // column would squeeze the round shuffle button into a bar.
             Row(
+                modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -328,18 +358,13 @@ fun HomeYourMixCard(
                         contentColor = colors.onPrimary
                     ),
                     contentPadding = PaddingValues(start = 16.dp, end = 20.dp),
-                    modifier = Modifier
-                        .height(48.dp)
-                        .animateContentSize(homeMotion.defaultSpatialSpec())
+                    modifier = Modifier.height(48.dp)
                 ) {
                     PlayStateIcon(showPause = playButton.showPause, iconSize = 22.dp) {
                         Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
                     }
                     Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(if (playButton.showPause) R.string.home_pause else R.string.home_play),
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    PlayStateLabel(showPause = playButton.showPause)
                 }
                 FilledIconButton(
                     onClick = onShuffle,

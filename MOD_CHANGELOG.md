@@ -1,8 +1,9 @@
+- Your Mix op de homepage: de Play-knop groeit en krimpt soepel als hele pil, Shuffle blijft rond
+
+Ook in deze versie (sinds 0.7.5-mod.1):
 - Genrepagina en Your Mix: nieuwe kop met de hoezen groot en helemaal in beeld
 - Play it, Shuffle en de sorteerknoppen bewegen nu net als de knoppen in de speler
 - Duur in woorden: 3 hours and 3 minutes
-
-Ook in deze versie (sinds 0.7.5-mod.1):
 - Muziek bedienen in Connect device: de mini player gaat mee boven het paneel
 - Volumeschuif gaat soepel mee met de volumetoetsen in plaats van in sprongen
 - Individueel volume klapt soepel uit, zonder hapering
