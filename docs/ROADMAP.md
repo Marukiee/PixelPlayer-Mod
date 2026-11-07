@@ -34,8 +34,9 @@ Volgorde gekozen door Mark (2026-11-02):
 14. [x] Genrepagina opnieuw (0.7.5-mod.20): Mark koos variant B, een grote hoes in een koekjesvorm met twee kleine eromheen, helemaal in beeld boven de titel. Icoontje naast de titel is weg. Your Mix gebruikt dezelfde kop
 15. [x] Knoppen bewegen als in de speler (0.7.5-mod.20): Play it en Shuffle, ook de sorteerknoppen. Ze deden het eerst niet doordat een korte tik in een lijst indrukken en loslaten tegelijk meldt, en `collectIsPressedAsState` dat niet ziet. `rememberPressFraction` leest nu elke tik zelf
 16. [x] Totale duur onder de naam in woorden (0.7.5-mod.20): `formatTotalDuration`, ook op de afspeellijstpagina. Engels en Nederlands; de andere talen vallen terug op Engels
-17. [ ] Spotify vanuit PixelPlayer op de Sonos: zoeken, een los nummer in dezelfde wachtrij, podcasts (Mark, 2026-11-07). Uitgezocht, zie "Spotify in de Sonos-wachtrij". Ligt stil op verzoek van Mark; de proef op de echte speaker is niet gedaan
+17. [ ] Spotify vanuit PixelPlayer op de Sonos: zoeken, een los nummer in dezelfde wachtrij, podcasts (Mark, 2026-11-07). Uitgezocht, zie "Spotify in de Sonos-wachtrij". Proef op een echte speaker gelukt (2026-11-07). Zoeken en los nummer in de wachtrij gebouwd (nog niet uitgebracht): knop Zoek op Spotify onder de resultaten en bij geen resultaat, Spotify-instellingen met eigen Client ID, podcasts met een afleveringenpagina (0.7.5-mod.23)
 18. [x] Play-knop van Your Mix groeit en krimpt als hele pil (0.7.5-mod.21): `animateContentSize` stond om de knop, dus de pil sprong en alleen het knipvlak bewoog. Het woord regelt nu zelf zijn breedte, in `PlayStateLabel`. Shuffle blijft op elke breedte een rondje: de knoppenrij is niet meer aan de kolom gebonden en loopt op een smal scherm door in het lege hoekje onder de hoezen
+19. [x] Telefoon heet en batterij leeg tijdens Sonos (0.7.5-mod.23, gemeld via de Drip-sessie 2026-11-07): de stream-proxy (Ktor CIO) hield een kern bezig zolang een Navidrome-nummer stil meespeelde, omdat zijn socket-schrijver blijft schrijven als de speler een volle buffer heeft. De telefoon leest Navidrome-nummers nu rechtstreeks (`NavidromeStreamProxy.directStreamUri`), op de emulator van ongeveer 104 naar 5 procent CPU. Een bewaarde wachtrij met het oude proxy-adres wordt bij herstel terug omgezet (`originalUri`), dat gaf na elke herstart een bronfout
 
 ## Luistergegevens naar Navidrome
 
@@ -107,7 +108,22 @@ Beperkingen: afspelen van Spotify-audio in PixelPlayer kan niet, alleen de Spoti
 
 Regels sinds februari 2026 voor een app in Development Mode: de eigenaar moet Premium hebben, maximaal 5 gebruikers, zoeken geeft maximaal 10 resultaten per keer, en nummers kunnen alleen nog een voor een worden opgehaald (geen batch). De nieuwe releases-lijst en artiest-toptracks zijn weg, dus "Nieuwe releases" hierboven gaat via MusicBrainz of ListenBrainz. `external_ids` (ISRC) blijft wel bestaan.
 
-### Spotify in de Sonos-wachtrij (uitgezocht 2026-11-07, nog niet op een speaker geprobeerd)
+### Spotify in de Sonos-wachtrij (uitgezocht 2026-11-07, proef op een echte speaker gelukt)
+
+Gebouwd (2026-11-07, uitgebracht in 0.7.5-mod.23):
+
+- **Inloggen:** PKCE met de Client ID van een app die Mark zelf maakt, redirect `pixelplaymod://spotify-callback` (`SpotifyAuth`, `SpotifyLoginActivity`). Tokens versleuteld en buiten elke back-up. De instellingen tonen per veld het pad in Spotify in vet, zoals bij MarkMySteps.
+- **Zoeken:** alleen op een tik, max 10 resultaten, `market=from_token`. Knop onder de resultaten en bij geen resultaat. Zelfde rijen als gewone nummers, eigen klein menu met Afspelen, Speel hierna, Aan wachtrij toevoegen.
+- **Wachtrij:** een Spotify-nummer is een gewone `Song` met een eigen negatief id (boven alle andere bronnen) en adres `spotify://track/<id>?ms=<duur>`. De telefoon speelt stilte van die lengte (`SpotifyStandInDataSource`), de Sonos krijgt het item van de proef (`SonosTrackResolver.spotifyTrack`).
+- **Zonder Sonos:** afspelen en toevoegen zeggen dat het alleen op de Sonos kan. Na een Sonos-sessie gaan Spotify-nummers uit de wachtrij van de telefoon.
+- **Weigert de speaker** (geen Premium, 804): het nummer blijft buiten de Sonos-wachtrij en wordt bij aankomst overgeslagen met een melding die zegt waarom.
+- Niet naar Navidrome gescrobbeld en niet in de lokale luisterstatistiek. Op de emulator getest met een nep-Spotify (`spotify_test_base.txt`) en de nep-Sonos.
+- In de speler staat naast de tijd het Spotify-logo met Spotify in plaats van de kwaliteit van de stille vervanger. Uitloggen is een ronde knop zoals Ontkoppelen, met een bevestiging.
+- Zoekfilters: de gewone chips in een rij die scrollt en tot de schermrand loopt (Mark, 2026-11-07), niet meer op twee regels.
+- **Gedrag zoals lokale nummers:** een tik speelt direct af en houdt de wachtrij (`playSongKeepingQueue`), vegen gebruikt de ingestelde veegacties, het menu heeft Afspelen, Speel hierna en Aan wachtrij. Alles alleen op de Sonos.
+- **Podcasts:** zoeken geeft ook shows en losse afleveringen. Een show opent een pagina over de volle hoogte met beschrijving en kaarten per aflevering (datum, duur, beschrijving die uitklapt). Afleveringen gaan als `spotify%3aepisode%3a<id>` naar de Sonos; dat is op de nep-Sonos getest, nog niet op Marks speakers. Weigert de speaker, dan wordt overgeslagen met een melding.
+
+Proef op Marks groep (2026-11-07): `AddURIToQueue` met `spotify%3atrack%3a<id>`, item-id `00032020` plus dat adres en service 2311 werkte meteen. Het nummer kwam achteraan de wachtrij met 48 Navidrome-nummers, speelde na `Seek` en `Play`, de tijd liep door, de bron bleef `x-rincon-queue` en de titel kwam van Spotify. Er was geen Spotify-app voor nodig, alleen het account dat in de Sonos-app gekoppeld is. Een podcastaflevering (`spotify%3aepisode%3a<id>`) is nog niet geprobeerd. Let op bij terugzetten: `SetAVTransportURI` laat de speaker op STOPPED staan, niet op gepauzeerd.
 
 Wens: zoeken op Spotify in PixelPlayer en een los nummer of een podcast in dezelfde wachtrij zetten, zonder naar de Spotify- of Sonos-app te gaan.
 

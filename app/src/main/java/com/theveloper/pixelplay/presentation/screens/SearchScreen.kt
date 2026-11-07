@@ -1,5 +1,7 @@
 package com.theveloper.pixelplay.presentation.screens
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.theveloper.pixelplay.presentation.components.subcomps.rememberPressFraction
 import com.theveloper.pixelplay.presentation.navigation.navigateSafely
 import com.theveloper.pixelplay.presentation.navigation.navigateSafelyReplacing
 
@@ -49,6 +51,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.layout.layout
+import androidx.compose.material3.Surface
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -147,6 +155,7 @@ import kotlinx.coroutines.withContext
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import timber.log.Timber
 import com.theveloper.pixelplay.presentation.components.subcomps.EnhancedSongListItem
+import com.theveloper.pixelplay.presentation.screens.search.components.SpotifySearchSection
 import com.theveloper.pixelplay.presentation.components.subcomps.SwipeToActionRow
 import com.theveloper.pixelplay.data.preferences.SwipeAction
 import androidx.compose.ui.res.stringResource
@@ -552,12 +561,20 @@ fun SearchScreen(
                                     .padding(vertical = 8.dp, horizontal = 8.dp)
                             )
                         } else {
-                            FlowRow(
+                            // One row that scrolls: a chip on a line of its own looked like it fell off. It runs to the
+                            // screen edges, past the 16.dp of this column, so the last chip slides under the edge instead
+                            // of being cut off in the middle of the screen. The first one still starts under the search bar.
+                            Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp, horizontal = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(0.dp)
+                                    .layout { measurable, constraints ->
+                                        val bleed = FilterRowBleed.roundToPx()
+                                        val width = constraints.maxWidth + 2 * bleed
+                                        val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+                                        layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
+                                    }
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(vertical = 8.dp, horizontal = 8.dp + FilterRowBleed),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 SearchFilterChip(SearchFilterType.ALL, currentFilter, playerViewModel)
                                 SearchFilterChip(SearchFilterType.SONGS, currentFilter, playerViewModel)
@@ -575,7 +592,17 @@ fun SearchScreen(
                                 if (isEmpty) {
                                     EmptySearchResults(
                                         searchQuery = searchQuery,
-                                        colorScheme = colorScheme
+                                        colorScheme = colorScheme,
+                                        footer = {
+                                            // Nothing here or on the server: Spotify may have it.
+                                            // As wide as the song rows of a normal result.
+                                            SpotifySearchSection(
+                                                query = searchQuery,
+                                                playerViewModel = playerViewModel,
+                                                onOpenSettings = { navController.navigateSafely(Screen.SettingsCategory.createRoute("spotify")) },
+                                                modifier = Modifier.padding(top = 16.dp)
+                                            )
+                                        }
                                     )
                                 } else {
                                     SearchResultsList(
@@ -1030,11 +1057,14 @@ fun SearchHistoryListItem(
 
 
 @Composable
-fun EmptySearchResults(searchQuery: String, colorScheme: ColorScheme) {
+fun EmptySearchResults(searchQuery: String, colorScheme: ColorScheme, footer: @Composable () -> Unit = {}) {
+    // Room at the bottom like the result list, so the Spotify rows can scroll up from under the mini player.
+    val bottomRoom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + MiniPlayerHeight + 94.dp
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(top = 32.dp, bottom = 32.dp + bottomRoom),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -1065,6 +1095,7 @@ fun EmptySearchResults(searchQuery: String, colorScheme: ColorScheme) {
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
+        footer()
     }
 }
 
@@ -1337,6 +1368,14 @@ fun SearchResultsList(
                     }
                 }
             }
+        }
+        // Under the results too, in case the one that was found is not the right one.
+        item(key = "spotify_search") {
+            SpotifySearchSection(
+                query = searchQuery,
+                playerViewModel = playerViewModel,
+                onOpenSettings = { navController.navigateSafely(Screen.SettingsCategory.createRoute("spotify")) }
+            )
         }
     }
 }
@@ -1712,12 +1751,20 @@ fun SearchFilterChip(
         SearchFilterType.PLAYLISTS -> R.string.library_tab_playlists
     }
 
+    // Presses like the other buttons: the corners square off for a moment.
+    val interactionSource = remember { MutableInteractionSource() }
+    val press by rememberPressFraction(interactionSource)
+    val haptics = LocalHapticFeedback.current
     FilterChip(
         selected = selected,
-        onClick = { playerViewModel.updateSearchFilter(filterType) },
+        onClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            playerViewModel.updateSearchFilter(filterType)
+        },
         label = { Text(stringResource(labelResId)) },
         modifier = modifier,
-        shape = CircleShape,
+        shape = RoundedCornerShape(androidx.compose.ui.unit.lerp(16.dp, 8.dp, press)),
+        interactionSource = interactionSource,
         border = BorderStroke(
             width = 0.dp,
             color = Color.Transparent
@@ -1729,17 +1776,20 @@ fun SearchFilterChip(
             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
             selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
         ),
-         leadingIcon = if (selected) {
-             {
-                 Icon(
-                     painter = painterResource(R.drawable.rounded_check_circle_24),
-                     contentDescription = "Selected",
-                     tint = MaterialTheme.colorScheme.onPrimary,
-                     modifier = Modifier.size(FilterChipDefaults.IconSize)
-                 )
-             }
-         } else {
-             null
-         }
+        leadingIcon = if (selected) {
+            {
+                Icon(
+                    painter = painterResource(R.drawable.rounded_check_circle_24),
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                )
+            }
+        } else {
+            null
+        }
     )
 }
+
+/** The side padding of the search column, which the filter row reaches past to the screen edge. */
+private val FilterRowBleed = 16.dp

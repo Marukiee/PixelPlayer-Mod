@@ -9,7 +9,7 @@ Timing is measured on a real speaker: calls take 12 to 90 ms, and Play or a trac
 during playback gives TRANSITIONING before PLAYING. A Pause is accepted during
 TRANSITIONING and takes effect at once. See README.md for how to run it.
 """
-import json
+import json, os
 import random
 import sys
 import threading
@@ -149,6 +149,17 @@ def av_transport(sp, action, a):
         didl = ET.fromstring(a["EnqueuedURIMetaData"])  # second layer must be valid XML
         ns = {"d": "urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/", "dc": "http://purl.org/dc/elements/1.1/"}
         res = didl.find(".//d:res", ns)
+        if a["EnqueuedURI"].startswith("spotify%3a"):
+            # A Spotify item like the real speakers took on 2026-11-07: no res, the speaker fetches it with the
+            # linked account. SPOTIFY_REFUSE=804 plays a speaker without Premium.
+            if os.environ.get("SPOTIFY_REFUSE"):
+                raise Fault(int(os.environ["SPOTIFY_REFUSE"]))
+            item = didl.find(".//d:item", ns)
+            if item is None or not item.get("id", "").startswith("00032020spotify%3a"):
+                raise Fault(402)
+            sp["queue"].append({"uri": a["EnqueuedURI"], "title": "Spotify song", "duration": 213_000, "mime": None})
+            n = len(sp["queue"])
+            return {"FirstTrackNumberEnqueued": str(n), "NumTracksAdded": "1", "NewQueueLength": str(n)}
         if res is None or res.text != a["EnqueuedURI"]:
             raise Fault(402)
         title = didl.find(".//dc:title", ns).text

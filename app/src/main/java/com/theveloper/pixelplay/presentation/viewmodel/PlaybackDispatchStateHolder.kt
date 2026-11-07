@@ -1038,6 +1038,23 @@ class PlaybackDispatchStateHolder @Inject constructor(
      * "Play next": insert at the FRONT of the user-queue block (right after the current
      * song), jumping ahead of anything already queued — matching Spotify's "Play next".
      */
+    /**
+     * Plays [song] right away and keeps the queue: it goes in after the current song and the player moves to it, so
+     * what was coming still comes after it. With an empty queue it simply starts.
+     */
+    fun playSongKeepingQueue(song: Song, queueName: String) {
+        val controller = cb.getController()
+        if (controller == null || controller.mediaItemCount == 0 || controller.currentMediaItemIndex == C.INDEX_UNSET) {
+            showAndPlaySong(song, listOf(song), queueName)
+            return
+        }
+        removeUpcomingOccurrences(controller, song.id)
+        val insertionIndex = (controller.currentMediaItemIndex + 1).coerceAtMost(controller.mediaItemCount)
+        controller.addMediaItem(insertionIndex, buildPlaybackMediaItem(song, isUserQueueItem = true))
+        controller.seekTo(insertionIndex, 0L)
+        controller.play()
+    }
+
     fun addSongNextToQueue(song: Song) {
         cb.getController()?.let { controller ->
             removeUpcomingOccurrences(controller, song.id)

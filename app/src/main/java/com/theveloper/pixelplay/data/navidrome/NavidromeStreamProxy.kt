@@ -53,11 +53,42 @@ class NavidromeStreamProxy @Inject constructor(
         }
     }
 
+    companion object {
+        /**
+         * The song's own address for a proxy address that an older version saved with the queue. The proxy takes a
+         * new port at every start, so the saved one led nowhere and the first song after a restart failed.
+         */
+        fun originalUri(saved: String): String? {
+            val uri = Uri.parse(saved)
+            if (uri.scheme != "http" || uri.host != "127.0.0.1") return null
+            val segments = uri.pathSegments
+            if (segments.size != 2 || segments[0] != "navidrome") return null
+            val id = segments[1].takeIf(CloudStreamSecurity::validateNavidromeSongId) ?: return null
+            return "navidrome://$id"
+        }
+    }
+
     // Navidrome URIs may use host or path: navidrome://songId or navidrome:///songId
     override fun extractIdFromUri(uri: Uri): String? =
         uri.host ?: uri.path?.removePrefix("/")
 
     fun resolveNavidromeUri(uriString: String): String? = resolveUri(uriString)
+
+    /**
+     * The server's own stream address for the phone's player, checked the way the proxy checks it. The player reads
+     * it directly: through this proxy a core stayed busy for as long as a song played, because the CIO socket writer
+     * keeps writing while the player has a full buffer and reads nothing. Made fresh every time: it carries a login
+     * token, costs nothing to build, and a kept one would outlive a new login.
+     */
+    suspend fun directStreamUri(uriString: String): String? {
+        val uri = Uri.parse(uriString)
+        if (uri.scheme != uriScheme) return null
+        val id = extractIdFromUri(uri)?.let(::parseRouteParam)?.takeIf(::validateId) ?: return null
+        val url = resolveStreamUrl(id) ?: return null
+        return url.takeIf {
+            CloudStreamSecurity.isSafeRemoteStreamUrl(it, allowedHostSuffixes, allowHttpForAllowedHosts = true)
+        }
+    }
 
     /**
      * Pre-fetches and caches the real stream URL for a song so the proxy can

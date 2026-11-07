@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Speaker
+import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.theveloper.pixelplay.R
 
@@ -43,6 +44,12 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_sonos_title,
         subtitleRes = R.string.settings_category_sonos_subtitle,
         icon = Icons.Rounded.Speaker
+    ),
+    SPOTIFY(
+        id = "spotify",
+        titleRes = R.string.settings_category_spotify_title,
+        subtitleRes = R.string.settings_category_spotify_subtitle,
+        icon = Icons.Rounded.TravelExplore
     ),
     NAVIDROME(
         id = "navidrome",

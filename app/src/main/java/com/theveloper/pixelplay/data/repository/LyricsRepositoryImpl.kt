@@ -1669,6 +1669,8 @@ class LyricsRepositoryImpl @Inject constructor(
     private fun generateCacheKey(songId: String): String = songId
 
     private fun createTempFileFromUri(uri: Uri): File? {
+        // A Spotify song has no file on the phone: the Sonos plays it, see SpotifyStandInDataSource.
+        if (uri.scheme == com.theveloper.pixelplay.data.spotify.SpotifyIds.SCHEME) return null
         return try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val fileName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->

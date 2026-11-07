@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_category_spotify_title">Spotify</string>
+    <string name="settings_category_spotify_subtitle">Search Spotify and play on your Sonos</string>
+
+    <string name="spotify_settings_status_hint">Search Spotify from Search and play it on your Sonos. Needs Spotify Premium.</string>
+    <string name="spotify_settings_connect_title">Connect</string>
+    <string name="spotify_settings_redirect_tail">. Also tick Web API.</string>
+    <string name="spotify_settings_your_app">your app</string>
+    <string name="spotify_settings_refused_lead">Spotify refuses?</string>
+    <string name="spotify_settings_refused_tail">. Add your e-mail.</string>
+    <string name="spotify_settings_logged_out">Not logged in yet</string>
+    <string name="spotify_settings_logged_in">Logged in as %1$s</string>
+    <string name="spotify_settings_logged_in_unknown">Logged in</string>
+    <string name="spotify_settings_logout">Log out</string>
+    <string name="spotify_settings_open_dashboard">Dashboard</string>
+    <string name="spotify_settings_redirect_label">Redirect URI</string>
+    <string name="spotify_settings_copy">Copy</string>
+    <string name="spotify_settings_copied">Copied</string>
+    <string name="spotify_settings_client_id_label">Client ID</string>
+    <string name="spotify_settings_client_id_needed">Paste the Client ID first</string>
+    <string name="spotify_settings_login">Log in</string>
+    <string name="spotify_login_done">Logged in to Spotify</string>
+    <string name="spotify_login_failed">Logging in to Spotify did not work. Check the Client ID and the redirect URI.</string>
+
+    <string name="spotify_search_button">Search on Spotify</string>
+    <string name="spotify_section_title">Spotify</string>
+    <string name="spotify_search_none">Nothing found on Spotify</string>
+    <string name="spotify_search_failed">Spotify did not answer. Try again.</string>
+    <string name="spotify_search_logged_out">Log in to Spotify again in Settings.</string>
+    <string name="spotify_needs_sonos">Spotify songs only play on your Sonos. Pick a speaker first.</string>
+    <string name="spotify_song_subtitle">%1$s on Spotify</string>
+    <string name="spotify_action_play">Play</string>
+    <string name="spotify_action_play_next">Play next</string>
+    <string name="spotify_action_add_to_queue">Add to queue</string>
+    <string name="spotify_sonos_refused">The Sonos refused the Spotify song (UPnP %1$s). Check Spotify Premium and that Spotify is linked in the Sonos app.</string>
+    <string name="spotify_logout_title">Log out of Spotify?</string>
+    <string name="spotify_logout_text">Searching Spotify works again once you log in. Your Client ID stays.</string>
+    <string name="spotify_section_podcasts">Podcasts</string>
+    <string name="spotify_section_episodes">Episodes</string>
+    <string name="spotify_show_failed">Spotify did not send the episodes. Try again.</string>
+    <string name="spotify_episode_more">More options</string>
+    <string name="spotify_episode_more_text">More</string>
+    <string name="spotify_episode_less">Less</string>
+    <string name="spotify_episode_playing">Playing</string>
+    <string name="spotify_episode_minutes">%1$d min</string>
+    <string name="spotify_episode_hours">%1$d h %2$d min</string>
+</resources>

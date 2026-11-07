@@ -89,8 +89,15 @@ class SonosTrackResolver @Inject constructor(
         cache.clear()
     }
 
-    /** Resolves the given media ids in one database read; unknown or unmatched songs map to null. */
-    suspend fun resolve(mediaIds: List<String>): Map<String, SonosTrack?> = mutex.withLock {
+    /**
+     * Resolves the given media ids in one database read; unknown or unmatched songs map to null. [spotifyTracks] holds
+     * every Spotify song or episode among them: those are not in the database at all.
+     */
+    suspend fun resolve(
+        mediaIds: List<String>,
+        spotifyTracks: Map<String, com.theveloper.pixelplay.data.spotify.SpotifyItem> = emptyMap()
+    ): Map<String, SonosTrack?> = mutex.withLock {
+        for ((mediaId, item) in spotifyTracks) cache[mediaId] = spotifyTrack(mediaId, item)
         val missing = mediaIds.filter { it !in cache }.distinct()
         if (missing.isNotEmpty()) {
             val rows = missing.mapNotNull { it.toLongOrNull() }.chunked(500)
@@ -212,6 +219,26 @@ class SonosTrackResolver @Inject constructor(
             }.ifEmpty { pool }
             return byAlbum.minByOrNull { abs(it.duration - durationMs) }
         }
+
+        /**
+         * A Spotify song or episode the way the Sonos app queues one: the speaker fetches it itself with the Spotify
+         * account linked in the Sonos app. Service 2311 is Spotify outside the US. A song was tried on Mark's speakers
+         * on 2026-11-07; an episode goes the same way in SoCo, but has not been tried on them.
+         */
+        fun spotifyTrack(mediaId: String, item: com.theveloper.pixelplay.data.spotify.SpotifyItem): SonosTrack {
+            val uri = item.sonosUri
+            val metadata = "<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
+                "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" " +
+                "xmlns:r=\"urn:schemas-rinconnetworks-com:metadata-1-0/\" " +
+                "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">" +
+                "<item id=\"00032020$uri\" parentID=\"-1\" restricted=\"true\"><dc:title></dc:title>" +
+                "<upnp:class>object.item.audioItem.musicTrack</upnp:class>" +
+                "<desc id=\"cdudn\" nameSpace=\"urn:schemas-rinconnetworks-com:metadata-1-0/\">" +
+                "SA_RINCON${SPOTIFY_SERVICE}_X_#Svc$SPOTIFY_SERVICE-0-Token</desc></item></DIDL-Lite>"
+            return SonosTrack(mediaId, uri, metadata)
+        }
+
+        private const val SPOTIFY_SERVICE = 2311
 
         fun mimeForSuffix(suffix: String?): String = when (suffix) {
             "flac" -> "audio/flac"

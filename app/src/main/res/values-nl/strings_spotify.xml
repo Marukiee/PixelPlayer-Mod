@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_category_spotify_title">Spotify</string>
+    <string name="settings_category_spotify_subtitle">Zoek op Spotify en speel af op je Sonos</string>
+
+    <string name="spotify_settings_status_hint">Zoek in Search op Spotify en speel het af op je Sonos. Spotify Premium nodig.</string>
+    <string name="spotify_settings_connect_title">Koppelen</string>
+    <string name="spotify_settings_redirect_tail">. Vink ook Web API aan.</string>
+    <string name="spotify_settings_your_app">je app</string>
+    <string name="spotify_settings_refused_lead">Weigert Spotify?</string>
+    <string name="spotify_settings_refused_tail">. Voeg je e-mailadres toe.</string>
+    <string name="spotify_settings_logged_out">Nog niet ingelogd</string>
+    <string name="spotify_settings_logged_in">Ingelogd als %1$s</string>
+    <string name="spotify_settings_logged_in_unknown">Ingelogd</string>
+    <string name="spotify_settings_logout">Uitloggen</string>
+    <string name="spotify_settings_open_dashboard">Dashboard</string>
+    <string name="spotify_settings_redirect_label">Redirect URI</string>
+    <string name="spotify_settings_copy">Kopieer</string>
+    <string name="spotify_settings_copied">Gekopieerd</string>
+    <string name="spotify_settings_client_id_label">Client ID</string>
+    <string name="spotify_settings_client_id_needed">Plak eerst de Client ID</string>
+    <string name="spotify_settings_login">Inloggen</string>
+    <string name="spotify_login_done">Ingelogd bij Spotify</string>
+    <string name="spotify_login_failed">Inloggen bij Spotify lukte niet. Controleer de Client ID en de redirect URI.</string>
+
+    <string name="spotify_search_button">Zoek op Spotify</string>
+    <string name="spotify_section_title">Spotify</string>
+    <string name="spotify_search_none">Niets gevonden op Spotify</string>
+    <string name="spotify_search_failed">Spotify gaf geen antwoord. Probeer het opnieuw.</string>
+    <string name="spotify_search_logged_out">Log in Instellingen opnieuw in bij Spotify.</string>
+    <string name="spotify_needs_sonos">Spotify-nummers spelen alleen op je Sonos. Kies eerst een speaker.</string>
+    <string name="spotify_song_subtitle">%1$s op Spotify</string>
+    <string name="spotify_action_play">Afspelen</string>
+    <string name="spotify_action_play_next">Speel hierna</string>
+    <string name="spotify_action_add_to_queue">Aan wachtrij toevoegen</string>
+    <string name="spotify_sonos_refused">De Sonos weigerde het Spotify-nummer (UPnP %1$s). Controleer Spotify Premium en of Spotify in de Sonos-app gekoppeld is.</string>
+    <string name="spotify_logout_title">Uitloggen bij Spotify?</string>
+    <string name="spotify_logout_text">Zoeken op Spotify werkt weer zodra je opnieuw inlogt. Je Client ID blijft bewaard.</string>
+    <string name="spotify_section_podcasts">Podcasts</string>
+    <string name="spotify_section_episodes">Afleveringen</string>
+    <string name="spotify_show_failed">Spotify stuurde de afleveringen niet. Probeer het opnieuw.</string>
+    <string name="spotify_episode_more">Meer opties</string>
+    <string name="spotify_episode_more_text">Meer</string>
+    <string name="spotify_episode_less">Minder</string>
+    <string name="spotify_episode_playing">Speelt</string>
+    <string name="spotify_episode_minutes">%1$d min</string>
+    <string name="spotify_episode_hours">%1$d u %2$d min</string>
+</resources>

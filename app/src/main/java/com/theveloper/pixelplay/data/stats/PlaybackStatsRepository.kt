@@ -169,6 +169,8 @@ class PlaybackStatsRepository @Inject constructor(
         timestamp: Long = System.currentTimeMillis()
     ) = withContext(Dispatchers.IO) {
         if (songId.isBlank()) return@withContext
+        // A Spotify song is not in the library, so the stats would only show it as an unknown artist.
+        if (com.theveloper.pixelplay.data.spotify.SpotifyIds.isSpotifySongId(songId)) return@withContext
         val coercedTimestamp = timestamp.coerceAtLeast(0L)
         val coercedDuration = durationMs.coerceAtLeast(0L)
         val start = (coercedTimestamp - coercedDuration).coerceAtLeast(0L)

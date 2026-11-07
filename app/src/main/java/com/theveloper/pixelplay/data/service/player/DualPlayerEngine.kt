@@ -61,6 +61,7 @@ import kotlin.coroutines.resume
 
 import com.theveloper.pixelplay.data.netease.NeteaseStreamProxy
 import com.theveloper.pixelplay.data.navidrome.NavidromeStreamProxy
+import com.theveloper.pixelplay.data.spotify.StandInAwareDataSource
 import com.theveloper.pixelplay.data.qqmusic.QqMusicStreamProxy
 import androidx.core.net.toUri
 import com.theveloper.pixelplay.data.diagnostics.AdvancedPerformanceDiagnostics
@@ -1136,7 +1137,8 @@ class DualPlayerEngine @Inject constructor(
             }
         }
         
-        val dataSourceFactory = DefaultDataSource.Factory(context)
+        // Spotify songs play on the Sonos; the phone gets silence of the same length, see SpotifyStandInDataSource.
+        val dataSourceFactory = StandInAwareDataSource.Factory(DefaultDataSource.Factory(context))
         val resolvingFactory = ResolvingDataSource.Factory(dataSourceFactory, resolver)
         val extractorsFactory = DefaultExtractorsFactory()
             // FLAG_WORKAROUND_IGNORE_EDIT_LISTS intentionally removed: it breaks Opus files
@@ -1219,6 +1221,8 @@ class DualPlayerEngine @Inject constructor(
 
     suspend fun resolveCloudUri(uri: Uri): Uri = withContext(Dispatchers.IO) {
         val uriString = uri.toString()
+        // Never kept: the address holds a login token, see NavidromeStreamProxy.directStreamUri.
+        if (uri.scheme == "navidrome") return@withContext resolveNavidromeUriAsync(uriString) ?: uri
         resolvedUriCache.get(uriString)?.let { return@withContext it }
 
         val resolved: Uri? = when (uri.scheme) {
@@ -1273,9 +1277,7 @@ class DualPlayerEngine @Inject constructor(
     }
 
     private suspend fun resolveNavidromeUriAsync(uriString: String): Uri? = withContext(Dispatchers.IO) {
-        if (!navidromeStreamProxy.ensureReady(5_000L)) return@withContext null
-        navidromeStreamProxy.warmUpStreamUrl(uriString)
-        navidromeStreamProxy.resolveNavidromeUri(uriString)?.toUri()
+        navidromeStreamProxy.directStreamUri(uriString)?.toUri()
     }
 
     private suspend fun resolveJellyfinUriAsync(uriString: String): Uri? = withContext(Dispatchers.IO) {
@@ -1299,6 +1301,9 @@ class DualPlayerEngine @Inject constructor(
         // Use CLOUD_PROXY_SCHEMES: http/https resolve directly via ExoPlayer and never
         // reach resolveCloudUri, so checking them wastes an IO dispatch.
         if (scheme !in CLOUD_PROXY_SCHEMES) return mediaItem
+        // Left to the data source, which resolves it as it opens: the server address holds a login token that should
+        // not end up in a media item.
+        if (scheme == "navidrome") return mediaItem
         val resolvedUri = resolveCloudUri(uri)
         return if (resolvedUri == uri) mediaItem else mediaItem.buildUpon().setUri(resolvedUri).build()
     }

@@ -91,6 +91,7 @@ import com.theveloper.pixelplay.shared.WearIntents
 import com.theveloper.pixelplay.utils.ArtworkTransportSanitizer
 import com.theveloper.pixelplay.utils.MediaItemBuilder
 import com.theveloper.pixelplay.data.navidrome.NavidromeRepository
+import com.theveloper.pixelplay.data.navidrome.NavidromeStreamProxy
 import com.theveloper.pixelplay.di.AppScope
 import com.theveloper.pixelplay.presentation.viewmodel.ListeningStatsTracker
 import java.io.ByteArrayOutputStream
@@ -1874,6 +1875,7 @@ class MusicService : MediaLibraryService() {
         if (snapshotItem.mediaId.isBlank() || snapshotItem.uri.isBlank()) {
             return null
         }
+        val savedUri = NavidromeStreamProxy.originalUri(snapshotItem.uri) ?: snapshotItem.uri
 
         val metadataBuilder = MediaMetadata.Builder()
         snapshotItem.title?.takeIf { it.isNotBlank() }?.let { metadataBuilder.setTitle(it) }
@@ -1887,7 +1889,7 @@ class MusicService : MediaLibraryService() {
                 MediaItemBuilder.EXTERNAL_EXTRA_FLAG,
                 snapshotItem.mediaId.startsWith("external:")
             )
-            putString(MediaItemBuilder.EXTERNAL_EXTRA_CONTENT_URI, snapshotItem.uri)
+            putString(MediaItemBuilder.EXTERNAL_EXTRA_CONTENT_URI, savedUri)
             snapshotItem.albumTitle?.takeIf { it.isNotBlank() }?.let {
                 putString(MediaItemBuilder.EXTERNAL_EXTRA_ALBUM, it)
             }
@@ -1902,7 +1904,7 @@ class MusicService : MediaLibraryService() {
 
         return MediaItem.Builder()
             .setMediaId(snapshotItem.mediaId)
-            .setUri(MediaItemBuilder.playbackUri(snapshotItem.uri))
+            .setUri(MediaItemBuilder.playbackUri(savedUri))
             .setMediaMetadata(metadataBuilder.build())
             .build()
     }

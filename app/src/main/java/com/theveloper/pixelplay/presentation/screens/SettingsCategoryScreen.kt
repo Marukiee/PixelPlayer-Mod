@@ -1,5 +1,12 @@
 package com.theveloper.pixelplay.presentation.screens
 
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.TravelExplore
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Button
 import com.theveloper.pixelplay.data.preferences.MiniPlayerStyle
 import com.theveloper.pixelplay.presentation.navigation.navigateSafely
 import com.theveloper.pixelplay.presentation.components.BackupModuleSelectionDialog
@@ -927,6 +934,9 @@ fun SettingsCategoryScreen(
                         }
                         SettingsCategory.SONOS -> {
                             SonosSettingsBlock()
+                        }
+                        SettingsCategory.SPOTIFY -> {
+                            SpotifySettingsBlock()
                         }
                         SettingsCategory.NAVIDROME -> {
                             NavidromeSettingsBlock(settingsViewModel, navController)
@@ -3452,6 +3462,229 @@ private fun QueueSwipeActionSettingItem(
             }
         }
     }
+}
+
+/**
+ * The Spotify login: Mark makes a free app on Spotify's dashboard and pastes its Client ID here. No steps to read:
+ * under each field a short path in Spotify's own words says where to find it, like the settings of MarkMySteps.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SpotifySettingsBlock() {
+    val spotifyViewModel: com.theveloper.pixelplay.presentation.viewmodel.SpotifyViewModel = hiltViewModel()
+    val account by spotifyViewModel.account.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val motion = remember { MotionScheme.expressive() }
+    val redirectUri = com.theveloper.pixelplay.data.spotify.SpotifyAuth.REDIRECT_URI
+    var clientId by remember(account.clientId) { mutableStateOf(account.clientId) }
+    var clientIdMissing by remember { mutableStateOf(false) }
+    var confirmLogout by remember { mutableStateOf(false) }
+
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .animateContentSize(motion.defaultSpatialSpec())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Rounded.TravelExplore, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                AnimatedContent(
+                    modifier = Modifier.weight(1f),
+                    targetState = when {
+                        !account.loggedIn -> stringResource(R.string.spotify_settings_logged_out)
+                        account.displayName != null -> stringResource(R.string.spotify_settings_logged_in, account.displayName.orEmpty())
+                        else -> stringResource(R.string.spotify_settings_logged_in_unknown)
+                    },
+                    transitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
+                    label = "spotifyStatus"
+                ) { text ->
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+                // The same round button as Disconnect on the Sonos card.
+                if (account.loggedIn) {
+                    com.theveloper.pixelplay.presentation.components.DeviceCardButton(
+                        description = stringResource(R.string.spotify_settings_logout),
+                        onClick = { confirmLogout = true },
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, modifier = Modifier.size(22.dp))
+                    }
+                }
+            }
+            Text(
+                text = stringResource(R.string.spotify_settings_status_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+            )
+        }
+    }
+
+    if (confirmLogout) {
+        AlertDialog(
+            onDismissRequest = { confirmLogout = false },
+            icon = { Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null) },
+            title = { Text(stringResource(R.string.spotify_logout_title)) },
+            text = { Text(stringResource(R.string.spotify_logout_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmLogout = false
+                    spotifyViewModel.logout()
+                }) { Text(stringResource(R.string.spotify_settings_logout)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmLogout = false }) { Text(stringResource(R.string.settings_sonos_cancel)) }
+            }
+        )
+    }
+
+    if (!account.loggedIn) {
+        SettingsSubsection(title = stringResource(R.string.spotify_settings_connect_title)) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.spotify_settings_redirect_label),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(text = redirectUri, style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                                }
+                                val copiedText = stringResource(R.string.spotify_settings_copied)
+                                IconButton(onClick = {
+                                    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                                    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Redirect URI", redirectUri))
+                                    // From Android 13 the system shows its own note.
+                                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+                                        android.widget.Toast.makeText(context, copiedText, android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }) {
+                                    Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.spotify_settings_copy))
+                                }
+                            }
+                        }
+                        SpotifyWhereToFind(
+                            path = listOf("Dashboard", "Create app", "Redirect URIs"),
+                            tail = stringResource(R.string.spotify_settings_redirect_tail)
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = clientId,
+                            onValueChange = {
+                                clientId = it.trim()
+                                clientIdMissing = false
+                            },
+                            label = { Text(stringResource(R.string.spotify_settings_client_id_label)) },
+                            singleLine = true,
+                            isError = clientIdMissing,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (clientIdMissing) {
+                            Text(
+                                text = stringResource(R.string.spotify_settings_client_id_needed),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        } else {
+                            SpotifyWhereToFind(path = listOf("Dashboard", stringResource(R.string.spotify_settings_your_app), "Client ID"))
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            FilledTonalButton(
+                                onClick = {
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse(com.theveloper.pixelplay.data.spotify.SpotifyAuth.DASHBOARD_URL)
+                                            )
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.spotify_settings_open_dashboard), maxLines = 1)
+                            }
+                            Button(
+                                onClick = { if (!spotifyViewModel.login(clientId)) clientIdMissing = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.spotify_settings_login), maxLines = 1)
+                            }
+                        }
+                        SpotifyWhereToFind(
+                            lead = stringResource(R.string.spotify_settings_refused_lead),
+                            path = listOf("Settings", "Users Management"),
+                            tail = stringResource(R.string.spotify_settings_refused_tail)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Where something is in Spotify: the path in bold with arrows between, the rest small and quiet. */
+@Composable
+private fun SpotifyWhereToFind(path: List<String>, tail: String? = null, lead: String? = null) {
+    val strong = MaterialTheme.colorScheme.onSurface
+    val quiet = MaterialTheme.colorScheme.onSurfaceVariant
+    Text(
+        text = androidx.compose.ui.text.buildAnnotatedString {
+            if (lead != null) {
+                pushStyle(androidx.compose.ui.text.SpanStyle(color = quiet))
+                append(lead)
+                append(" ")
+                pop()
+            }
+            path.forEachIndexed { index, part ->
+                if (index > 0) {
+                    pushStyle(androidx.compose.ui.text.SpanStyle(color = quiet))
+                    append("  ›  ")
+                    pop()
+                }
+                pushStyle(androidx.compose.ui.text.SpanStyle(color = strong, fontWeight = FontWeight.Bold))
+                append(part)
+                pop()
+            }
+            if (tail != null) {
+                pushStyle(androidx.compose.ui.text.SpanStyle(color = quiet))
+                append(tail)
+                pop()
+            }
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(horizontal = 4.dp)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

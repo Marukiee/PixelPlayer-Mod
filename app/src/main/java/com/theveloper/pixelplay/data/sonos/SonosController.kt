@@ -12,6 +12,8 @@ import androidx.media3.common.util.UnstableApi
 import com.theveloper.pixelplay.R
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.service.player.DualPlayerEngine
+import com.theveloper.pixelplay.data.spotify.SpotifyIds
+import com.theveloper.pixelplay.data.spotify.SpotifyItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -190,7 +192,9 @@ class SonosController @Inject constructor(
         val currentMediaId: String,
         val positionMs: Long,
         val playWhenReady: Boolean,
-        val isPlaying: Boolean
+        val isPlaying: Boolean,
+        /** Each Spotify song or episode among [upcomingIds]. */
+        val spotifyTracks: Map<String, SpotifyItem>
     )
 
     init {
@@ -330,7 +334,7 @@ class SonosController @Inject constructor(
             return
         }
         val ids = saved.optJSONArray("queue")?.let { array -> List(array.length()) { array.optString(it) } }.orEmpty()
-        val resolved = resolver.resolve(ids)
+        val resolved = resolver.resolve(ids, spotifyTracksInPlayer())
         // Something else was connected to in the meantime.
         if (active != null) return
         val s = ActiveSession(group)
@@ -420,12 +424,14 @@ class SonosController @Inject constructor(
     private fun restorePhone(pauseLocal: Boolean) {
         if (pauseLocal) {
             engine.masterPlayer.pause()
+            dropSpotifySongs()
             // Let the pause reach the audio sink before the sound comes back.
             scope.launch {
                 delay(300)
                 if (active == null) engine.setRemoteOutputActive(false)
             }
         } else {
+            dropSpotifySongs()
             engine.setRemoteOutputActive(false)
         }
     }
@@ -684,13 +690,33 @@ class SonosController @Inject constructor(
         val item = player.currentMediaItem ?: return null
         val timeline = player.currentTimeline
         val ids = ArrayList<String>()
+        val spotify = HashMap<String, SpotifyItem>()
         val window = Timeline.Window()
         var index = player.currentMediaItemIndex
         while (index != C.INDEX_UNSET && index < timeline.windowCount && ids.size <= MAX_UPCOMING) {
-            ids += timeline.getWindow(index, window).mediaItem.mediaId
+            val mediaItem = timeline.getWindow(index, window).mediaItem
+            ids += mediaItem.mediaId
+            SpotifyIds.item(mediaItem.localConfiguration?.uri)?.let { spotify[mediaItem.mediaId] = it }
             index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
         }
-        return LocalState(ids, item.mediaId, player.currentPosition, player.playWhenReady, player.isPlaying)
+        return LocalState(ids, item.mediaId, player.currentPosition, player.playWhenReady, player.isPlaying, spotify)
+    }
+
+    /** The Spotify songs and episodes in the whole phone queue, by media id. */
+    private fun spotifyTracksInPlayer(): Map<String, SpotifyItem> {
+        val player = engine.masterPlayer
+        return (0 until player.mediaItemCount).mapNotNull { index ->
+            val item = player.getMediaItemAt(index)
+            SpotifyIds.item(item.localConfiguration?.uri)?.let { item.mediaId to it }
+        }.toMap()
+    }
+
+    /** Spotify songs can only play on the Sonos: without it the phone would play minutes of silence. */
+    private fun dropSpotifySongs() {
+        val player = engine.masterPlayer
+        for (index in player.mediaItemCount - 1 downTo 0) {
+            if (SpotifyIds.item(player.getMediaItemAt(index).localConfiguration?.uri) != null) player.removeMediaItem(index)
+        }
     }
 
     /**
@@ -701,7 +727,7 @@ class SonosController @Inject constructor(
         s.appendJob?.cancel()
         val generation = s.syncGeneration
         val local = readLocal() ?: return
-        val resolved = resolver.resolve(local.upcomingIds)
+        val resolved = resolver.resolve(local.upcomingIds, local.spotifyTracks)
         // The phone moved on during the lookup; the sync that caused is next in line.
         if (generation != s.syncGeneration) return
         val current = resolved[local.currentMediaId]
@@ -747,7 +773,13 @@ class SonosController @Inject constructor(
         val hadOtherSource = releaseOtherSource(s)
         avt(s, "RemoveAllTracksFromQueue")
         s.queue.clear()
-        addToQueue(s, current)
+        try {
+            addToQueue(s, current)
+        } catch (e: SonosException) {
+            if (!isSpotify(current)) throw e
+            skipRefusedSpotifySong(s, e)
+            return
+        }
         // A fresh queue starts at its first track, so no TRACK_NR seek is needed.
         avt(s, "SetAVTransportURI", "CurrentURI" to s.group.queueUri, "CurrentURIMetaData" to "")
         if (hadOtherSource) holdSpeaker(s)
@@ -854,18 +886,40 @@ class SonosController @Inject constructor(
 
     /** Adds the next two songs right away and the rest in the background. */
     private suspend fun appendTracks(s: ActiveSession, tracks: List<SonosTrack>) {
-        tracks.take(2).forEach { addToQueue(s, it) }
+        tracks.take(2).forEach { addOrLeaveOut(s, it) }
         val rest = tracks.drop(2)
         if (rest.isEmpty()) return
         s.appendJob = scope.launch {
             for (track in rest) {
                 if (!isActive || active !== s) break
                 val ok = commandMutex.withLock {
-                    withContext(NonCancellable) { runCatching { addToQueue(s, track) }.onFailure(::report).isSuccess }
+                    withContext(NonCancellable) { runCatching { addOrLeaveOut(s, track) }.onFailure(::report).isSuccess }
                 }
                 if (!ok) break
             }
         }
+    }
+
+    private fun isSpotify(track: SonosTrack) = track.uri.startsWith("spotify%3a")
+
+    /**
+     * A Spotify song the speaker refuses (no Premium, Spotify not linked in the Sonos app) stays out of its queue, so
+     * the songs after it still go on. When the phone gets to it, [skipRefusedSpotifySong] says why and moves on.
+     */
+    private suspend fun addOrLeaveOut(s: ActiveSession, track: SonosTrack) {
+        try {
+            addToQueue(s, track)
+        } catch (e: SonosException) {
+            if (!isSpotify(track)) throw e
+            Timber.tag(TAG).w("Spotify song refused by the speaker: UPnP ${e.upnpCode}")
+        }
+    }
+
+    private suspend fun skipRefusedSpotifySong(s: ActiveSession, error: SonosException) {
+        toast(context.getString(R.string.spotify_sonos_refused, error.upnpCode?.toString() ?: "?"))
+        // The usual note says the song is not on Navidrome, which is not the reason here.
+        s.skipStreak = maxOf(s.skipStreak, 1)
+        handleUnplayable(s)
     }
 
     private suspend fun addToQueue(s: ActiveSession, track: SonosTrack) {

@@ -1,7 +1,12 @@
-- Volumeknoppen in de app: een volumebalk voor de Sonos boven de minispeler, met dempknop en volume per speaker
-- Volume glijdt bij elke stap en het getal telt mee, ook in het Verbinden-paneel
+- Spotify in Search: zoek nummers en podcasts op Spotify en speel ze op je Sonos, in dezelfde wachtrij
+- Instellingen, Spotify: koppelen met een eigen gratis Spotify-app
+- De telefoon blijft koel en zuinig terwijl de Sonos speelt
+- Na een herstart speelt het eerste Navidrome-nummer weer gewoon
+- Zoekfilters op één rij die je opzij scrolt
 
 Ook in deze versie (sinds 0.7.5-mod.1):
+- Volumeknoppen in de app: een volumebalk voor de Sonos boven de minispeler, met dempknop en volume per speaker
+- Volume glijdt bij elke stap en het getal telt mee, ook in het Verbinden-paneel
 - Your Mix op de homepage: de Play-knop groeit en krimpt soepel als hele pil, Shuffle blijft rond
 - Genrepagina en Your Mix: nieuwe kop met de hoezen groot en helemaal in beeld
 - Play it, Shuffle en de sorteerknoppen bewegen nu net als de knoppen in de speler

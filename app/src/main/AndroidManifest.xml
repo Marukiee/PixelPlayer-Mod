@@ -108,6 +108,20 @@
             android:label="QQ Music Login"
             android:theme="@style/Theme.PixelPlay"
             android:windowSoftInputMode="adjustResize" />
+        <!-- Spotify's answer after the login page; only counts for a login the app itself started. -->
+        <activity
+            android:name=".SpotifyLoginActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="pixelplaymod" android:host="spotify-callback" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".presentation.navidrome.auth.NavidromeLoginActivity"

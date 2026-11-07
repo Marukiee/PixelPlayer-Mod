@@ -1275,6 +1275,8 @@ private fun FullPlayerProgressSection(
     // Source of the currently playing song: streamed (Navidrome/remote URL) vs local file.
     val isRemoteSource = song.navidromeId != null ||
         song.contentUriString.startsWith("http", ignoreCase = true)
+    // The Sonos plays a Spotify song; the phone's own file info would describe its silent stand-in.
+    val isSpotifySource = com.theveloper.pixelplay.data.spotify.SpotifyIds.item(song.contentUriString) != null
 
     PlayerProgressBarSection(
         songId = song.id,
@@ -1285,6 +1287,7 @@ private fun FullPlayerProgressSection(
         audioBitrate = audioBitrate,
         audioSampleRate = audioSampleRate,
         isRemoteSource = isRemoteSource,
+        isSpotifySource = isSpotifySource,
         showAudioFileInfo = showPlayerFileInfo,
         onSeek = onSeek,
         expansionFractionProvider = expansionFractionProvider,
@@ -1683,6 +1686,7 @@ private fun PlayerProgressBarSection(
     audioBitrate: Int?,
     audioSampleRate: Int?,
     isRemoteSource: Boolean = false,
+    isSpotifySource: Boolean = false,
     showAudioFileInfo: Boolean,
     onSeek: (Long) -> Unit,
     expansionFractionProvider: () -> Float,
@@ -1718,8 +1722,10 @@ private fun PlayerProgressBarSection(
         kotlin.math.abs(reportedDuration - hintDuration) <= 1500L -> reportedDuration
         else -> minOf(reportedDuration, hintDuration)
     }
-    val audioMetaLabel = remember(showAudioFileInfo, audioMimeType, audioBitrate, audioSampleRate) {
-        if (showAudioFileInfo) {
+    val audioMetaLabel = remember(showAudioFileInfo, audioMimeType, audioBitrate, audioSampleRate, isSpotifySource) {
+        if (showAudioFileInfo && isSpotifySource) {
+            "Spotify"
+        } else if (showAudioFileInfo) {
             formatAudioMetaLabel(
                 mimeType = audioMimeType,
                 bitrate = audioBitrate,
@@ -1890,6 +1896,7 @@ private fun PlayerProgressBarSection(
                 textColor = timeTextColor,
                 audioMetaLabel = displayAudioMetaLabel,
                 isRemoteSource = isRemoteSource,
+                isSpotifySource = isSpotifySource,
                 horizontalTrackInset = progressSectionHorizontalInset
             )
         }
@@ -1950,6 +1957,7 @@ private fun EfficientTimeLabels(
     textColor: Color,
     audioMetaLabel: String?,
     isRemoteSource: Boolean = false,
+    isSpotifySource: Boolean = false,
     horizontalTrackInset: Dp
 ) {
     val coarsePositionMs by remember(isVisible, positionState) {
@@ -2005,12 +2013,20 @@ private fun EfficientTimeLabels(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                 ) {
-                    // Source badge: streamed (Navidrome/web) vs local file.
-                    Icon(
-                        imageVector = if (isRemoteSource) Icons.Rounded.Language else Icons.Rounded.Smartphone,
-                        contentDescription = if (isRemoteSource) "Streaming source" else "Local source",
-                        modifier = Modifier.size(12.dp)
-                    )
+                    // Source badge: Spotify, streamed (Navidrome/web) or a local file.
+                    if (isSpotifySource) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_spotify),
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (isRemoteSource) Icons.Rounded.Language else Icons.Rounded.Smartphone,
+                            contentDescription = if (isRemoteSource) "Streaming source" else "Local source",
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
                     Text(
                         text = audioMetaLabel,
                         style = MaterialTheme.typography.labelSmall.copy(

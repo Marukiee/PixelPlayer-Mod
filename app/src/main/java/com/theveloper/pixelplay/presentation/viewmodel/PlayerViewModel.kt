@@ -2385,6 +2385,10 @@ class PlayerViewModel @Inject constructor(
         _queueAddedEvents.tryEmit(QueueAddEvent(song, playNext = false))
     }
 
+    /** Plays [song] now without throwing the queue away; see [PlaybackDispatchStateHolder.playSongKeepingQueue]. */
+    fun playSongKeepingQueue(song: Song, queueName: String) =
+        playbackDispatchStateHolder.playSongKeepingQueue(song, queueName)
+
     fun addSongNextToQueue(song: Song) {
         playbackDispatchStateHolder.addSongNextToQueue(song)
         _queueAddedEvents.tryEmit(QueueAddEvent(song, playNext = true))

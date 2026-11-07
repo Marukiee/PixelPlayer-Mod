@@ -5,6 +5,7 @@ import androidx.core.content.edit
 import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
 import com.theveloper.pixelplay.data.network.navidrome.NavidromeApiService
+import com.theveloper.pixelplay.data.spotify.SpotifyIds
 import com.theveloper.pixelplay.data.worker.NavidromeScrobbleWorker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.sync.Mutex
@@ -94,7 +95,7 @@ class NavidromeScrobbles @Inject constructor(
     /** Remembered before anything is sent, so it survives having no connection or the app closing. */
     fun onListened(songId: String, listenedMs: Long, durationMs: Long, endedAtMs: Long) {
         if (!navidromeRepository.isLoggedIn) return
-        if (!NavidromeScrobbleRules.canBeOnServer(songId)) return
+        if (!NavidromeScrobbleRules.canBeOnServer(songId) || SpotifyIds.isSpotifySongId(songId)) return
         if (!NavidromeScrobbleRules.counts(listenedMs, durationMs)) return
         useCurrentAccount()
         val scrobble = PendingScrobble(songId, (endedAtMs - listenedMs).coerceAtLeast(0L))
