@@ -1,3 +1,38 @@
+# PixelPlayer Mod
+
+[![Release](https://img.shields.io/github/v/release/Marukiee/PixelPlayer-Mod?label=release)](https://github.com/Marukiee/PixelPlayer-Mod/releases/latest)
+[![License](https://img.shields.io/badge/license-see%20LICENSE-lightgrey)](LICENSE)
+[![Android](https://img.shields.io/badge/Android-11%2B-3DDC84?logo=android&logoColor=white)](#install)
+
+English | [Nederlands](README.nl.md)
+
+**A fork of PixelPlayer for Android with Sonos playback through Navidrome, a better queue and accent-free search.** The player is [PixelPlayer](https://github.com/PixelPlayerHQ/PixelPlayer), made by others. This is my own version with extra features and fixes from open pull requests that upstream did not take in. It is not supported by the original authors.
+
+## What the mod adds
+
+- **Play on Sonos through Navidrome.** Pick a room, group rooms and set the volume per speaker. The speakers fetch the music themselves, so it keeps playing when your phone is off
+- **A queue that works the way you expect.** Songs you add go in order after the current song, you can swipe on songs, and swiping the mini player changes song
+- **Search without accents.** `hakan hellstrom` finds Håkan Hellström
+- **Your own home screen.** Mixes per genre and a mix of your own
+- **Fixes from open pull requests** that upstream did not take in
+
+The full list, release by release, is in [MOD_CHANGELOG.md](MOD_CHANGELOG.md) and what differs from upstream is in [MOD.md](MOD.md).
+
+## Install
+
+You need Android 11 or newer.
+
+1. Download `PixelPlayer-Mod.apk` from the [latest release](https://github.com/Marukiee/PixelPlayer-Mod/releases/latest) on your phone.
+2. Open it. Android asks once whether the app you open it with (your browser or files app) may install apps from unknown sources. Turn that on, go back and tap Install.
+
+Every release of the mod is signed with the same key, so updates install over the previous one and keep your likes, queue and settings. You can also add the repository to [Obtainium](https://obtainium.imranr.dev).
+
+## License
+
+This fork follows the license of the original project, see [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The original is below.
+
+---
+
 # PixelPlayer 🎵
 
 <p align="center">
