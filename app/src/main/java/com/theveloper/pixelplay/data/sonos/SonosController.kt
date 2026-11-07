@@ -23,7 +23,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -122,6 +126,18 @@ class SonosController @Inject constructor(
     val session: StateFlow<SonosSessionState?> = _session.asStateFlow()
 
     private val volumeKeysEnabled = MutableStateFlow(true)
+
+    private val _inAppVolumeKeys = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /**
+     * A press of the volume keys while the app is open, for the volume bar above the mini player. Only the app's own
+     * key handling sends it: keys outside the app and the Connect panel must not bring the bar up.
+     */
+    val inAppVolumeKeys: SharedFlow<Unit> = _inAppVolumeKeys.asSharedFlow()
+
+    fun onInAppVolumeKey() {
+        _inAppVolumeKeys.tryEmit(Unit)
+    }
 
     /** The session, when the phone's volume keys should work on it. See [SonosSessionPlayer]. */
     val remoteVolume: StateFlow<SonosSessionState?> = _session

@@ -1,6 +1,8 @@
-- Your Mix op de homepage: de Play-knop groeit en krimpt soepel als hele pil, Shuffle blijft rond
+- Volumeknoppen in de app: een volumebalk voor de Sonos boven de minispeler, met dempknop en volume per speaker
+- Volume glijdt bij elke stap en het getal telt mee, ook in het Verbinden-paneel
 
 Ook in deze versie (sinds 0.7.5-mod.1):
+- Your Mix op de homepage: de Play-knop groeit en krimpt soepel als hele pil, Shuffle blijft rond
 - Genrepagina en Your Mix: nieuwe kop met de hoezen groot en helemaal in beeld
 - Play it, Shuffle en de sorteerknoppen bewegen nu net als de knoppen in de speler
 - Duur in woorden: 3 hours and 3 minutes

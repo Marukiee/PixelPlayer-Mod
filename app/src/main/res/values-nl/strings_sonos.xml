@@ -29,6 +29,8 @@
     <string name="sonos_individual_volume">Individueel volume</string>
     <string name="sonos_show_rooms">Speakers tonen</string>
     <string name="sonos_hide_rooms">Speakers verbergen</string>
+    <string name="sonos_mute">Dempen</string>
+    <string name="sonos_unmute">Geluid aan</string>
     <string name="cast_connectivity_hint">Wifi en Bluetooth van deze telefoon</string>
 
     <string name="sonos_msg_skipped">Niet op Navidrome, overgeslagen: %1$s</string>

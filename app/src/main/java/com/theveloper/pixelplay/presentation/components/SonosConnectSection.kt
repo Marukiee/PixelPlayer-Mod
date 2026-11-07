@@ -307,18 +307,18 @@ private val RowSizeSpec = spring<IntSize>(
 )
 
 /** Quick enough that the end of the fold does not creep up pixel by pixel. */
-private val RoomsFoldSpec = spring(
+internal val RoomsFoldSpec = spring(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessMediumLow,
     visibilityThreshold = 0.002f
 )
 
 /** Long enough for the sheet to have come up, so the extra work does not end up in that animation. */
-private const val RoomsBuildDelayMs = 500L
+internal const val RoomsBuildDelayMs = 500L
 
 /** Material 3 Expressive motion, the same scheme the player sheet and range chips use. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-private val sonosMotion = MotionScheme.expressive()
+internal val sonosMotion = MotionScheme.expressive()
 
 /** The three-dot menu of a room: play, add it to the music that is on, group or split it. */
 @Composable
@@ -734,9 +734,12 @@ internal fun SonosActiveCard(
     }
 }
 
-/** One line: what it is about, the slider, the number. Keeps the slider's own value while dragging. */
+/**
+ * One line: what it is about, the slider, the number. Keeps the slider's own value while dragging. The number counts
+ * along with the gliding slider, so a step of the volume keys never jumps.
+ */
 @Composable
-private fun VolumeRow(
+internal fun VolumeRow(
     value: Int?,
     description: String,
     onValueChange: (Int) -> Unit,
@@ -775,7 +778,8 @@ private fun VolumeRow(
                 .graphicsLayer { alpha = sliderAlpha }
         )
         Spacer(Modifier.width(8.dp))
-        DeviceCardVolumeNumber(value?.let { (fingerValue?.toInt() ?: it).toString() } ?: "")
+        // Under the finger the number the speaker gets, or it would drop a step on letting go.
+        DeviceCardVolumeNumber(if (value != null) (fingerValue?.toInt() ?: sliderValue.roundToInt()).toString() else "")
     }
 }
 
@@ -801,7 +805,7 @@ private val VolumeGlideSpec = spring<Float>(
 
 /** The name in front of a slider, so the sliders of all speakers start on one line. */
 @Composable
-private fun VolumeName(name: String) {
+internal fun VolumeName(name: String) {
     Text(
         text = name,
         style = MaterialTheme.typography.labelLarge,

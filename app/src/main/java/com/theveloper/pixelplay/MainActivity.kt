@@ -217,7 +217,10 @@ class MainActivity : ComponentActivity() {
             else -> 0
         }
         if (delta != 0 && sonosVolumeKeys && sonosController.session.value != null) {
-            if (event.action == android.view.KeyEvent.ACTION_DOWN) sonosController.adjustGroupVolume(delta)
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                sonosController.adjustGroupVolume(delta)
+                sonosController.onInAppVolumeKey()
+            }
             return true
         }
         return super.dispatchKeyEvent(event)

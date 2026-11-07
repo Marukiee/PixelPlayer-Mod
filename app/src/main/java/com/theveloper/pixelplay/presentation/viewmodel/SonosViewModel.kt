@@ -45,6 +45,7 @@ class SonosViewModel @Inject constructor(
     val groups: StateFlow<List<SonosGroup>> = controller.groups
     val isScanning: StateFlow<Boolean> = controller.isScanning
     val session: StateFlow<SonosSessionState?> = controller.session
+    val inAppVolumeKeys = controller.inAppVolumeKeys
     val isEnabled: StateFlow<Boolean> = userPreferencesRepository.sonosEnabledFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val skipUnavailable: StateFlow<Boolean> = userPreferencesRepository.sonosSkipUnavailableFlow
@@ -118,6 +119,7 @@ class SonosViewModel @Inject constructor(
     fun switchToPhone() = controller.switchToPhone()
     fun setGroupVolume(volume: Int) = controller.setGroupVolume(volume)
     fun adjustVolume(delta: Int) = controller.adjustGroupVolume(delta)
+    fun setGroupMuted(muted: Boolean) = controller.setGroupMuted(muted)
     fun setSpeakerVolume(uuid: String, volume: Int) = controller.setSpeakerVolume(uuid, volume)
     fun setGroupMembers(groupId: String, memberUuids: Set<String>) =
         controller.setGroupMembers(groupId, memberUuids)

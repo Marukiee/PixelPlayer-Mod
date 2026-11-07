@@ -8,8 +8,8 @@ Volgorde gekozen door Mark (2026-11-02):
    - [x] Mark test thuis op zijn echte speakers: werkt (2026-11-02)
    - [x] Volumeknoppen buiten de app regelen de Sonos, en het volume verschijnt in het eiland van Drip (0.7.5-mod.13, `SonosSessionPlayer`)
    - [x] App gesloten terwijl de Sonos speelt: bij openen pakt hij de sessie vanzelf weer op (0.7.5-mod.13, `resumeSavedSession`)
-   - [ ] Volumeschuif in beeld als je in de app op de volumeknoppen drukt
-   - [ ] Vanaf die volumeschuif ook het volume van de andere speakers in de groep regelen
+   - [x] Volumeschuif in beeld als je in de app op de volumeknoppen drukt (0.7.5-mod.22): Marks ontwerp C, een balk boven de minispeler (`SonosVolumeBar`)
+   - [x] Vanaf die volumeschuif ook het volume van de andere speakers in de groep regelen (0.7.5-mod.22): klapt naar boven uit
    - [ ] Animaties in de hele app nalopen (Material 3 Expressive, `MotionScheme.expressive()`), net als bij de Sonos-onderdelen
    - [x] **Ronde mod.11 en mod.12** (wensen van Mark, 2026-11-02 en 2026-11-04): overzetten op dezelfde plek, speakers vooraf klaar, groepsvolume zoals de Sonos-app, dempknop, drie puntjes, nieuwe indeling, soepel scrollen en krimpen, artiestfoto's, speaker-pil, Spotify overnemen, geen grijze box op de homepage
    - [x] **Ronde mod.16** (wensen van Mark, 2026-11-05): likes twee kanten op met Navidrome, Navidrome in Instellingen, genrepagina's, homepage en geschiedenis, swipe in lijsten, mediakaart, nieuw Verbinden-paneel
@@ -170,7 +170,7 @@ Gemeten op Marks echte speakers en de Sonos-app (Android) op 2026-11-04:
 
 Let op bij een nieuwe naam: de router bewaart een "bestaat niet"-antwoord tot 30 minuten (SOA-minimum 1800 s). Dat was bij deze test de oorzaak van NXDOMAIN, geen rebind-bescherming: een `nip.io`-naam die naar hetzelfde privé-adres wijst, lost via de router gewoon op.
 
-### Sonos-volume (punt 1 gebouwd in 0.7.5-mod.13, punt 2 en 3 nog niet)
+### Sonos-volume (punt 1 gebouwd in 0.7.5-mod.13, punt 2 en 3 in 0.7.5-mod.22)
 
 Nu regelen de volumeknoppen de Sonos alleen zolang de app open is (`MainActivity.dispatchKeyEvent` en het verbinden-scherm), en je ziet dan weinig.
 
@@ -187,6 +187,10 @@ Eerst proberen: de Sonos-app meldt zich zelf al als afstandsbediening (mediasess
      - Groepsnaam in de extras van de media-sessie onder de sleutel `nl.markmaaktmedia.drip.REMOTE_NAME` (Drip leest ook `remote_name`), bijvoorbeeld "Living room + Kitchen". Bij een wijziging opnieuw zetten; Drip luistert naar `onExtrasChanged`. Zonder naam toont Drip de app-naam. Terugval: Drip leest op Android 11 en hoger ook `PlaybackInfo.getVolumeControlId()` als daar een naam met een spatie in staat.
      - Na de Sonos-sessie de extras en het remote-type weer weghalen, zodat Drip het gewone mediavolume toont.
 2. **In de app een volumeschuif.** Bij de volumeknoppen in de app verschijnt een Material 3 Expressive volumeschuif met de groepsnaam, die vanzelf weer verdwijnt.
+   - Gebouwd als Marks ontwerp C (2026-11-07): `SonosVolumeBar` boven de minispeler, even breed, met dempknop. Zonder minispeler (volle speler, toetsenbord) staat hij onderin het scherm.
+   - Alleen bij een volumeknop in de app (`SonosController.onInAppVolumeKey` vanuit `MainActivity`), niet bij de knoppen buiten de app of in het Verbinden-paneel. Niet zolang het paneel open is of de Sonos verbindt.
+   - Weg na 3 seconden zonder aanraken; een vinger op de balk houdt hem. Elke stap glijdt (`glidingVolume`) en het getal telt mee, ook in het Verbinden-paneel.
+   - Verdwijnen met de trage fade van het schema: de snelle had hem in minder dan een tiende seconde weg, dat leek een plop.
 3. **Ook de andere speakers.** Vanaf die schuif uitklappen naar een schuif per speaker in de groep, zoals op de Sonos-kaart in het verbinden-scherm.
 
 Oorspronkelijke wens van Mark (2026-11-02): vanuit PixelPlayer naar zijn Sonos-speakers spelen, met groeperen, waarbij de Sonos de muziek van zijn Navidrome-server haalt.

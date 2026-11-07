@@ -4,6 +4,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.geometry.Rect
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.theveloper.pixelplay.presentation.viewmodel.SonosViewModel
 import android.widget.Toast
 import com.theveloper.pixelplay.presentation.components.ExpressiveOfflineDialog
 import androidx.activity.compose.BackHandler
@@ -599,7 +601,13 @@ fun UnifiedPlayerSheetV2(
         onDraggingPlayerAreaChange = sheetBackAndDragState.onDraggingPlayerAreaChange
     )
 
-    if (!actuallyShowSheetContent) return
+    val sonosViewModel: SonosViewModel = hiltViewModel()
+    val sonosVolumeBar = rememberSonosVolumeBarState(sonosViewModel, blocked = castSheetState.showCastSheet)
+
+    if (!actuallyShowSheetContent) {
+        SonosVolumeBarLayer(sonosVolumeBar, sonosViewModel, albumColorScheme, miniPlayer = { null })
+        return
+    }
 
     val playerSheetSemanticsDescription = remember(
         currentSheetContentState,
@@ -864,6 +872,18 @@ fun UnifiedPlayerSheetV2(
             )
         }
     }
+
+    // Above the mini player when it is on screen, at the bottom of the screen when the full player is open.
+    SonosVolumeBarLayer(
+        state = sonosVolumeBar,
+        sonosViewModel = sonosViewModel,
+        colorScheme = albumColorScheme,
+        miniPlayer = {
+            miniPlayerBounds.value.takeIf {
+                showPlayerContentArea && currentSheetContentState == PlayerSheetState.COLLAPSED
+            }
+        }
+    )
 
     UnifiedPlayerCastLayer(
         showCastSheet = castSheetState.showCastSheet,
