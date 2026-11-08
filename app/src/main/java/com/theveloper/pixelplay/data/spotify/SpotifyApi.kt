@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.data.spotify
 
+import timber.log.Timber
 import com.theveloper.pixelplay.data.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,17 +34,20 @@ class SpotifyApi @Inject constructor(
 ) {
     class NotLoggedIn : IOException("Not logged in to Spotify")
 
+    /** Spotify said no, with its own reason. Holds no token or address, so it may be shown and logged. */
+    class Refused(val status: Int, val reason: String) : IOException("Spotify answered $status: $reason")
+
     /**
      * Songs, podcasts and episodes for [query], at most ten of each: the most an app in development mode may ask for.
-     * Only what the account can play in its own country, so nothing lands in the queue that the speaker would refuse.
+     * No market is sent: with a user token Spotify uses the account's own country, and the old `from_token` value
+     * could be refused.
      */
-    suspend fun search(query: String): Result<SpotifyResults> = withContext(Dispatchers.IO) {
+    suspend fun search(query: String, podcasts: Boolean = true, songs: Boolean = true): Result<SpotifyResults> = withContext(Dispatchers.IO) {
         runCatching {
             val url = "${auth.apiBase}/v1/search".toHttpUrl().newBuilder()
                 .addQueryParameter("q", query)
-                .addQueryParameter("type", "track,show,episode")
+                .addQueryParameter("type", listOfNotNull("track".takeIf { songs }, "show,episode".takeIf { podcasts }).joinToString(","))
                 .addQueryParameter("limit", SEARCH_LIMIT.toString())
-                .addQueryParameter("market", "from_token")
                 .build()
             val json = get(url)
             SpotifyResults(
@@ -59,7 +63,6 @@ class SpotifyApi @Inject constructor(
         runCatching {
             val url = "${auth.apiBase}/v1/shows/${show.id}/episodes".toHttpUrl().newBuilder()
                 .addQueryParameter("limit", EPISODE_LIMIT.toString())
-                .addQueryParameter("market", "from_token")
                 .build()
             parseEpisodes(get(url).optJSONArray("items"), show)
         }
@@ -74,8 +77,14 @@ class SpotifyApi @Inject constructor(
                     token = auth.accessToken(forceRefresh = true) ?: throw NotLoggedIn()
                     return@repeat
                 }
-                if (!response.isSuccessful) throw IOException("Spotify answered ${response.code}")
-                return JSONObject(response.body.string())
+                val body = response.body.string()
+                if (!response.isSuccessful) {
+                    val reason = runCatching { JSONObject(body).optJSONObject("error")?.optString("message") }.getOrNull()
+                        ?.takeIf { it.isNotBlank() } ?: response.message
+                    Timber.w("SpotifyApi: ${url.encodedPath} answered ${response.code}: $reason")
+                    throw Refused(response.code, reason)
+                }
+                return JSONObject(body)
             }
         }
         throw NotLoggedIn()

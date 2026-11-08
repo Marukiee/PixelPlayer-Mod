@@ -38,6 +38,9 @@ class SpotifyAuth @Inject constructor(
 ) {
     data class Account(val clientId: String, val loggedIn: Boolean, val displayName: String?)
 
+    /** How Spotify shows up in Search. */
+    data class Preferences(val showButton: Boolean, val podcasts: Boolean, val autoSearch: Boolean)
+
     private val prefs: SharedPreferences = try {
         val masterKey = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
         EncryptedSharedPreferences.create(
@@ -55,6 +58,24 @@ class SpotifyAuth @Inject constructor(
     private val mutex = Mutex()
     private val _account = MutableStateFlow(readAccount())
     val account: StateFlow<Account> = _account.asStateFlow()
+    private val _preferences = MutableStateFlow(readPreferences())
+    val preferences: StateFlow<Preferences> = _preferences.asStateFlow()
+
+    fun setShowButton(on: Boolean) = savePreference(KEY_SHOW_BUTTON, on)
+    fun setPodcasts(on: Boolean) = savePreference(KEY_PODCASTS, on)
+    fun setAutoSearch(on: Boolean) = savePreference(KEY_AUTO_SEARCH, on)
+
+    private fun savePreference(key: String, on: Boolean) {
+        prefs.edit { putBoolean(key, on) }
+        _preferences.value = readPreferences()
+    }
+
+    private fun readPreferences() = Preferences(
+        showButton = prefs.getBoolean(KEY_SHOW_BUTTON, true),
+        podcasts = prefs.getBoolean(KEY_PODCASTS, true),
+        // Off at first: an app in development mode may not ask Spotify much.
+        autoSearch = prefs.getBoolean(KEY_AUTO_SEARCH, false)
+    )
 
     /** Only for the emulator tests: a file next to `sonos_hosts.txt` points both bases at a stub. */
     private val testBase: String? = runCatching {
@@ -229,6 +250,9 @@ class SpotifyAuth @Inject constructor(
         private const val KEY_NAME = "display_name"
         private const val KEY_STATE = "login_state"
         private const val KEY_VERIFIER = "login_verifier"
+        private const val KEY_SHOW_BUTTON = "pref_show_button"
+        private const val KEY_PODCASTS = "pref_podcasts"
+        private const val KEY_AUTO_SEARCH = "pref_auto_search"
         private const val EARLY_REFRESH_MS = 60_000L
         private const val PKCE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
     }

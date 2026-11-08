@@ -1,5 +1,8 @@
 package com.theveloper.pixelplay.presentation.viewmodel
 
+import com.theveloper.pixelplay.data.model.Song
+import com.theveloper.pixelplay.data.search.RecentSearchSongs
+import com.theveloper.pixelplay.data.model.withoutDuplicateTracks
 import com.theveloper.pixelplay.data.model.SearchFilterType
 import com.theveloper.pixelplay.data.model.SearchHistoryItem
 import com.theveloper.pixelplay.data.model.SearchResultItem
@@ -37,7 +40,15 @@ import kotlinx.coroutines.FlowPreview
 @Singleton
 class SearchStateHolder @Inject constructor(
     private val musicRepository: MusicRepository,
+    private val recentSongs: RecentSearchSongs,
 ) {
+    /** The songs tapped in Search, for the recent searches. */
+    val recentSearchSongs = recentSongs.entries
+
+    fun addRecentSearchSong(song: Song) = recentSongs.add(song)
+
+    fun removeRecentSearchSong(songId: String) = recentSongs.remove(songId)
+
     private companion object {
         const val SEARCH_DEBOUNCE_MS = 300L
     }
@@ -92,7 +103,13 @@ class SearchStateHolder @Inject constructor(
 
                     try {
                         val currentFilter = _selectedSearchFilter.value
-                        musicRepository.searchAll(normalizedQuery, currentFilter).collect { resultsList ->
+                        musicRepository.searchAll(normalizedQuery, currentFilter).collect { rawResults ->
+                            // A song that is on the phone and on the server shows once, as the local file.
+                            val keptSongIds = rawResults.filterIsInstance<SearchResultItem.SongItem>()
+                                .map { it.song }
+                                .withoutDuplicateTracks()
+                                .mapTo(HashSet()) { it.id }
+                            val resultsList = rawResults.filter { it !is SearchResultItem.SongItem || it.song.id in keptSongIds }
                             // Sort: prioritize Song/Album matches over Artist/Playlist matches
                             val sortedResults = resultsList.sortedWith(
                                 compareBy { result ->
@@ -192,6 +209,7 @@ class SearchStateHolder @Inject constructor(
                     musicRepository.clearSearchHistory()
                 }
                 _searchHistory.value = persistentListOf()
+                recentSongs.clear()
             } catch (e: Exception) {
                 Timber.e(e, "Error clearing search history")
             }

@@ -1,5 +1,19 @@
 package com.theveloper.pixelplay.presentation.screens
 
+import com.theveloper.pixelplay.data.spotify.SpotifyIds
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.theveloper.pixelplay.presentation.components.subcomps.rememberPressFraction
 import com.theveloper.pixelplay.presentation.navigation.navigateSafely
@@ -250,6 +264,28 @@ fun SearchScreen(
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val favoriteSongIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
+    val spotifyViewModel: com.theveloper.pixelplay.presentation.viewmodel.SpotifyViewModel = hiltViewModel()
+    val spotifyAccount by spotifyViewModel.account.collectAsStateWithLifecycle()
+    val spotifyPreferences by spotifyViewModel.preferences.collectAsStateWithLifecycle()
+    // The Podcasts filter: only there with Spotify, and only podcasts from Spotify while it is on.
+    val podcastsAvailable = spotifyAccount.loggedIn && spotifyPreferences.podcasts
+    var podcastsOnlyPicked by rememberSaveable { mutableStateOf(false) }
+    val podcastsOnly = podcastsOnlyPicked && podcastsAvailable
+    // Tapping the search bar shows the recent searches in the place of the genres, like Spotify.
+    var searchFieldFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val recentQueries by remember(playerViewModel) {
+        playerViewModel.playerUiState.map { it.searchHistory }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = persistentListOf())
+    val recentSongs by playerViewModel.recentSearchSongs.collectAsStateWithLifecycle()
+    val recentEntries = remember(recentQueries, recentSongs) {
+        (recentQueries.map { RecentEntry.Query(it.query, it.timestamp) } +
+            recentSongs.map { RecentEntry.SongEntry(it.song, it.timestamp) })
+            .sortedByDescending { it.timestamp }
+            .take(MAX_RECENT_ENTRIES)
+    }
+    val showRecents = searchFieldFocused && searchQuery.isBlank() && recentEntries.isNotEmpty()
+    BackHandler(enabled = showRecents && !anySelectionMode) { focusManager.clearFocus() }
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val searchInputFocusRequester = remember { FocusRequester() }
@@ -345,7 +381,9 @@ fun SearchScreen(
                     DockedSearchBar(
                         inputField = {
                             SearchBarDefaults.InputField(
-                                modifier = Modifier.focusRequester(searchInputFocusRequester),
+                                modifier = Modifier
+                                    .focusRequester(searchInputFocusRequester)
+                                    .onFocusChanged { searchFieldFocused = it.isFocused },
                                 query = searchQuery,
                                 onQueryChange = {
                                     searchQuery = it
@@ -445,6 +483,40 @@ fun SearchScreen(
                 label = "search_mode_transition"
             ) { isGenreMode ->
                 if (isGenreMode) {
+                    Crossfade(
+                        targetState = showRecents,
+                        animationSpec = tween(durationMillis = 190),
+                        label = "search_recents_fade"
+                    ) { recents ->
+                    if (recents) {
+                        RecentSearchesList(
+                            entries = recentEntries,
+                            isPlaying = stablePlayerState.isPlaying,
+                            currentSongId = stablePlayerState.currentSong?.id,
+                            onQueryClick = { query ->
+                                searchQuery = query
+                                playerViewModel.updateSearchQuery(query)
+                                keyboardController?.hide()
+                            },
+                            onSongClick = { song ->
+                                keyboardController?.hide()
+                                if (SpotifyIds.isSpotifySongId(song.id)) {
+                                    // Spotify songs only play on a Sonos, and keep the queue, like from the results.
+                                    if (spotifyViewModel.sonosActive.value) {
+                                        playerViewModel.addRecentSearchSong(song)
+                                        playerViewModel.playSongKeepingQueue(song, "Spotify")
+                                    } else {
+                                        playerViewModel.sendToast(context.getString(R.string.spotify_needs_sonos))
+                                    }
+                                } else {
+                                    playerViewModel.playRecentSearchSong(song, context.getString(R.string.search_recent_queue_name))
+                                }
+                            },
+                            onRemoveQuery = playerViewModel::deleteSearchHistoryItem,
+                            onRemoveSong = { playerViewModel.removeRecentSearchSong(it.id) },
+                            onClearAll = playerViewModel::clearSearchHistory
+                        )
+                    } else
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (isGenreSelectionMode) {
                             SelectionActionRow(
@@ -501,6 +573,7 @@ fun SearchScreen(
                                     .padding(top = 16.dp)
                             )
                         }
+                    }
                     }
                 } else {
                     Column(
@@ -566,33 +639,53 @@ fun SearchScreen(
                             // of being cut off in the middle of the screen. The first one still starts under the search bar.
                             Row(
                                 modifier = Modifier
-                                    .layout { measurable, constraints ->
-                                        val bleed = FilterRowBleed.roundToPx()
-                                        val width = constraints.maxWidth + 2 * bleed
-                                        val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-                                        layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
-                                    }
+                                    .bleedPastColumnPadding()
                                     .horizontalScroll(rememberScrollState())
                                     .padding(vertical = 8.dp, horizontal = 8.dp + FilterRowBleed),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                SearchFilterChip(SearchFilterType.ALL, currentFilter, playerViewModel)
-                                SearchFilterChip(SearchFilterType.SONGS, currentFilter, playerViewModel)
-                                SearchFilterChip(SearchFilterType.ALBUMS, currentFilter, playerViewModel)
-                                SearchFilterChip(SearchFilterType.ARTISTS, currentFilter, playerViewModel)
-                                SearchFilterChip(SearchFilterType.PLAYLISTS, currentFilter, playerViewModel)
+                                val pickLocal = { podcastsOnlyPicked = false }
+                                SearchFilterChip(SearchFilterType.ALL, currentFilter, playerViewModel, podcastsOnly, pickLocal)
+                                SearchFilterChip(SearchFilterType.SONGS, currentFilter, playerViewModel, podcastsOnly, pickLocal)
+                                SearchFilterChip(SearchFilterType.ALBUMS, currentFilter, playerViewModel, podcastsOnly, pickLocal)
+                                SearchFilterChip(SearchFilterType.ARTISTS, currentFilter, playerViewModel, podcastsOnly, pickLocal)
+                                SearchFilterChip(SearchFilterType.PLAYLISTS, currentFilter, playerViewModel, podcastsOnly, pickLocal)
+                                if (podcastsAvailable) {
+                                    SearchChip(
+                                        label = stringResource(R.string.search_filter_podcasts),
+                                        selected = podcastsOnly,
+                                        onClick = { podcastsOnlyPicked = true }
+                                    )
+                                }
                             }
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
                             Crossfade(
+                                targetState = podcastsOnly,
+                                animationSpec = tween(durationMillis = 190),
+                                label = "search_podcasts_fade"
+                            ) { showPodcasts ->
+                            if (showPodcasts) {
+                                PodcastResultsList(
+                                    query = searchQuery,
+                                    playerViewModel = playerViewModel,
+                                    spotifyViewModel = spotifyViewModel,
+                                    onOpenSettings = { navController.navigateSafely(Screen.SettingsCategory.createRoute("spotify")) }
+                                )
+                            } else Crossfade(
                                 targetState = searchResults.isEmpty(),
                                 animationSpec = tween(durationMillis = 190),
                                 label = "search_results_fade"
                             ) { isEmpty ->
                                 if (isEmpty) {
+                                    val spotifySearch by spotifyViewModel.search.collectAsStateWithLifecycle()
+                                    val spotifyFound = (spotifySearch as? com.theveloper.pixelplay.presentation.viewmodel.SpotifyViewModel.Search.Found)
+                                        ?.takeIf { it.query == searchQuery.trim() && !it.podcastsOnly }
+                                        ?.results?.let { it.songs.isNotEmpty() || it.shows.isNotEmpty() || it.episodes.isNotEmpty() } == true
                                     EmptySearchResults(
                                         searchQuery = searchQuery,
                                         colorScheme = colorScheme,
+                                        foundElsewhere = spotifyFound,
                                         footer = {
                                             // Nothing here or on the server: Spotify may have it.
                                             // As wide as the song rows of a normal result.
@@ -600,7 +693,9 @@ fun SearchScreen(
                                                 query = searchQuery,
                                                 playerViewModel = playerViewModel,
                                                 onOpenSettings = { navController.navigateSafely(Screen.SettingsCategory.createRoute("spotify")) },
-                                                modifier = Modifier.padding(top = 16.dp)
+                                                modifier = Modifier.padding(top = 16.dp),
+                                                nothingFoundHere = true,
+                                                spotifyViewModel = spotifyViewModel
                                             )
                                         }
                                     )
@@ -671,6 +766,7 @@ fun SearchScreen(
                                         }
                                     )
                                 }
+                            }
                             }
 
                             val count = when {
@@ -971,6 +1067,152 @@ fun SearchResultSectionHeader(title: String) {
     )
 }
 
+/** One line of the recent searches: a search term, or a song that was tapped. */
+private sealed interface RecentEntry {
+    val timestamp: Long
+    val key: String
+
+    data class Query(val query: String, override val timestamp: Long) : RecentEntry {
+        override val key get() = "query_$query"
+    }
+
+    data class SongEntry(val song: Song, override val timestamp: Long) : RecentEntry {
+        override val key get() = "song_${song.id}"
+    }
+}
+
+private const val MAX_RECENT_ENTRIES = 20
+
+/**
+ * The recent searches, newest first: search terms and the songs tapped in Search, mixed like Spotify does, each with
+ * a cross to take it away. Clearing all of them asks first.
+ */
+@Composable
+private fun RecentSearchesList(
+    entries: List<RecentEntry>,
+    isPlaying: Boolean,
+    currentSongId: String?,
+    onQueryClick: (String) -> Unit,
+    onSongClick: (Song) -> Unit,
+    onRemoveQuery: (String) -> Unit,
+    onRemoveSong: (Song) -> Unit,
+    onClearAll: () -> Unit
+) {
+    var askClear by remember { mutableStateOf(false) }
+    val bottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + 94.dp + MiniPlayerHeight
+    val removeLabel = stringResource(R.string.search_recent_remove)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottom)
+    ) {
+        item(key = "recent_header") {
+            SearchResultSectionHeader(title = stringResource(R.string.search_recent_title))
+        }
+        items(entries, key = { it.key }, contentType = { it.javaClass.simpleName }) { entry ->
+            Box(modifier = Modifier.animateItem().padding(bottom = 12.dp)) {
+                when (entry) {
+                    is RecentEntry.Query -> RecentQueryRow(
+                        query = entry.query,
+                        removeLabel = removeLabel,
+                        onClick = { onQueryClick(entry.query) },
+                        onRemove = { onRemoveQuery(entry.query) }
+                    )
+                    is RecentEntry.SongEntry -> EnhancedSongListItem(
+                        song = entry.song,
+                        isPlaying = isPlaying,
+                        isCurrentSong = currentSongId == entry.song.id,
+                        trailingIcon = Icons.Rounded.Close,
+                        trailingDescription = removeLabel,
+                        onMoreOptionsClick = onRemoveSong,
+                        onClick = { onSongClick(entry.song) }
+                    )
+                }
+            }
+        }
+        item(key = "recent_clear") {
+            Box(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
+                FilledTonalButton(onClick = { askClear = true }) {
+                    Text(stringResource(R.string.search_recent_clear))
+                }
+            }
+        }
+    }
+    if (askClear) {
+        AlertDialog(
+            onDismissRequest = { askClear = false },
+            title = { Text(stringResource(R.string.search_recent_clear_title)) },
+            text = { Text(stringResource(R.string.search_recent_clear_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    askClear = false
+                    onClearAll()
+                }) { Text(stringResource(R.string.search_recent_clear_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { askClear = false }) { Text(stringResource(android.R.string.cancel)) }
+            }
+        )
+    }
+}
+
+/** A search term in the look of a song row: the clock where the cover would be, the cross where the menu is. */
+@Composable
+private fun RecentQueryRow(query: String, removeLabel: String, onClick: () -> Unit, onRemove: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(22.dp)
+    Surface(
+        onClick = onClick,
+        shape = shape,
+        color = colors.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 13.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(colors.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.History,
+                    contentDescription = null,
+                    tint = colors.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = query,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = colors.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(12.dp))
+            FilledIconButton(
+                onClick = onRemove,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = colors.surfaceContainerHigh,
+                    contentColor = colors.onSurface
+                ),
+                modifier = Modifier
+                    .size(36.dp)
+                    .padding(end = 4.dp)
+            ) {
+                Icon(imageVector = Icons.Rounded.Close, contentDescription = removeLabel, modifier = Modifier.size(24.dp))
+            }
+        }
+    }
+}
+
 @Composable
 fun SearchHistoryList(
     historyItems: List<SearchHistoryItem>,
@@ -1057,7 +1299,13 @@ fun SearchHistoryListItem(
 
 
 @Composable
-fun EmptySearchResults(searchQuery: String, colorScheme: ColorScheme, footer: @Composable () -> Unit = {}) {
+fun EmptySearchResults(
+    searchQuery: String,
+    colorScheme: ColorScheme,
+    /** Spotify found something, so only the library came up empty. */
+    foundElsewhere: Boolean = false,
+    footer: @Composable () -> Unit = {}
+) {
     // Room at the bottom like the result list, so the Spotify rows can scroll up from under the mini player.
     val bottomRoom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + MiniPlayerHeight + 94.dp
     Column(
@@ -1077,7 +1325,9 @@ fun EmptySearchResults(searchQuery: String, colorScheme: ColorScheme, footer: @C
         )
 
         Text(
-            text = if (searchQuery.isNotBlank()) {
+            text = if (searchQuery.isNotBlank() && foundElsewhere) {
+                stringResource(R.string.search_no_local_results_for_query, searchQuery)
+            } else if (searchQuery.isNotBlank()) {
                 stringResource(R.string.search_no_results_for_query, searchQuery)
             } else {
                 stringResource(R.string.search_nothing_found)
@@ -1089,12 +1339,14 @@ fun EmptySearchResults(searchQuery: String, colorScheme: ColorScheme, footer: @C
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = stringResource(R.string.search_try_different_or_filters),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center
-        )
+        if (!foundElsewhere) {
+            Text(
+                text = stringResource(R.string.search_try_different_or_filters),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
         footer()
     }
 }
@@ -1174,6 +1426,7 @@ fun SearchResultsList(
                 listOf(song)
             }
             playerViewModel.showAndPlaySong(song, playbackQueue, searchQueueName)
+            playerViewModel.addRecentSearchSong(song)
             onItemSelected()
         }
     }
@@ -1190,14 +1443,14 @@ fun SearchResultsList(
 
     LazyColumn(
         modifier = Modifier
+            // Out to the screen edges, past the 16.dp of the column around it, so a swiped row slides all the way
+            // out instead of being cut off at the margin. The content padding puts the rows back where they were.
+            .bleedPastColumnPadding()
             .fillMaxSize()
-            .clip(
-                RoundedCornerShape(
-                    topStart = 28.dp,
-                    topEnd = 28.dp
-                )
-            ),
+            .clip(ResultsListShape),
         contentPadding = PaddingValues(
+            start = FilterRowBleed,
+            end = FilterRowBleed,
             top = 8.dp,
             bottom = if (imePadding <= 8.dp) (MiniPlayerHeight + systemBarPaddingBottom) else imePadding
         )
@@ -1739,10 +1992,11 @@ fun SearchFilterChip(
     filterType: SearchFilterType,
     currentFilter: SearchFilterType,
     playerViewModel: PlayerViewModel,
+    /** The Podcasts filter is on: then none of these is picked. */
+    podcastsOnly: Boolean = false,
+    onPicked: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val selected = filterType == currentFilter
-
     val labelResId = when (filterType) {
         SearchFilterType.ALL -> R.string.common_all
         SearchFilterType.SONGS -> R.string.library_tab_songs
@@ -1750,7 +2004,20 @@ fun SearchFilterChip(
         SearchFilterType.ARTISTS -> R.string.library_tab_artists
         SearchFilterType.PLAYLISTS -> R.string.library_tab_playlists
     }
+    SearchChip(
+        label = stringResource(labelResId),
+        selected = !podcastsOnly && filterType == currentFilter,
+        onClick = {
+            onPicked()
+            playerViewModel.updateSearchFilter(filterType)
+        },
+        modifier = modifier
+    )
+}
 
+/** One filter of Search, in the look of all of them. */
+@Composable
+fun SearchChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     // Presses like the other buttons: the corners square off for a moment.
     val interactionSource = remember { MutableInteractionSource() }
     val press by rememberPressFraction(interactionSource)
@@ -1759,9 +2026,9 @@ fun SearchFilterChip(
         selected = selected,
         onClick = {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            playerViewModel.updateSearchFilter(filterType)
+            onClick()
         },
-        label = { Text(stringResource(labelResId)) },
+        label = { Text(label) },
         modifier = modifier,
         shape = RoundedCornerShape(androidx.compose.ui.unit.lerp(16.dp, 8.dp, press)),
         interactionSource = interactionSource,
@@ -1791,5 +2058,65 @@ fun SearchFilterChip(
     )
 }
 
+/** Only podcasts and episodes from Spotify, in the place of the normal results. */
+@Composable
+private fun PodcastResultsList(
+    query: String,
+    playerViewModel: PlayerViewModel,
+    spotifyViewModel: com.theveloper.pixelplay.presentation.viewmodel.SpotifyViewModel,
+    onOpenSettings: () -> Unit
+) {
+    val bottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + 94.dp + MiniPlayerHeight
+    LazyColumn(
+        modifier = Modifier
+            .bleedPastColumnPadding()
+            .fillMaxSize()
+            .clip(ResultsListShape),
+        contentPadding = PaddingValues(start = FilterRowBleed, end = FilterRowBleed, top = 8.dp, bottom = bottom)
+    ) {
+        item(key = "spotify_podcasts") {
+            SpotifySearchSection(
+                query = query,
+                playerViewModel = playerViewModel,
+                onOpenSettings = onOpenSettings,
+                podcastsOnly = true,
+                spotifyViewModel = spotifyViewModel
+            )
+        }
+    }
+}
+
+/**
+ * Out to the screen edges, past the 16.dp of the search column: a row that scrolls sideways or a swiped song then
+ * slides under the edge instead of being cut off at the margin. Padding inside puts the content back in line.
+ */
+private fun Modifier.bleedPastColumnPadding(): Modifier = layout { measurable, constraints ->
+    val bleed = FilterRowBleed.roundToPx()
+    val width = constraints.maxWidth + 2 * bleed
+    val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+    layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
+}
+
 /** The side padding of the search column, which the filter row reaches past to the screen edge. */
 private val FilterRowBleed = 16.dp
+
+/**
+ * The round top of the results, where they scroll away under the filters, at the margin as before; lower down it
+ * is as wide as the screen, so a swiped row can slide out to the edge.
+ */
+private val ResultsListShape = object : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val inset = with(density) { FilterRowBleed.toPx() }
+        val corner = with(density) { 28.dp.toPx() }
+        val path = Path().apply {
+            addRoundRect(
+                RoundRect(
+                    left = inset, top = 0f, right = size.width - inset, bottom = size.height,
+                    topLeftCornerRadius = CornerRadius(corner), topRightCornerRadius = CornerRadius(corner)
+                )
+            )
+            addRect(Rect(0f, corner, size.width, size.height))
+        }
+        return Outline.Generic(path)
+    }
+}

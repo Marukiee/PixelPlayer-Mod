@@ -2644,6 +2644,30 @@ class PlayerViewModel @Inject constructor(
         searchStateHolder.deleteSearchHistoryItem(query)
     }
 
+    /** The songs tapped in Search, newest first, shown with the recent search terms. */
+    val recentSearchSongs get() = searchStateHolder.recentSearchSongs
+
+    fun addRecentSearchSong(song: Song) = searchStateHolder.addRecentSearchSong(song)
+
+    fun removeRecentSearchSong(songId: String) = searchStateHolder.removeRecentSearchSong(songId)
+
+    /**
+     * Plays a song from the recent searches with the library's own copy of it, so a moved or retagged file still
+     * plays. A song that left the library goes from the list too.
+     */
+    fun playRecentSearchSong(song: Song, queueName: String) {
+        viewModelScope.launch {
+            val current = runCatching { musicRepository.getSong(song.id).first() }.getOrNull()
+            if (current == null) {
+                removeRecentSearchSong(song.id)
+                sendToast(context.getString(R.string.search_recent_song_gone))
+                return@launch
+            }
+            addRecentSearchSong(current)
+            showAndPlaySong(current, listOf(current), queueName)
+        }
+    }
+
     fun clearSearchHistory() {
         searchStateHolder.clearSearchHistory()
     }

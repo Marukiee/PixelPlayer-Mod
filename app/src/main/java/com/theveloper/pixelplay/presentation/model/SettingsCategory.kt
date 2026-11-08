@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.model
 
+import androidx.compose.material.icons.rounded.Hub
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeveloperBoard
@@ -10,7 +11,6 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Speaker
-import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.theveloper.pixelplay.R
 
@@ -21,6 +21,13 @@ enum class SettingsCategory(
     val icon: ImageVector? = null,
     val iconRes: Int? = null
 ) {
+    /** One page for every place music plays from: local, Navidrome, Sonos and Spotify each have a page under it. */
+    SOURCES(
+        id = "sources",
+        titleRes = R.string.settings_category_sources_title,
+        subtitleRes = R.string.settings_category_sources_subtitle,
+        icon = Icons.Rounded.Hub
+    ),
     LIBRARY(
         id = "library",
         titleRes = R.string.settings_category_music_management_title,
@@ -49,7 +56,7 @@ enum class SettingsCategory(
         id = "spotify",
         titleRes = R.string.settings_category_spotify_title,
         subtitleRes = R.string.settings_category_spotify_subtitle,
-        icon = Icons.Rounded.TravelExplore
+        iconRes = R.drawable.ic_spotify
     ),
     NAVIDROME(
         id = "navidrome",
@@ -101,6 +108,9 @@ enum class SettingsCategory(
     );
 
     companion object {
+        /** The pages under "Play from". */
+        val sources = listOf(LIBRARY, NAVIDROME, SONOS, SPOTIFY)
+
         fun fromId(id: String): SettingsCategory? = entries.find { it.id == id }
     }
 }

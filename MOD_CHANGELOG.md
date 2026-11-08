@@ -1,10 +1,18 @@
+- Zoeken: recente zoekopdrachten en nummers als je op de zoekbalk tikt, elk met een kruisje
+- Zoeken: filter Podcasts als Spotify gekoppeld is
+- Geen dubbele nummers meer: staat iets lokaal en op de server, dan zie je het lokale nummer
+- Geen lokale resultaten? Dan zegt Zoeken dat, als Spotify wel iets vindt
+- Instellingen: alles over afspelen bij elkaar onder Afspelen via, en meer Spotify-instellingen
+- Vegen in Zoeken gaat door tot de rand
+- Volumebalk is ook bij een laag volume gevuld
+- Spotify-zoeken werkt weer als je ingelogd bent
+
+Ook in deze versie (sinds 0.7.5-mod.1):
 - Spotify in Search: zoek nummers en podcasts op Spotify en speel ze op je Sonos, in dezelfde wachtrij
 - Instellingen, Spotify: koppelen met een eigen gratis Spotify-app
 - De telefoon blijft koel en zuinig terwijl de Sonos speelt
 - Na een herstart speelt het eerste Navidrome-nummer weer gewoon
 - Zoekfilters op één rij die je opzij scrolt
-
-Ook in deze versie (sinds 0.7.5-mod.1):
 - Volumeknoppen in de app: een volumebalk voor de Sonos boven de minispeler, met dempknop en volume per speaker
 - Volume glijdt bij elke stap en het getal telt mee, ook in het Verbinden-paneel
 - Your Mix op de homepage: de Play-knop groeit en krimpt soepel als hele pil, Shuffle blijft rond

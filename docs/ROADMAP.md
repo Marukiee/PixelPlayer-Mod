@@ -34,9 +34,20 @@ Volgorde gekozen door Mark (2026-11-02):
 14. [x] Genrepagina opnieuw (0.7.5-mod.20): Mark koos variant B, een grote hoes in een koekjesvorm met twee kleine eromheen, helemaal in beeld boven de titel. Icoontje naast de titel is weg. Your Mix gebruikt dezelfde kop
 15. [x] Knoppen bewegen als in de speler (0.7.5-mod.20): Play it en Shuffle, ook de sorteerknoppen. Ze deden het eerst niet doordat een korte tik in een lijst indrukken en loslaten tegelijk meldt, en `collectIsPressedAsState` dat niet ziet. `rememberPressFraction` leest nu elke tik zelf
 16. [x] Totale duur onder de naam in woorden (0.7.5-mod.20): `formatTotalDuration`, ook op de afspeellijstpagina. Engels en Nederlands; de andere talen vallen terug op Engels
-17. [ ] Spotify vanuit PixelPlayer op de Sonos: zoeken, een los nummer in dezelfde wachtrij, podcasts (Mark, 2026-11-07). Uitgezocht, zie "Spotify in de Sonos-wachtrij". Proef op een echte speaker gelukt (2026-11-07). Zoeken en los nummer in de wachtrij gebouwd (nog niet uitgebracht): knop Zoek op Spotify onder de resultaten en bij geen resultaat, Spotify-instellingen met eigen Client ID, podcasts met een afleveringenpagina (0.7.5-mod.23)
+17. [x] Spotify vanuit PixelPlayer op de Sonos: zoeken, een los nummer in dezelfde wachtrij, podcasts (Mark, 2026-11-07). Uitgezocht, zie "Spotify in de Sonos-wachtrij". Proef op een echte speaker gelukt (2026-11-07). Knop Zoek op Spotify onder de resultaten en bij geen resultaat, Spotify-instellingen met eigen Client ID, podcasts met een afleveringenpagina (0.7.5-mod.23). Getest op Marks telefoon en echte groep (2026-11-08): zoeken en een nummer spelen met behoud van de wachtrij. Een aflevering op een echte speaker is nog niet getest
+   - [x] Spotify-zoekfout "did not answer" (0.7.5-mod.24): `market=from_token` gaf een weigering; weggehaald, en een weigering toont nu Spotify's eigen reden
 18. [x] Play-knop van Your Mix groeit en krimpt als hele pil (0.7.5-mod.21): `animateContentSize` stond om de knop, dus de pil sprong en alleen het knipvlak bewoog. Het woord regelt nu zelf zijn breedte, in `PlayStateLabel`. Shuffle blijft op elke breedte een rondje: de knoppenrij is niet meer aan de kolom gebonden en loopt op een smal scherm door in het lege hoekje onder de hoezen
 19. [x] Telefoon heet en batterij leeg tijdens Sonos (0.7.5-mod.23, gemeld via de Drip-sessie 2026-11-07): de stream-proxy (Ktor CIO) hield een kern bezig zolang een Navidrome-nummer stil meespeelde, omdat zijn socket-schrijver blijft schrijven als de speler een volle buffer heeft. De telefoon leest Navidrome-nummers nu rechtstreeks (`NavidromeStreamProxy.directStreamUri`), op de emulator van ongeveer 104 naar 5 procent CPU. Een bewaarde wachtrij met het oude proxy-adres wordt bij herstel terug omgezet (`originalUri`), dat gaf na elke herstart een bronfout
+20. [x] **Ronde mod.24** (wensen van Mark, 2026-11-08), nog te testen op Marks telefoon:
+   - [x] "Geen lokale resultaten" in plaats van "Geen resultaten" als Spotify wel iets vindt
+   - [x] Filter Podcasts bij de zoekfilters, alleen met Spotify gekoppeld: zoekt alleen podcasts en afleveringen
+   - [x] Recente zoekopdrachten als je op de zoekbalk tikt, zoals Spotify: zoektermen en aangetikte nummers (ook Spotify), elk met een kruisje; alles wissen vraagt eerst (`RecentSearchSongs`)
+   - [x] Lokaal gaat voor: een nummer dat op de telefoon en op de server staat komt een keer in de zoekresultaten en de bibliotheek (zelfde titel, artiest en lengte binnen drie seconden). Met het filter Online zie je de servernummers wel allemaal
+   - [x] Vegen in Zoeken loopt door tot de schermrand
+   - [x] Volumebalk: het gevulde deel blijft ook bij een laag volume zichtbaar (stompje voor de schuif)
+   - [x] Instellingen: een pagina Afspelen via met Lokale muziek, Navidrome, Sonos en Spotify, elk met een statusregel. De Spotify-pagina heeft na inloggen schakelaars voor de knop, podcasts en vanzelf zoeken, en de koppeling (Client ID, dashboard, Redirect URI)
+   - [ ] Nog dubbel: albums van de server die ook lokaal staan (bibliotheek en zoekresultaten), en Liked Songs en de album- en artiestpagina's. Bij Liked Songs niet dezelfde regel gebruiken: die zou een servernummer met een ster verbergen terwijl het lokale nummer geen ster heeft
+21. [ ] YouTube als bron (Mark, 2026-11-08, "misschien"): uitgezocht, zie "YouTube als bron". Keuze van Mark
 
 ## Luistergegevens naar Navidrome
 
@@ -251,3 +262,12 @@ Deze bibliotheken staan bewust op een oudere versie (zie `gradle/libs.versions.t
 - **Media3 1.10.1:** met 1.11.1 werken volgende en vorige nergens meer (de mediasessie meldt `actions=128`).
 - **Material3 1.5.0-alpha22:** alpha28 verandert de Slider-API in zeven schermen.
 - **Navigation 2.9.8:** 2.10 vervangt de terug-animatie (de kaart schuift niet meer mee met de vinger).
+
+## YouTube als bron
+
+Uitgezocht op 2026-11-08, nog niets gebouwd.
+
+- Afspelen op de telefoon: de regels van YouTube API Services verbieden afspelen op de achtergrond en het losmaken van het geluid uit de video. Een officiele weg voor een muziekspeler is er dus niet.
+- YouTube Music heeft geen officiele API. Zoeken kan via de YouTube Data API v3, maar `search.list` kost 100 eenheden en het standaardquotum is 10.000 per dag, dus ongeveer 100 zoekopdrachten per dag.
+- Op de Sonos: Sonos heeft YouTube Music als dienst, net als Spotify. Het formaat om een nummer in de wachtrij te zetten is niet gedocumenteerd; SoCo en node-sonos-http-api ondersteunen Spotify, TIDAL, Deezer en Apple Music, geen YouTube Music.
+- Mogelijke proef, alleen lezen: Mark zet via de Sonos-app een YouTube Music-nummer in de wachtrij, daarna lees ik met Browse Q:0 het adres en de DIDL uit. Lijkt het op Spotify, dan kan zoeken via de Data API en afspelen via de Sonos, net als bij Spotify.

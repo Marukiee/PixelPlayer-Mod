@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.screens.search.components
 
+import androidx.compose.runtime.LaunchedEffect
 import com.theveloper.pixelplay.data.spotify.SpotifyEpisode
 import com.theveloper.pixelplay.presentation.components.subcomps.SongSwipeContainer
 import androidx.compose.foundation.clickable
@@ -94,17 +95,30 @@ fun SpotifySearchSection(
     playerViewModel: PlayerViewModel,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    /** True under "nothing found": then it may search Spotify by itself, if that is switched on. */
+    nothingFoundHere: Boolean = false,
+    /** The Podcasts filter: only podcasts and episodes, searched as soon as the typing stops. */
+    podcastsOnly: Boolean = false,
     spotifyViewModel: SpotifyViewModel = hiltViewModel()
 ) {
     val account by spotifyViewModel.account.collectAsStateWithLifecycle()
+    val preferences by spotifyViewModel.preferences.collectAsStateWithLifecycle()
     val search by spotifyViewModel.search.collectAsStateWithLifecycle()
     val openShow by spotifyViewModel.openShow.collectAsStateWithLifecycle()
     val sonosActive by spotifyViewModel.sonosActive.collectAsStateWithLifecycle()
     val playerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val cleaned = query.trim()
-    if (cleaned.isEmpty()) return
-    // Results of an older query do not belong under this one.
-    val current = search?.takeIf { it.query == cleaned }
+    if (cleaned.isEmpty() || (!preferences.showButton && !podcastsOnly)) return
+    // Results of an older query, or of the other filter, do not belong under this one.
+    val current = search?.takeIf { it.query == cleaned && it.podcastsOnly == podcastsOnly }
+    // Waits for the typing to stop: every new letter starts the wait again.
+    LaunchedEffect(cleaned, nothingFoundHere, podcastsOnly, preferences.autoSearch, account.loggedIn) {
+        val asked = spotifyViewModel.search.value?.let { it.query == cleaned && it.podcastsOnly == podcastsOnly } == true
+        if (account.loggedIn && !asked && (podcastsOnly || (nothingFoundHere && preferences.autoSearch))) {
+            kotlinx.coroutines.delay(if (podcastsOnly) PODCAST_SEARCH_WAIT_MS else AUTO_SEARCH_WAIT_MS)
+            spotifyViewModel.search(cleaned, podcastsOnly)
+        }
+    }
     val needsSonos = stringResource(R.string.spotify_needs_sonos)
     val queueName = "Spotify: $cleaned"
     var sheetSong by remember { mutableStateOf<Song?>(null) }
@@ -112,7 +126,14 @@ fun SpotifySearchSection(
     fun whenOnSonos(action: () -> Unit) {
         if (sonosActive) action() else playerViewModel.sendToast(needsSonos)
     }
-    val play: (Song) -> Unit = { song -> whenOnSonos { playerViewModel.playSongKeepingQueue(song, queueName) } }
+    val play: (Song) -> Unit = { song ->
+        whenOnSonos {
+            playerViewModel.playSongKeepingQueue(song, queueName)
+            // Into the recent searches, with the search term, like a song from the library.
+            playerViewModel.addRecentSearchSong(song)
+            playerViewModel.onSearchQuerySubmitted(cleaned)
+        }
+    }
 
     // Swiping works like on every song row, with the actions chosen in the settings, but only on a Sonos.
     val baseSwipe = LocalSongSwipeConfig.current
@@ -133,10 +154,11 @@ fun SpotifySearchSection(
         Column(modifier = Modifier.fillMaxWidth()) {
             when (state) {
                 is SpotifyViewModel.Search.Found -> CompositionLocalProvider(LocalSongSwipeConfig provides swipe) {
-                    val results = state.results
+                    // The Podcasts filter shows no songs, also if an answer would hold some.
+                    val results = if (podcastsOnly) state.results.copy(songs = emptyList()) else state.results
                     if (results.songs.isEmpty() && results.shows.isEmpty() && results.episodes.isEmpty()) {
-                        SpotifyHeader(stringResource(R.string.spotify_section_title))
-                        SpotifyNote(stringResource(R.string.spotify_search_none))
+                        SpotifyHeader(stringResource(if (podcastsOnly) R.string.spotify_section_podcasts else R.string.spotify_section_title))
+                        SpotifyNote(stringResource(if (podcastsOnly) R.string.spotify_search_no_podcasts else R.string.spotify_search_none))
                     }
                     if (results.songs.isNotEmpty()) {
                         SpotifyHeader(stringResource(R.string.spotify_section_title))
@@ -153,22 +175,24 @@ fun SpotifySearchSection(
                         SpotifySongRows(results.episodes.map { it.song }, playerState.isPlaying, playerState.currentSong?.id, play) { sheetSong = it }
                     }
                 }
-                is SpotifyViewModel.Search.Loading -> {
-                    SpotifyHeader(stringResource(R.string.spotify_section_title))
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                        LoadingIndicator()
-                    }
-                }
+                is SpotifyViewModel.Search.Loading -> SpotifyLoading(podcastsOnly)
                 is SpotifyViewModel.Search.Failed -> {
+                    // Spotify's own reason, so a refusal can be told from a bad connection.
                     SpotifyNote(
-                        stringResource(if (state.notLoggedIn) R.string.spotify_search_logged_out else R.string.spotify_search_failed)
+                        when {
+                            state.notLoggedIn -> stringResource(R.string.spotify_search_logged_out)
+                            state.status == 403 -> stringResource(R.string.spotify_search_forbidden, state.reason.orEmpty())
+                            state.status != null -> stringResource(R.string.spotify_search_refused, state.status, state.reason.orEmpty())
+                            else -> stringResource(R.string.spotify_search_failed)
+                        }
                     )
                     SpotifySearchButton {
-                        if (account.loggedIn) spotifyViewModel.search(cleaned) else onOpenSettings()
+                        if (account.loggedIn) spotifyViewModel.search(cleaned, podcastsOnly) else onOpenSettings()
                     }
                 }
-                null -> SpotifySearchButton {
-                    if (account.loggedIn) spotifyViewModel.search(cleaned) else onOpenSettings()
+                // The Podcasts filter searches by itself in a moment: no button in between.
+                null -> if (podcastsOnly && account.loggedIn) SpotifyLoading(podcastsOnly = true) else SpotifySearchButton {
+                    if (account.loggedIn) spotifyViewModel.search(cleaned, podcastsOnly) else onOpenSettings()
                 }
             }
         }
@@ -194,6 +218,15 @@ fun SpotifySearchSection(
             onPlayNext = { whenOnSonos { playerViewModel.addSongNextToQueue(song) } },
             onAddToQueue = { whenOnSonos { playerViewModel.addSongToQueue(song) } }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SpotifyLoading(podcastsOnly: Boolean) {
+    SpotifyHeader(stringResource(if (podcastsOnly) R.string.spotify_section_podcasts else R.string.spotify_section_title))
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+        LoadingIndicator()
     }
 }
 
@@ -682,3 +715,6 @@ private fun SpotifyQueueButtons(onAddToQueue: () -> Unit, onPlayNext: () -> Unit
         }
     }
 }
+
+private const val AUTO_SEARCH_WAIT_MS = 900L
+private const val PODCAST_SEARCH_WAIT_MS = 600L

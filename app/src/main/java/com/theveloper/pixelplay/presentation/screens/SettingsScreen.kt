@@ -215,7 +215,9 @@ fun SettingsScreen(
                 ExpressiveSettingsGroup {
                     val mainCategories = SettingsCategory.entries.filter {
                         it != SettingsCategory.ABOUT && 
-                        it != SettingsCategory.DEVICE_CAPABILITIES
+                        it != SettingsCategory.DEVICE_CAPABILITIES &&
+                        // These four have their page under "Play from".
+                        it !in SettingsCategory.sources
                     }
 
                     val totalItems = mainCategories.size + 3 // Device + Accounts + About
@@ -377,7 +379,9 @@ fun ExpressiveCategoryItem(
     category: SettingsCategory,
     onClick: () -> Unit,
     shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(24.dp),
-    customColors: Pair<Color, Color>? = null
+    customColors: Pair<Color, Color>? = null,
+    /** A line that says how it stands, in the place of the fixed subtitle. */
+    subtitle: String? = null
 ) {
     Surface(
         onClick = onClick,
@@ -426,7 +430,7 @@ fun ExpressiveCategoryItem(
                     maxLines = 1
                 )
                 Text(
-                    text = stringResource(category.subtitleRes),
+                    text = subtitle ?: stringResource(category.subtitleRes),
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
@@ -475,9 +479,10 @@ fun ExpressiveSettingsGroup(content: @Composable () -> Unit) {
     }
 }
 
-private fun getCategoryColors(category: SettingsCategory, isDark: Boolean): Pair<Color, Color> {
+internal fun getCategoryColors(category: SettingsCategory, isDark: Boolean): Pair<Color, Color> {
     return if (isDark) {
         when (category) {
+            SettingsCategory.SOURCES -> Color(0xFF00497D) to Color(0xFFCFE5FF)
             SettingsCategory.LIBRARY -> Color(0xFF004A77) to Color(0xFFC2E7FF) 
             SettingsCategory.APPEARANCE -> Color(0xFF7D5260) to Color(0xFFFFD8E4) 
             SettingsCategory.PLAYBACK -> Color(0xFF633B48) to Color(0xFFFFD8EC) 
@@ -494,6 +499,7 @@ private fun getCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
         }
     } else {
         when (category) {
+            SettingsCategory.SOURCES -> Color(0xFFCFE5FF) to Color(0xFF001D33)
             SettingsCategory.LIBRARY -> Color(0xFFD7E3FF) to Color(0xFF005AC1)
             SettingsCategory.APPEARANCE -> Color(0xFFFFD8E4) to Color(0xFF631835)
             SettingsCategory.PLAYBACK -> Color(0xFFFFD8EC) to Color(0xFF631B4B)

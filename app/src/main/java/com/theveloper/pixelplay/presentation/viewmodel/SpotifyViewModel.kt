@@ -35,12 +35,29 @@ class SpotifyViewModel @Inject constructor(
 
     sealed interface Search {
         val query: String
-        data class Loading(override val query: String) : Search
-        data class Found(override val query: String, val results: SpotifyResults) : Search
-        data class Failed(override val query: String, val notLoggedIn: Boolean) : Search
+        /** From the Podcasts filter: no songs asked for. */
+        val podcastsOnly: Boolean
+        data class Loading(override val query: String, override val podcastsOnly: Boolean = false) : Search
+        data class Found(override val query: String, val results: SpotifyResults, override val podcastsOnly: Boolean = false) : Search
+        data class Failed(
+            override val query: String,
+            val notLoggedIn: Boolean,
+            val status: Int? = null,
+            val reason: String? = null,
+            override val podcastsOnly: Boolean = false
+        ) : Search
     }
 
     val account: StateFlow<SpotifyAuth.Account> = auth.account
+    val preferences: StateFlow<SpotifyAuth.Preferences> = auth.preferences
+
+    fun setShowButton(on: Boolean) = auth.setShowButton(on)
+    fun setPodcasts(on: Boolean) {
+        auth.setPodcasts(on)
+        // Results without or with podcasts belong to the other setting.
+        _search.value = null
+    }
+    fun setAutoSearch(on: Boolean) = auth.setAutoSearch(on)
 
     /** Spotify songs only play on a Sonos: the speaker fetches them, the phone has no sound for them. */
     val sonosActive: StateFlow<Boolean> = sonosController.session
@@ -92,16 +109,29 @@ class SpotifyViewModel @Inject constructor(
         _search.value = null
     }
 
-    /** Only on a tap of the button, never while typing: an app in development mode may not ask much. */
-    fun search(query: String) {
+    /**
+     * On a tap of the button, or once the typing has stopped where that was asked for (the Podcasts filter, or
+     * searching by itself in the settings): an app in development mode may not ask much.
+     */
+    fun search(query: String, podcastsOnly: Boolean = false) {
         val cleaned = query.trim()
         if (cleaned.isEmpty()) return
         searchJob?.cancel()
-        _search.value = Search.Loading(cleaned)
+        _search.value = Search.Loading(cleaned, podcastsOnly)
         searchJob = viewModelScope.launch {
-            _search.value = api.search(cleaned).fold(
-                onSuccess = { Search.Found(cleaned, it) },
-                onFailure = { Search.Failed(cleaned, notLoggedIn = it is SpotifyApi.NotLoggedIn) }
+            val podcasts = podcastsOnly || auth.preferences.value.podcasts
+            _search.value = api.search(cleaned, podcasts = podcasts, songs = !podcastsOnly).fold(
+                onSuccess = { Search.Found(cleaned, it, podcastsOnly) },
+                onFailure = {
+                    val refused = it as? SpotifyApi.Refused
+                    Search.Failed(
+                        cleaned,
+                        notLoggedIn = it is SpotifyApi.NotLoggedIn,
+                        status = refused?.status,
+                        reason = refused?.reason,
+                        podcastsOnly = podcastsOnly
+                    )
+                }
             )
         }
     }

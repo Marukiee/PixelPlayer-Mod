@@ -1,5 +1,12 @@
 package com.theveloper.pixelplay.presentation.screens
 
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -439,6 +446,9 @@ fun SettingsCategoryScreen(
                     modifier = Modifier.background(Color.Transparent)
                ) {
                     when (category) {
+                        SettingsCategory.SOURCES -> {
+                            SourcesHubBlock(navController)
+                        }
                         SettingsCategory.LIBRARY -> {
                             SettingsSubsection(title = stringResource(R.string.settings_library_structure_section)) {
                                 SettingsItem(
@@ -3494,7 +3504,7 @@ private fun SpotifySettingsBlock() {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Rounded.TravelExplore, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                Icon(painterResource(R.drawable.ic_spotify), contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
                 AnimatedContent(
                     modifier = Modifier.weight(1f),
                     targetState = when {
@@ -3548,6 +3558,10 @@ private fun SpotifySettingsBlock() {
                 TextButton(onClick = { confirmLogout = false }) { Text(stringResource(R.string.settings_sonos_cancel)) }
             }
         )
+    }
+
+    if (account.loggedIn) {
+        SpotifyPreferencesSections(spotifyViewModel, account.clientId)
     }
 
     if (!account.loggedIn) {
@@ -3651,6 +3665,165 @@ private fun SpotifySettingsBlock() {
             }
         }
     }
+}
+
+/** How Spotify shows up in Search, and the link with the Spotify app, once logged in. */
+@Composable
+private fun SpotifyPreferencesSections(
+    spotifyViewModel: com.theveloper.pixelplay.presentation.viewmodel.SpotifyViewModel,
+    clientId: String
+) {
+    val preferences by spotifyViewModel.preferences.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val redirectUri = com.theveloper.pixelplay.data.spotify.SpotifyAuth.REDIRECT_URI
+    var changeClientId by remember { mutableStateOf(false) }
+
+    SettingsSubsection(title = stringResource(R.string.spotify_settings_search_section)) {
+        SwitchSettingItem(
+            title = stringResource(R.string.spotify_settings_button_title),
+            subtitle = stringResource(R.string.spotify_settings_button_text),
+            checked = preferences.showButton,
+            onCheckedChange = spotifyViewModel::setShowButton,
+            leadingIcon = { Icon(Icons.Rounded.Search, null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+        SwitchSettingItem(
+            title = stringResource(R.string.spotify_settings_podcasts_title),
+            subtitle = stringResource(R.string.spotify_settings_podcasts_text),
+            checked = preferences.podcasts,
+            onCheckedChange = spotifyViewModel::setPodcasts,
+            leadingIcon = { Icon(Icons.Rounded.Podcasts, null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+        SwitchSettingItem(
+            title = stringResource(R.string.spotify_settings_auto_title),
+            subtitle = stringResource(R.string.spotify_settings_auto_text),
+            checked = preferences.autoSearch && preferences.showButton,
+            onCheckedChange = spotifyViewModel::setAutoSearch,
+            enabled = preferences.showButton,
+            leadingIcon = { Icon(Icons.Rounded.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+    }
+
+    SettingsSubsection(title = stringResource(R.string.spotify_settings_link_section)) {
+        SettingsItem(
+            title = stringResource(R.string.spotify_settings_client_id_label),
+            subtitle = maskedClientId(clientId),
+            leadingIcon = { Icon(Icons.Rounded.Key, null, tint = MaterialTheme.colorScheme.secondary) },
+            trailingIcon = { Icon(Icons.Rounded.Edit, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            onClick = { changeClientId = true }
+        )
+        SettingsItem(
+            title = stringResource(R.string.spotify_settings_dashboard_title),
+            subtitle = stringResource(R.string.spotify_settings_dashboard_text),
+            leadingIcon = { Icon(painterResource(R.drawable.ic_spotify), null, tint = MaterialTheme.colorScheme.secondary) },
+            trailingIcon = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            onClick = {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(com.theveloper.pixelplay.data.spotify.SpotifyAuth.DASHBOARD_URL)
+                        )
+                    )
+                }
+            }
+        )
+        val copiedText = stringResource(R.string.spotify_settings_copied)
+        SettingsItem(
+            title = stringResource(R.string.spotify_settings_redirect_label),
+            subtitle = redirectUri,
+            leadingIcon = { Icon(Icons.Rounded.Link, null, tint = MaterialTheme.colorScheme.secondary) },
+            trailingIcon = { Icon(Icons.Rounded.ContentCopy, stringResource(R.string.spotify_settings_copy), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            onClick = {
+                val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Redirect URI", redirectUri))
+                // From Android 13 the system shows its own note.
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+                    android.widget.Toast.makeText(context, copiedText, android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    if (changeClientId) {
+        SonosAddressDialog(
+            iconRes = R.drawable.ic_spotify,
+            title = stringResource(R.string.spotify_settings_client_id_change),
+            hint = stringResource(R.string.spotify_settings_client_id_change_hint),
+            label = stringResource(R.string.spotify_settings_client_id_label),
+            placeholder = "",
+            invalidMessage = stringResource(R.string.spotify_settings_client_id_needed),
+            initial = clientId,
+            onSave = { value ->
+                val cleaned = value.trim()
+                if (cleaned.isEmpty()) false else {
+                    // Another app on Spotify's side: the old login does not belong to it, so this logs out.
+                    spotifyViewModel.setClientId(cleaned)
+                    true
+                }
+            },
+            onDismiss = { changeClientId = false }
+        )
+    }
+}
+
+/** Enough of the Client ID to recognise it, not enough to copy it off the screen. */
+private fun maskedClientId(clientId: String): String =
+    if (clientId.length <= 8) clientId else clientId.take(4) + " •••• " + clientId.takeLast(4)
+
+/**
+ * "Play from": every place music can play from, each with its own page and a line that says how it stands. Local
+ * music first, then the server, the speakers and Spotify.
+ */
+@Composable
+private fun SourcesHubBlock(navController: NavController) {
+    val sourcesViewModel: com.theveloper.pixelplay.presentation.viewmodel.SourcesViewModel = hiltViewModel()
+    val status by sourcesViewModel.status.collectAsStateWithLifecycle()
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val sources = SettingsCategory.sources
+    ExpressiveSettingsGroup {
+        sources.forEachIndexed { index, category ->
+            val shape = when (index) {
+                0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
+                sources.lastIndex -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+                else -> RoundedCornerShape(4.dp)
+            }
+            ExpressiveCategoryItem(
+                category = category,
+                customColors = getCategoryColors(category, isDark),
+                subtitle = sourceStatus(category, status),
+                // On top of this page, so Back comes here: all setting pages share one route, and single top would
+                // swap this page for the next one.
+                onClick = {
+                    navController.navigateSafely(Screen.SettingsCategory.createRoute(category.id)) { launchSingleTop = false }
+                },
+                shape = shape
+            )
+            if (index < sources.lastIndex) Spacer(modifier = Modifier.height(2.dp))
+        }
+    }
+}
+
+@Composable
+private fun sourceStatus(
+    category: SettingsCategory,
+    status: com.theveloper.pixelplay.presentation.viewmodel.SourcesViewModel.Status
+): String = when (category) {
+    SettingsCategory.LIBRARY -> stringResource(R.string.sources_local_status)
+    SettingsCategory.NAVIDROME -> status.navidromeUser?.let { user ->
+        if (user.isBlank()) stringResource(R.string.sources_connected) else stringResource(R.string.sources_logged_in_as, user)
+    } ?: stringResource(R.string.sources_not_connected)
+    SettingsCategory.SONOS -> when {
+        status.sonosRoom != null -> stringResource(R.string.sources_sonos_playing, status.sonosRoom)
+        status.sonosOn -> stringResource(R.string.sources_sonos_on)
+        else -> stringResource(R.string.sources_off)
+    }
+    SettingsCategory.SPOTIFY -> when {
+        status.spotifyLoggedIn && status.spotifyName != null -> stringResource(R.string.sources_logged_in_as, status.spotifyName)
+        status.spotifyLoggedIn -> stringResource(R.string.sources_connected)
+        status.spotifyHasClientId -> stringResource(R.string.sources_not_logged_in)
+        else -> stringResource(R.string.sources_not_connected)
+    }
+    else -> stringResource(category.subtitleRes)
 }
 
 /** Where something is in Spotify: the path in bold with arrows between, the rest small and quiet. */

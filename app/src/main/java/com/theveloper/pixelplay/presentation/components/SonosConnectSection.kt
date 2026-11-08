@@ -1,5 +1,15 @@
 package com.theveloper.pixelplay.presentation.components
 
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -7,7 +17,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.style.TextAlign
@@ -956,6 +965,20 @@ internal fun DeviceVolumeSlider(
 ) {
     val onContainer = MaterialTheme.colorScheme.onTertiaryContainer
     val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val dragged by interactionSource.collectIsDraggedAsState()
+    // Thinner under the finger, like the Material thumb.
+    val thumbWidth by animateDpAsState(
+        targetValue = if (pressed || dragged) 2.dp else 4.dp,
+        animationSpec = sonosMotion.fastSpatialSpec(),
+        label = "volumeThumbWidth"
+    )
+    val trackHeight = if (prominent) 30.dp else 18.dp
+    val thumbHeight = if (prominent) 36.dp else 24.dp
+    val corner = if (prominent) 12.dp else 8.dp
+    val activeColor = if (enabled) onContainer else onContainer.copy(alpha = 0.3f)
+    val inactiveColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = if (enabled) 0.2f else 0.1f)
+    val thumbColor = if (enabled) onContainer else onContainer.copy(alpha = 0.38f)
     Slider(
         value = value,
         onValueChange = onValueChange,
@@ -964,30 +987,103 @@ internal fun DeviceVolumeSlider(
         enabled = enabled,
         interactionSource = interactionSource,
         track = { sliderState ->
-            SliderDefaults.Track(
-                sliderState = sliderState,
+            val range = sliderState.valueRange
+            val span = (range.endInclusive - range.start).takeIf { it > 0f } ?: 1f
+            val fraction = ((sliderState.value - range.start) / span).coerceIn(0f, 1f)
+            Canvas(
                 modifier = Modifier
-                    .height(if (prominent) 30.dp else 18.dp)
-                    .clip(RoundedCornerShape(if (prominent) 12.dp else 8.dp)),
-                colors = SliderDefaults.colors(
-                    activeTrackColor = onContainer,
-                    inactiveTrackColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.2f),
-                    disabledActiveTrackColor = onContainer.copy(alpha = 0.3f),
-                    disabledInactiveTrackColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.1f)
+                    .fillMaxWidth()
+                    .height(trackHeight)
+            ) {
+                drawVolumeTrack(
+                    fraction = fraction,
+                    thumbWidth = thumbWidth.toPx(),
+                    thumbHeight = thumbHeight.toPx(),
+                    outerCorner = corner.toPx(),
+                    activeColor = activeColor,
+                    inactiveColor = inactiveColor,
+                    thumbColor = thumbColor
                 )
-            )
+            }
         },
-        thumb = { sliderState ->
-            SliderDefaults.Thumb(
-                modifier = Modifier.height(if (prominent) 36.dp else 24.dp),
-                interactionSource = interactionSource,
-                sliderState = sliderState,
-                colors = SliderDefaults.colors(thumbColor = onContainer)
-            )
-        },
+        // Takes the room of the inset only: the track draws the thumb itself, so a stub of the filled part stays
+        // in front of it even at the lowest volume.
+        thumb = { Spacer(Modifier.size(VolumeThumbInset * 2, thumbHeight)) },
         modifier = modifier.semantics { contentDescription = description }
     )
 }
+
+/**
+ * The track of a volume slider in the Material look, but with the thumb set in from both ends: there is always a
+ * filled stub in front of it, so the bar never looks empty while it plays. Drawn in track coordinates; the inset
+ * reaches out to the edges of the slider on both sides.
+ */
+private fun DrawScope.drawVolumeTrack(
+    fraction: Float,
+    thumbWidth: Float,
+    thumbHeight: Float,
+    outerCorner: Float,
+    activeColor: Color,
+    inactiveColor: Color,
+    thumbColor: Color
+) {
+    val inset = VolumeThumbInset.toPx()
+    val gap = VolumeThumbGap.toPx()
+    val inner = CornerRadius(VolumeInnerCorner.toPx())
+    val outer = CornerRadius(outerCorner)
+    val left = -inset
+    val right = size.width + inset
+    val h = size.height
+    val thumbX = fraction * size.width
+    val activeEnd = thumbX - thumbWidth / 2f - gap
+    val inactiveStart = thumbX + thumbWidth / 2f + gap
+    if (activeEnd > left) {
+        drawPath(
+            Path().apply {
+                addRoundRect(
+                    RoundRect(
+                        left = left, top = 0f, right = activeEnd, bottom = h,
+                        topLeftCornerRadius = outer, bottomLeftCornerRadius = outer,
+                        topRightCornerRadius = inner, bottomRightCornerRadius = inner
+                    )
+                )
+            },
+            activeColor
+        )
+    }
+    if (right > inactiveStart) {
+        drawPath(
+            Path().apply {
+                addRoundRect(
+                    RoundRect(
+                        left = inactiveStart, top = 0f, right = right, bottom = h,
+                        topLeftCornerRadius = inner, bottomLeftCornerRadius = inner,
+                        topRightCornerRadius = outer, bottomRightCornerRadius = outer
+                    )
+                )
+            },
+            inactiveColor
+        )
+    }
+    // The stop at the end, gone once the empty part is too short to hold it.
+    val dotRadius = VolumeStopDot.toPx() / 2f
+    val dotX = right - h / 2f
+    if (inactiveStart < dotX - dotRadius * 2f) {
+        drawCircle(activeColor, radius = dotRadius, center = Offset(dotX, h / 2f))
+    }
+    drawRoundRect(
+        color = thumbColor,
+        topLeft = Offset(thumbX - thumbWidth / 2f, (h - thumbHeight) / 2f),
+        size = Size(thumbWidth, thumbHeight),
+        cornerRadius = CornerRadius(thumbWidth / 2f)
+    )
+}
+
+/** Half the room the thumb takes: the filled stub, the gap and half the thumb. */
+private val VolumeThumbInset = 23.dp
+private val VolumeThumbGap = 6.dp
+private val VolumeInnerCorner = 2.dp
+private val VolumeStopDot = 4.dp
 
 @Composable
 internal fun DeviceCardVolumeNumber(number: String) {

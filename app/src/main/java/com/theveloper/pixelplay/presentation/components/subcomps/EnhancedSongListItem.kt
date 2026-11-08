@@ -100,6 +100,9 @@ fun EnhancedSongListItem(
     selectionIndex: Int? = null,
     isSelectionMode: Boolean = false,
     showMoreOptionsButton: Boolean = true,
+    /** The icon of the button at the end: the menu, or a cross where the row can be taken away. */
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Rounded.MoreVert,
+    trailingDescription: String? = null,
     /** Short text at the end of the row, such as the time a song was played. */
     trailingLabel: String? = null,
     onLongPress: () -> Unit = {},
@@ -421,8 +424,8 @@ fun EnhancedSongListItem(
                             .padding(end = 4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.MoreVert,
-                            contentDescription = stringResource(R.string.common_more_options_for, song.title),
+                            imageVector = trailingIcon,
+                            contentDescription = trailingDescription ?: stringResource(R.string.common_more_options_for, song.title),
                             modifier = Modifier.size(24.dp)
                         )
                     }

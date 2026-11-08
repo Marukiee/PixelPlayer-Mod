@@ -78,6 +78,37 @@ private const val SONG_DETAIL_PROJECTION = """
     songs.source_type AS source_type
 """
 
+/**
+ * Leaves out a song from a server (Navidrome, Telegram) when the same recording is also on the phone, in the library
+ * without the Offline/Online filter: the local file wins, because it plays without a connection. Same title, an
+ * artist that is the same or starts the same, and at most three seconds apart. A server song that is not on the phone
+ * stays. The title index keeps it fast. Uses the :filterMode, :applyDirectoryFilter and :allowedParentDirs of the
+ * query it is in, so a file in a hidden folder does not hide the server copy.
+ */
+private const val HIDE_SERVER_COPIES_OF_LOCAL_SONGS = """
+        AND (
+            :filterMode != 0
+            OR songs.source_type = 0
+            OR NOT EXISTS (
+                SELECT 1 FROM songs AS local_copy
+                WHERE local_copy.title = songs.title
+                AND local_copy.source_type = 0
+                AND abs(local_copy.duration - songs.duration) <= 3000
+                AND (
+                    lower(local_copy.artist_name) = lower(songs.artist_name)
+                    OR (
+                        local_copy.artist_name != '' AND songs.artist_name != ''
+                        AND (
+                            instr(lower(songs.artist_name), lower(local_copy.artist_name)) = 1
+                            OR instr(lower(local_copy.artist_name), lower(songs.artist_name)) = 1
+                        )
+                    )
+                )
+                AND (:applyDirectoryFilter = 0 OR local_copy.parent_directory_path IN (:allowedParentDirs))
+            )
+        )
+"""
+
 // Projection for list queries: excludes lyrics to prevent CursorWindow overflow (2MB limit)
 // when loading large libraries. Lyrics are only needed for the Now Playing screen (getSongById).
 private const val SONG_LIST_PROJECTION = """
@@ -698,6 +729,7 @@ interface MusicDao {
                 AND songs.source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LOCAL_SONGS + """
         ORDER BY
             CASE WHEN :sortOrder = 'song_default_order' THEN songs.track_number END ASC,
             CASE WHEN :sortOrder = 'song_title_az' THEN songs.title END COLLATE LOCALIZED ASC,
@@ -779,6 +811,7 @@ interface MusicDao {
                 AND source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LOCAL_SONGS + """
         ORDER BY
             CASE WHEN :sortOrder = 'song_default_order' THEN track_number END ASC,
             CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE LOCALIZED ASC,
@@ -821,6 +854,7 @@ interface MusicDao {
                 AND source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LOCAL_SONGS + """
         ORDER BY
             CASE WHEN :sortOrder = 'song_default_order' THEN track_number END ASC,
             CASE WHEN :sortOrder = 'song_title_az' THEN title END COLLATE LOCALIZED ASC,
