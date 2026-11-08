@@ -1,5 +1,11 @@
 package com.theveloper.pixelplay.presentation.components
 
+import androidx.compose.ui.platform.LocalView
+import kotlin.math.min
+import androidx.compose.runtime.Stable
+import androidx.compose.material3.ModalBottomSheetProperties
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.activity.compose.PredictiveBackHandler
 import android.Manifest
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
@@ -197,7 +203,9 @@ fun CastBottomSheet(
     onDismiss: () -> Unit,
     onExpansionChanged: (Float) -> Unit = {},
     miniPlayerRest: () -> Rect? = { null },
-    miniPlayerAbovePanel: (@Composable (close: () -> Unit, modifier: Modifier) -> Unit)? = null
+    miniPlayerAbovePanel: (@Composable (close: () -> Unit, modifier: Modifier) -> Unit)? = null,
+    /** Lets the real mini player step aside while the copy above the panel has left its spot. */
+    miniPlayerLift: MiniPlayerLift? = null
 ) {
     val routes by playerViewModel.castRoutes.collectAsStateWithLifecycle()
     val selectedRoute by playerViewModel.selectedRoute.collectAsStateWithLifecycle()
@@ -246,6 +254,8 @@ fun CastBottomSheet(
 
     LaunchedEffect(Unit) {
         missingPermissions = missingCastPermissions(context, requiredPermissions)
+        // Once the panel is up: asking Bluetooth and Wi-Fi happens on the main thread and made the opening stutter.
+        delay(PanelSettleMs)
         if (missingPermissions.isEmpty()) {
             playerViewModel.refreshLocalConnectionInfo(refreshBluetoothDevices = true)
         }
@@ -260,6 +270,7 @@ fun CastBottomSheet(
         onDispose { sonosViewModel.setConnectPanelOpen(false) }
     }
     val sonosEnabled by sonosViewModel.isEnabled.collectAsStateWithLifecycle()
+    val sonosFavorites by sonosViewModel.favorites.collectAsStateWithLifecycle()
     val sonosGroups by sonosViewModel.groups.collectAsStateWithLifecycle()
     val sonosScanning by sonosViewModel.isScanning.collectAsStateWithLifecycle()
     val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
@@ -268,6 +279,8 @@ fun CastBottomSheet(
     val sheetScope = rememberCoroutineScope()
 
     LaunchedEffect(sonosEnabled, missingPermissions.isEmpty()) {
+        // The rooms from last time show at once; the fresh search waits for the panel to be up.
+        delay(PanelSettleMs)
         if (sonosEnabled && missingPermissions.isEmpty()) sonosViewModel.refresh()
     }
 
@@ -417,6 +430,46 @@ fun CastBottomSheet(
     val panelColor = MaterialTheme.colorScheme.surfaceContainerLow
     var handleHeightPx by remember { mutableIntStateOf(0) }
 
+    // The back gesture, done here instead of by Material: its sheet shrinks everything in it, also the mini player
+    // above the edge, which then jumped back to full size once the panel was gone. Now only the panel shrinks, the
+    // way Material does it, and the mini player rides its edge at full size.
+    val backProgress = remember { Animatable(0f) }
+    var contentHeightPx by remember { mutableIntStateOf(0) }
+    var panelWidthPx by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    val backShrinkXPx = with(density) { PanelBackShrinkX.toPx() }
+    val backShrinkYPx = with(density) { PanelBackShrinkY.toPx() }
+    val miniGapPx = with(density) { CastPanelMiniGap.toPx() }
+    // The sheet's own window, as tall as the screen: where the hidden sheet ends up.
+    val panelWindowView = LocalView.current
+    val miniHeightPx = with(density) { MiniPlayerHeight.roundToPx().toFloat() }
+    fun backScaleX(): Float {
+        val width = panelWidthPx.toFloat()
+        return if (width <= 0f) 1f else 1f - min(backShrinkXPx, width) * backProgress.value / width
+    }
+    fun backScaleY(): Float {
+        val height = (contentHeightPx + handleHeightPx).toFloat()
+        return if (height <= 0f) 1f else 1f - min(backShrinkYPx, height) * backProgress.value / height
+    }
+    /** How far the top of the shrinking panel has come down. */
+    fun backDrop(): Float = (contentHeightPx + handleHeightPx) * (1f - backScaleY())
+    /** Where the mini player above the panel stands: on the panel's edge, or on the real one once that is lower. */
+    fun miniCopyTop(sheetTop: Float, restTop: Float?): Float {
+        val riding = sheetTop + backDrop() - miniGapPx - miniHeightPx
+        return if (restTop != null) min(riding, restTop) else riding
+    }
+
+    if (miniPlayerLift != null && miniPlayerAbovePanel != null) {
+        DisposableEffect(miniPlayerLift) {
+            miniPlayerLift.lifted = {
+                val rest = miniPlayerRest()
+                val sheetTop = runCatching { sheetState.requireOffset() }.getOrNull()
+                rest != null && sheetTop != null && miniCopyTop(sheetTop, rest.top) < rest.top - 0.5f
+            }
+            onDispose { miniPlayerLift.lifted = null }
+        }
+    }
+
     DisposableEffect(Unit) {
         onExpansionChanged(1f)
         playerViewModel.setConnectPanelOpen(true)
@@ -425,15 +478,28 @@ fun CastBottomSheet(
             playerViewModel.setConnectPanelOpen(false)
         }
     }
+    DisposableEffect(sonosEnabled) {
+        sonosViewModel.watchGroups(sonosEnabled)
+        onDispose { sonosViewModel.watchGroups(false) }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = false, shouldDismissOnClickOutside = true),
         dragHandle = {
             Box(
                 Modifier
                     .fillMaxWidth()
                     .onSizeChanged { handleHeightPx = it.height }
+                    // Shrinks with the panel below it, around the bottom of the whole panel.
+                    .graphicsLayer {
+                        val scaleYNow = backScaleY()
+                        scaleX = backScaleX()
+                        scaleY = scaleYNow
+                        transformOrigin = TransformOrigin(0.5f, 1f)
+                        translationY = contentHeightPx * (1f - scaleYNow)
+                    }
                     .background(panelColor, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .then(closeOnShortPull),
                 contentAlignment = Alignment.Center
@@ -447,6 +513,15 @@ fun CastBottomSheet(
         tonalElevation = 0.dp,
         contentWindowInsets = { WindowInsets(0) }
     ) {
+        PredictiveBackHandler(enabled = sheetState.isVisible) { events ->
+            try {
+                events.collect { event -> backProgress.snapTo(PanelBackEasing.transform(event.progress)) }
+                // The panel keeps its shrink while it slides away, like Material's.
+                closePanel()
+            } catch (cancelled: CancellationException) {
+                closeScope.launch { backProgress.animateTo(0f) }
+            }
+        }
         // The sheet is its own window, so the activity never sees the volume keys while it is open.
         val sonosVolumeKeys by sonosViewModel.volumeKeys.collectAsStateWithLifecycle()
         val keyFocus = remember { FocusRequester() }
@@ -457,9 +532,7 @@ fun CastBottomSheet(
         ) {
             Box(
                 modifier = Modifier
-                    .background(panelColor)
                     .then(closeOnShortPull)
-                    .padding(bottom = 18.dp)
                     .focusRequester(keyFocus)
                     .focusable()
                     .onPreviewKeyEvent { event ->
@@ -476,6 +549,26 @@ fun CastBottomSheet(
                         }
                     }
             ) {
+                Box(
+                    modifier = Modifier
+                        .onSizeChanged {
+                            contentHeightPx = it.height
+                            panelWidthPx = it.width
+                        }
+                        .graphicsLayer {
+                            scaleX = backScaleX()
+                            scaleY = backScaleY()
+                            transformOrigin = TransformOrigin(0.5f, 1f)
+                        }
+                        .background(panelColor)
+                        .padding(bottom = 18.dp)
+                        // The content shrinks as much each way, so nothing gets squashed; Material does the same.
+                        .graphicsLayer {
+                            val scaleYNow = backScaleY()
+                            scaleY = if (scaleYNow != 0f) backScaleX() / scaleYNow else 1f
+                            transformOrigin = TransformOrigin(0.5f, 0f)
+                        }
+                ) {
                 if (missingPermissions.isNotEmpty()) {
                     CastPermissionStep(
                         missingPermissions = missingPermissions,
@@ -548,7 +641,20 @@ fun CastBottomSheet(
                                     onEditGroup = { group -> sonosGroupSheetFor = group.coordinatorUuid },
                                     onUngroup = { group -> sonosViewModel.ungroup(group.id) },
                                     onStop = sonosViewModel::switchToPhone,
-                                    onRefresh = sonosViewModel::refresh
+                                    onRefresh = sonosViewModel::refresh,
+                                    favorites = sonosFavorites,
+                                    onToggleFavorite = sonosViewModel::toggleFavorite,
+                                    onPlayFavorite = { ids ->
+                                        if (isRemoteSession) {
+                                            playerViewModel.disconnect()
+                                            sheetScope.launch {
+                                                delay(1200)
+                                                sonosViewModel.playFavorite(ids)
+                                            }
+                                        } else {
+                                            sonosViewModel.playFavorite(ids)
+                                        }
+                                    }
                                 )
                             }
                         },
@@ -581,9 +687,11 @@ fun CastBottomSheet(
                         startWithControls = isRemoteSession || currentSonos != null
                     )
                 }
+                }
                 if (miniPlayerAbovePanel != null) {
                     // Lies exactly over the real mini player until the sheet's edge reaches it, then rides on that
-                    // edge, and the other way round on the way down. Worked out while drawing, so it keeps up with the sheet.
+                    // edge, and the other way round on the way down. Worked out while drawing, so it keeps up with the
+                    // sheet. While it is up, the real one hides, or it would show in the gap above the edge.
                     Box(
                         modifier = Modifier.layout { measurable, constraints ->
                             val height = MiniPlayerHeight.roundToPx()
@@ -595,10 +703,19 @@ fun CastBottomSheet(
                             layout(0, 0) {
                                 placeable.placeWithLayer(rest?.left?.roundToInt() ?: margin, 0) {
                                     val sheetTop = runCatching { sheetState.requireOffset() }.getOrDefault(size.height * 100f)
-                                    val riding = sheetTop - gap - height
-                                    val resting = miniPlayerRest()?.top
-                                    val at = if (resting != null) minOf(riding, resting) else riding
+                                    val restTop = miniPlayerRest()?.top
+                                    val at = miniCopyTop(sheetTop, restTop)
                                     translationY = at - sheetTop - handleHeightPx
+                                    // Opened from the full player there is no mini player below to land on: it fades
+                                    // and shrinks away with the last bit of the panel, instead of vanishing in one go
+                                    // once the panel is gone. The same on the way in.
+                                    val shown = if (restTop != null) 1f else {
+                                        ((panelWindowView.height - sheetTop) / (height + 2 * gap)).coerceIn(0f, 1f)
+                                    }
+                                    alpha = shown
+                                    scaleX = 0.9f + 0.1f * shown
+                                    scaleY = 0.9f + 0.1f * shown
+                                    transformOrigin = TransformOrigin(0.5f, 1f)
                                 }
                             }
                         }
@@ -626,8 +743,27 @@ fun CastBottomSheet(
     }
 }
 
+/** About as long as the panel takes to come up. */
+private const val PanelSettleMs = 450L
+
 private val CastPanelMiniGap = 8.dp
 private val CastPanelMiniMargin = 20.dp
+
+// Material's predictive back for sheets: at most this much narrower and lower, with its easing.
+private val PanelBackShrinkX = 48.dp
+private val PanelBackShrinkY = 24.dp
+private val PanelBackEasing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
+
+/**
+ * The real mini player asks this whether the copy above the connect panel has left its spot. Then the real one
+ * hides, so it does not show in the gap between the copy and the panel's edge.
+ */
+@Stable
+class MiniPlayerLift {
+    var lifted by mutableStateOf<(() -> Boolean)?>(null)
+
+    fun isLifted(): Boolean = lifted?.invoke() == true
+}
 
 /** A clip far larger than the sheet: Material's sheet always clips to its shape, and this lets the mini player out. */
 private object UnclippedSheetShape : Shape {

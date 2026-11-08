@@ -157,6 +157,15 @@ internal fun SonosVolumeBarLayer(
             .fillMaxSize()
             .onGloballyPositioned { origin = it.positionInWindow() }
     ) {
+        // A tap next to the bar only takes the bar away, like a popup: it no longer opens the album cover or
+        // whatever lies under the finger.
+        if (state.visibility.targetState) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .closesBarOnTouch(state)
+            )
+        }
         AnimatedVisibility(
             visibleState = state.visibility,
             enter = fadeIn(sonosMotion.defaultEffectsSpec()) +
@@ -387,6 +396,18 @@ private fun Modifier.keepsBarUp(state: SonosVolumeBarState): Modifier = pointerI
             state.held = false
             state.touch()
         }
+    }
+}
+
+/** Takes the whole touch, from the first finger down to the last one up, and sends the bar away. */
+private fun Modifier.closesBarOnTouch(state: SonosVolumeBarState): Modifier = pointerInput(state) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false).consume()
+        state.visibility.targetState = false
+        do {
+            val event = awaitPointerEvent()
+            event.changes.forEach { it.consume() }
+        } while (event.changes.any { it.pressed })
     }
 }
 

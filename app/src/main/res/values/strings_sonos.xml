@@ -74,4 +74,13 @@
     <string name="settings_sonos_reachable">reachable</string>
     <string name="settings_sonos_unreachable">not reachable from this phone right now</string>
     <string name="settings_sonos_problem_tailscale">Sonos can\'t reach Navidrome through Tailscale. Enter your server\'s home address below.</string>
+    <string name="sonos_msg_server_unreachable">Navidrome can\'t be reached, so the Sonos plays nothing. Paused.</string>
+    <string name="sonos_msg_stalled">The Sonos isn\'t playing, so playback is paused.</string>
+    <string name="sonos_menu_favorite">Add to favorites</string>
+    <string name="sonos_menu_unfavorite">Remove from favorites</string>
+    <string name="sonos_menu_play_favorite">Group and play here</string>
+    <string name="sonos_favorite_group_hint">Tap to group</string>
+    <string name="sonos_favorite_room_hint">Tap to play alone</string>
+    <string name="sonos_cd_favorite">Favorite</string>
+    <string name="sonos_favorite_gone">The rooms of this favorite were not found</string>
 </resources>

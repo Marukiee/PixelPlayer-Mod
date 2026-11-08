@@ -505,7 +505,8 @@ internal fun UnifiedPlayerCastLayer(
     onDismiss: () -> Unit,
     onExpansionChanged: (Float) -> Unit,
     miniPlayerRest: () -> Rect?,
-    miniPlayerAbovePanel: @Composable (close: () -> Unit, modifier: Modifier) -> Unit
+    miniPlayerAbovePanel: @Composable (close: () -> Unit, modifier: Modifier) -> Unit,
+    miniPlayerLift: MiniPlayerLift
 ) {
     if (!showCastSheet || internalIsKeyboardVisible) return
 
@@ -523,7 +524,8 @@ internal fun UnifiedPlayerCastLayer(
                 onDismiss = onDismiss,
                 onExpansionChanged = onExpansionChanged,
                 miniPlayerRest = miniPlayerRest,
-                miniPlayerAbovePanel = miniPlayerAbovePanel
+                miniPlayerAbovePanel = miniPlayerAbovePanel,
+                miniPlayerLift = miniPlayerLift
             )
         }
     }

@@ -428,6 +428,8 @@ fun UnifiedPlayerSheetV2(
 
     val castSheetState = rememberCastSheetState()
     val miniPlayerBounds = remember { mutableStateOf<Rect?>(null) }
+    // While the connect panel is open, its copy of the mini player stands above the edge; then this one hides.
+    val miniPlayerLift = remember { MiniPlayerLift() }
     val sheetBackAndDragState = rememberSheetBackAndDragState(
         showPlayerContentArea = showPlayerContentArea,
         currentSheetContentState = currentSheetContentState
@@ -658,7 +660,7 @@ fun UnifiedPlayerSheetV2(
                             .graphicsLayer {
                                 scaleX = miniAppearScale
                                 scaleY = visualOvershootScaleY.value * miniAppearScale
-                                alpha = miniReadyAlpha
+                                alpha = if (miniPlayerLift.isLifted() && miniPlayerScheme != null) 0f else miniReadyAlpha
                                 translationX = miniPlayerSwipeGestureHandler.offsetX.value
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             }
@@ -894,6 +896,7 @@ fun UnifiedPlayerSheetV2(
         onExpansionChanged = castSheetState.onCastExpansionChanged,
         // Opened from the full player there is no mini player on the screen to take over from.
         miniPlayerRest = { miniPlayerBounds.value.takeIf { currentSheetContentState == PlayerSheetState.COLLAPSED } },
+        miniPlayerLift = miniPlayerLift,
         miniPlayerAbovePanel = { close, modifier ->
             val song = infrequentPlayerState.currentSong
             val scheme = miniPlayerScheme

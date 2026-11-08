@@ -74,4 +74,13 @@
     <string name="settings_sonos_reachable">bereikbaar</string>
     <string name="settings_sonos_unreachable">nu niet bereikbaar vanaf deze telefoon</string>
     <string name="settings_sonos_problem_tailscale">Sonos kan Navidrome niet bereiken via Tailscale. Vul hieronder het thuisadres van je server in.</string>
+    <string name="sonos_msg_server_unreachable">Navidrome is niet bereikbaar, dus de Sonos speelt niets. Afspelen staat op pauze.</string>
+    <string name="sonos_msg_stalled">De Sonos speelt niet, dus afspelen staat op pauze.</string>
+    <string name="sonos_menu_favorite">Favoriet maken</string>
+    <string name="sonos_menu_unfavorite">Geen favoriet meer</string>
+    <string name="sonos_menu_play_favorite">Groeperen en hier afspelen</string>
+    <string name="sonos_favorite_group_hint">Tik om te groeperen</string>
+    <string name="sonos_favorite_room_hint">Tik om los te spelen</string>
+    <string name="sonos_cd_favorite">Favoriet</string>
+    <string name="sonos_favorite_gone">De kamers van deze favoriet zijn niet gevonden</string>
 </resources>

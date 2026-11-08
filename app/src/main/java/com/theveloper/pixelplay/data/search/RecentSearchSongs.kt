@@ -19,15 +19,31 @@ import javax.inject.Singleton
  */
 @Singleton
 class RecentSearchSongs @Inject constructor(@ApplicationContext context: Context) {
-    data class Entry(val song: Song, val timestamp: Long)
+    /** [query] is the search the song was tapped in: the list shows the song in the place of that search. */
+    data class Entry(val song: Song, val timestamp: Long, val query: String? = null)
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val _entries = MutableStateFlow(read())
     val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
 
-    fun add(song: Song) {
-        val entry = Entry(song, System.currentTimeMillis())
+    fun add(song: Song, query: String? = null) {
+        val earlier = _entries.value.firstOrNull { it.song.id == song.id }
+        val entry = Entry(song, System.currentTimeMillis(), query?.trim()?.takeIf { it.isNotEmpty() } ?: earlier?.query)
         save((listOf(entry) + _entries.value.filter { it.song.id != song.id }).take(MAX_SONGS))
+    }
+
+    /** Whether the searches from before this list existed have been matched with what played after them. */
+    val backfilled: Boolean get() = prefs.getBoolean(KEY_BACKFILLED, false)
+
+    /**
+     * A song worked out from the listening history for a search from before this list existed. Goes in at the time
+     * of that search, and never pushes out a song that was really tapped.
+     */
+    fun addGuessed(guesses: List<Entry>) {
+        val known = _entries.value.map { it.song.id }.toSet()
+        val fresh = guesses.filter { it.song.id !in known }.distinctBy { it.song.id }
+        if (fresh.isNotEmpty()) save((_entries.value + fresh).sortedByDescending { it.timestamp }.take(MAX_SONGS))
+        prefs.edit { putBoolean(KEY_BACKFILLED, true) }
     }
 
     fun remove(songId: String) = save(_entries.value.filter { it.song.id != songId })
@@ -61,6 +77,7 @@ class RecentSearchSongs @Inject constructor(@ApplicationContext context: Context
         .put("duration", song.duration)
         .put("mime", song.mimeType ?: "")
         .put("navidromeId", song.navidromeId ?: "")
+        .put("query", query ?: "")
 
     private fun JSONObject.toEntry(): Entry? {
         val id = optString("id").takeIf { it.isNotEmpty() } ?: return null
@@ -82,13 +99,15 @@ class RecentSearchSongs @Inject constructor(@ApplicationContext context: Context
                 sampleRate = null,
                 navidromeId = optString("navidromeId").takeIf { it.isNotEmpty() }
             ),
-            timestamp = optLong("time", 0L)
+            timestamp = optLong("time", 0L),
+            query = optString("query").takeIf { it.isNotEmpty() }
         )
     }
 
     private companion object {
         const val PREFS_NAME = "recent_search_songs"
         const val KEY_ENTRIES = "entries"
+        const val KEY_BACKFILLED = "backfilled"
         const val MAX_SONGS = 20
     }
 }

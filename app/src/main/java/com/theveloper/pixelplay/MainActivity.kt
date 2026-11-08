@@ -1,5 +1,7 @@
 package com.theveloper.pixelplay
 
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.foundation.layout.ime
 import com.theveloper.pixelplay.presentation.navigation.navigateSafely
 
 // import androidx.compose.ui.platform.LocalView // No longer needed for this
@@ -195,6 +197,8 @@ class MainActivity : ComponentActivity() {
     lateinit var syncManager: SyncManager
     @Inject
     lateinit var sonosController: SonosController
+    @Inject
+    lateinit var spotifyAuth: dagger.Lazy<com.theveloper.pixelplay.data.spotify.SpotifyAuth>
     private var sonosVolumeKeys = true
     // For handling shortcut navigation - using StateFlow so composables can observe changes
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
@@ -248,6 +252,9 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             userPreferencesRepository.sonosVolumeKeysFlow.collect { sonosVolumeKeys = it }
         }
+        // The Spotify login opens encrypted storage, which takes a moment: done here in the background, so the first
+        // visit to Search or the settings no longer stutters on it.
+        lifecycleScope.launch(Dispatchers.IO) { runCatching { spotifyAuth.get() } }
 
         // MD3 Optimization: Release Splash Screen immediately to render UI skeleton.
         // Data loading is handled via optimistic UI and smooth transitions.
@@ -1130,19 +1137,28 @@ class MainActivity : ComponentActivity() {
                             animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                             label = "queuePopupBottom"
                         )
+                        // Above the keyboard while it is open, such as when swiping a search result into the
+                        // queue: the keyboard covers the mini player and the pill would sit behind it. Follows the
+                        // keyboard as it moves, without an animation of its own on top.
+                        val keyboardTop = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+                        val popupBottom = if (keyboardTop > 0.dp) {
+                            maxOf(queuePopupBottom, keyboardTop + QueuePopupKeyboardGap)
+                        } else {
+                            queuePopupBottom
+                        }
                         QueueAddedPopup(
                             playerViewModel = playerViewModel,
                             suppressed = queueUndoBarActive,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
-                                .padding(bottom = queuePopupBottom)
+                                .padding(bottom = popupBottom)
                         )
                         // Same anchor + styling as the add popup so the two never differ in position.
                         QueueRemovedPopup(
                             playerViewModel = playerViewModel,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
-                                .padding(bottom = queuePopupBottom)
+                                .padding(bottom = popupBottom)
                         )
 
                         if (showPlayStoreAnnouncement) {
@@ -1362,3 +1378,6 @@ private class DynamicSmoothCornerShape(
         }
     }
 }
+
+/** Room between the open keyboard and the queue pill above it. */
+private val QueuePopupKeyboardGap = 16.dp

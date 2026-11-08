@@ -279,8 +279,14 @@ fun SearchScreen(
     }.collectAsStateWithLifecycle(initialValue = persistentListOf())
     val recentSongs by playerViewModel.recentSearchSongs.collectAsStateWithLifecycle()
     val recentEntries = remember(recentQueries, recentSongs) {
-        (recentQueries.map { RecentEntry.Query(it.query, it.timestamp) } +
-            recentSongs.map { RecentEntry.SongEntry(it.song, it.timestamp) })
+        // Like Spotify: a song tapped in a search stands in for that search, with its cover. A search done again
+        // later, without tapping anything, shows as a search again.
+        val songSearches = recentSongs.mapNotNull { entry -> entry.query?.let { it.lowercase() to entry.timestamp } }
+        val searches = recentQueries.filterNot { item ->
+            songSearches.any { (query, at) -> query == item.query.trim().lowercase() && at >= item.timestamp - RECENT_MERGE_MS }
+        }
+        (searches.map { RecentEntry.Query(it.query, it.timestamp) } +
+            recentSongs.map { RecentEntry.SongEntry(it.song, it.timestamp, it.query) })
             .sortedByDescending { it.timestamp }
             .take(MAX_RECENT_ENTRIES)
     }
@@ -503,7 +509,7 @@ fun SearchScreen(
                                 if (SpotifyIds.isSpotifySongId(song.id)) {
                                     // Spotify songs only play on a Sonos, and keep the queue, like from the results.
                                     if (spotifyViewModel.sonosActive.value) {
-                                        playerViewModel.addRecentSearchSong(song)
+                                        playerViewModel.addRecentSearchSong(song, null)
                                         playerViewModel.playSongKeepingQueue(song, "Spotify")
                                     } else {
                                         playerViewModel.sendToast(context.getString(R.string.spotify_needs_sonos))
@@ -513,7 +519,11 @@ fun SearchScreen(
                                 }
                             },
                             onRemoveQuery = playerViewModel::deleteSearchHistoryItem,
-                            onRemoveSong = { playerViewModel.removeRecentSearchSong(it.id) },
+                            onRemoveSong = { entry ->
+                                playerViewModel.removeRecentSearchSong(entry.song.id)
+                                // Its search would otherwise come back in its place.
+                                entry.query?.let(playerViewModel::deleteSearchHistoryItem)
+                            },
                             onClearAll = playerViewModel::clearSearchHistory
                         )
                     } else
@@ -1076,12 +1086,14 @@ private sealed interface RecentEntry {
         override val key get() = "query_$query"
     }
 
-    data class SongEntry(val song: Song, override val timestamp: Long) : RecentEntry {
+    data class SongEntry(val song: Song, override val timestamp: Long, val query: String? = null) : RecentEntry {
         override val key get() = "song_${song.id}"
     }
 }
 
 private const val MAX_RECENT_ENTRIES = 20
+/** A song kept this long before its search still counts as tapped in it: the search is kept just after the tap. */
+private const val RECENT_MERGE_MS = 5_000L
 
 /**
  * The recent searches, newest first: search terms and the songs tapped in Search, mixed like Spotify does, each with
@@ -1095,7 +1107,7 @@ private fun RecentSearchesList(
     onQueryClick: (String) -> Unit,
     onSongClick: (Song) -> Unit,
     onRemoveQuery: (String) -> Unit,
-    onRemoveSong: (Song) -> Unit,
+    onRemoveSong: (RecentEntry.SongEntry) -> Unit,
     onClearAll: () -> Unit
 ) {
     var askClear by remember { mutableStateOf(false) }
@@ -1123,7 +1135,7 @@ private fun RecentSearchesList(
                         isCurrentSong = currentSongId == entry.song.id,
                         trailingIcon = Icons.Rounded.Close,
                         trailingDescription = removeLabel,
-                        onMoreOptionsClick = onRemoveSong,
+                        onMoreOptionsClick = { onRemoveSong(entry) },
                         onClick = { onSongClick(entry.song) }
                     )
                 }
@@ -1426,7 +1438,7 @@ fun SearchResultsList(
                 listOf(song)
             }
             playerViewModel.showAndPlaySong(song, playbackQueue, searchQueueName)
-            playerViewModel.addRecentSearchSong(song)
+            playerViewModel.addRecentSearchSong(song, searchQuery)
             onItemSelected()
         }
     }

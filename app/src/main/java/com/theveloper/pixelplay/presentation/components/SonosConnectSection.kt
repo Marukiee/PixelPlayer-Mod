@@ -1,5 +1,7 @@
 package com.theveloper.pixelplay.presentation.components
 
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Size
@@ -167,7 +169,10 @@ internal fun SonosDeviceSection(
     onEditGroup: (SonosGroup) -> Unit,
     onUngroup: (SonosGroup) -> Unit,
     onStop: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    favorites: List<Set<String>> = emptyList(),
+    onToggleFavorite: (Set<String>) -> Unit = {},
+    onPlayFavorite: (Set<String>) -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -226,36 +231,132 @@ internal fun SonosDeviceSection(
             }
         }
     }
-    AnimatedRows(items = groups, key = { "sonos_${it.coordinatorUuid}" }, spacing = DeviceRowSpacing) { group ->
-        val isActive = session?.group?.coordinatorUuid == group.coordinatorUuid
-        val status = when {
-            isActive && session?.isConnecting == true -> stringResource(R.string.sonos_connecting)
-            isActive && session?.isPlaying == true -> stringResource(R.string.sonos_playing)
-            isActive -> stringResource(R.string.sonos_paused)
-            else -> group.members.mapNotNull { it.model }.distinct().joinToString(" + ")
-                .ifBlank { stringResource(R.string.sonos_section_title) }
-        }
-        OutputRow(
-            title = group.stackedNames,
-            status = status,
-            icon = if (group.members.size > 1) Icons.Rounded.SpeakerGroup else Icons.Rounded.Speaker,
-            isSelected = isActive,
-            isBusy = isActive && session?.isConnecting == true,
-            onClick = { onSelectGroup(group) },
-            trailing = { tint ->
-                SonosRowMenu(
-                    group = group,
-                    isActive = isActive,
-                    playingName = session?.takeIf { !isActive && !it.isConnecting }?.group?.shortName,
-                    tint = tint,
-                    onPlayHere = { onSelectGroup(group) },
-                    onAddToPlaying = { onAddToPlaying(group) },
-                    onEditGroup = { onEditGroup(group) },
-                    onUngroup = { onUngroup(group) },
-                    onStop = onStop
+    // Favorites first, with a star; a favorite group that is not together right now stays as a row of its own.
+    val rows = remember(groups, favorites) { sonosRows(groups, favorites) }
+    AnimatedRows(items = rows, key = { it.key }, spacing = DeviceRowSpacing) { row ->
+        when (row) {
+            is SonosRow.Room -> {
+                val group = row.group
+                val isActive = session?.group?.coordinatorUuid == group.coordinatorUuid
+                val status = when {
+                    isActive && session?.isConnecting == true -> stringResource(R.string.sonos_connecting)
+                    isActive && session?.isPlaying == true -> stringResource(R.string.sonos_playing)
+                    isActive -> stringResource(R.string.sonos_paused)
+                    else -> group.members.mapNotNull { it.model }.distinct().joinToString(" + ")
+                        .ifBlank { stringResource(R.string.sonos_section_title) }
+                }
+                OutputRow(
+                    title = group.stackedNames,
+                    status = status,
+                    icon = if (group.members.size > 1) Icons.Rounded.SpeakerGroup else Icons.Rounded.Speaker,
+                    isSelected = isActive,
+                    isBusy = isActive && session?.isConnecting == true,
+                    onClick = { onSelectGroup(group) },
+                    trailing = { tint ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            FavoriteStar(visible = row.favorite, tint = tint)
+                            SonosRowMenu(
+                                group = group,
+                                isActive = isActive,
+                                playingName = session?.takeIf { !isActive && !it.isConnecting }?.group?.shortName,
+                                tint = tint,
+                                favorite = row.favorite,
+                                onPlayHere = { onSelectGroup(group) },
+                                onAddToPlaying = { onAddToPlaying(group) },
+                                onEditGroup = { onEditGroup(group) },
+                                onUngroup = { onUngroup(group) },
+                                onStop = onStop,
+                                onToggleFavorite = { onToggleFavorite(row.memberIds) }
+                            )
+                        }
+                    }
                 )
             }
+            is SonosRow.Apart -> OutputRow(
+                title = row.speakers.joinToString("\n") { it.name },
+                status = stringResource(if (row.speakers.size > 1) R.string.sonos_favorite_group_hint else R.string.sonos_favorite_room_hint),
+                icon = if (row.speakers.size > 1) Icons.Rounded.SpeakerGroup else Icons.Rounded.Speaker,
+                isSelected = false,
+                isBusy = false,
+                onClick = { onPlayFavorite(row.memberIds) },
+                trailing = { tint ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FavoriteStar(visible = true, tint = tint)
+                        FavoriteRowMenu(
+                            name = row.speakers.joinToString(" + ") { it.name },
+                            tint = tint,
+                            onPlay = { onPlayFavorite(row.memberIds) },
+                            onRemove = { onToggleFavorite(row.memberIds) }
+                        )
+                    }
+                }
+            )
+        }
+    }
+}
+
+/** A row in the Sonos list: a room or group as it is now, or a favorite whose rooms are apart right now. */
+private sealed interface SonosRow {
+    val key: String
+    val memberIds: Set<String>
+
+    data class Room(val group: SonosGroup, val favorite: Boolean) : SonosRow {
+        override val key get() = "sonos_${group.coordinatorUuid}"
+        override val memberIds get() = group.members.map { it.uuid }.toSet()
+    }
+
+    data class Apart(val speakers: List<SonosSpeaker>, override val memberIds: Set<String>) : SonosRow {
+        override val key get() = "favorite_" + memberIds.sorted().joinToString(",")
+    }
+}
+
+private fun sonosRows(groups: List<SonosGroup>, favorites: List<Set<String>>): List<SonosRow> {
+    val rooms = groups.map { group -> SonosRow.Room(group, group.members.map { it.uuid }.toSet() in favorites) }
+    val known = groups.flatMap { it.members }.associateBy { it.uuid }
+    val together = rooms.map { it.memberIds }.toSet()
+    val apart = favorites
+        .filter { it !in together }
+        .mapNotNull { ids ->
+            val speakers = ids.mapNotNull(known::get).sortedBy { it.name }
+            if (speakers.isEmpty()) null else SonosRow.Apart(speakers, ids)
+        }
+    return rooms.filter { it.favorite } + apart + rooms.filterNot { it.favorite }
+}
+
+/** A small star in front of the menu of a favorite room or group. */
+@Composable
+private fun FavoriteStar(visible: Boolean, tint: Color) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(sonosMotion.defaultEffectsSpec()) + scaleIn(sonosMotion.fastSpatialSpec(), initialScale = 0.6f),
+        exit = fadeOut(sonosMotion.slowEffectsSpec()) + scaleOut(sonosMotion.fastSpatialSpec(), targetScale = 0.6f)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Star,
+            contentDescription = stringResource(R.string.sonos_cd_favorite),
+            tint = tint,
+            modifier = Modifier.size(20.dp)
         )
+    }
+}
+
+/** The menu of a favorite whose rooms are apart: group and play there, or no longer a favorite. */
+@Composable
+private fun FavoriteRowMenu(name: String, tint: Color, onPlay: () -> Unit, onRemove: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.sonos_more_options, name), tint = tint)
+        }
+        DropdownMenu(
+            expanded = open,
+            onDismissRequest = { open = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            SonosMenuItem(stringResource(R.string.sonos_menu_play_favorite), Icons.Rounded.PlayArrow) { open = false; onPlay() }
+            SonosMenuItem(stringResource(R.string.sonos_menu_unfavorite), Icons.Rounded.StarBorder) { open = false; onRemove() }
+        }
     }
 }
 
@@ -340,7 +441,9 @@ private fun SonosRowMenu(
     onAddToPlaying: () -> Unit,
     onEditGroup: () -> Unit,
     onUngroup: () -> Unit,
-    onStop: () -> Unit
+    onStop: () -> Unit,
+    favorite: Boolean = false,
+    onToggleFavorite: () -> Unit = {}
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -371,6 +474,11 @@ private fun SonosRowMenu(
                 SonosMenuItem(stringResource(R.string.sonos_menu_ungroup), Icons.Rounded.LinkOff, close(onUngroup))
             }
             if (isActive) SonosMenuItem(stringResource(R.string.sonos_menu_stop), Icons.Rounded.PhoneAndroid, close(onStop))
+            SonosMenuItem(
+                stringResource(if (favorite) R.string.sonos_menu_unfavorite else R.string.sonos_menu_favorite),
+                if (favorite) Icons.Rounded.StarBorder else Icons.Rounded.Star,
+                close(onToggleFavorite)
+            )
         }
     }
 }

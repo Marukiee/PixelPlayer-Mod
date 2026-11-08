@@ -127,6 +127,10 @@ class SonosController @Inject constructor(
     private val _session = MutableStateFlow<SonosSessionState?>(null)
     val session: StateFlow<SonosSessionState?> = _session.asStateFlow()
 
+    /** Favorite rooms and groups, each as the ids of its speakers; one id is a favorite room. Kept on the phone. */
+    private val _favorites = MutableStateFlow(readFavorites())
+    val favorites: StateFlow<List<Set<String>>> = _favorites.asStateFlow()
+
     private val volumeKeysEnabled = MutableStateFlow(true)
 
     private val _inAppVolumeKeys = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -182,6 +186,10 @@ class SonosController @Inject constructor(
         /** Picked up again after the app was closed: the phone follows the speaker until it has caught up. */
         var resumedUntil = 0L
         val speakerOffset = SpeakerOffsetEstimate()
+        /** The speaker's last time in the song, and when it last moved: a speaker that says it plays but stands still has a problem. */
+        var lastSpeakerMs = -1L
+        var speakerMovedAt = 0L
+        var stallHandled = false
         var pollJob: Job? = null
         var syncJob: Job? = null
         var appendJob: Job? = null
@@ -226,6 +234,28 @@ class SonosController @Inject constructor(
         refresh()
     }
 
+    private var groupWatch: Job? = null
+
+    /**
+     * While the connect panel is open, reads the groups every few seconds from a speaker we know, so grouping in the
+     * Sonos app shows right away. One small request each time, no search of the network.
+     */
+    fun watchGroups(on: Boolean) {
+        groupWatch?.cancel()
+        groupWatch = null
+        if (!on || !sonosEnabled) return
+        groupWatch = scope.launch {
+            while (isActive) {
+                delay(GROUP_WATCH_MS)
+                // During a session the poll already reads them.
+                if (active != null) continue
+                val host = _groups.value.firstOrNull()?.coordinator?.host ?: continue
+                runCatching { withContext(Dispatchers.Default) { discovery.readGroups(host) } }
+                    .onSuccess { if (it.isNotEmpty()) applyGroups(it) }
+            }
+        }
+    }
+
     fun refresh() {
         if (_isScanning.value) return
         lastRefreshAt = now()
@@ -242,8 +272,10 @@ class SonosController @Inject constructor(
     }
 
     private fun applyGroups(groups: List<SonosGroup>) {
+        // Read every few seconds now: only write them away when something changed.
+        val changed = groups != _groups.value
         _groups.value = groups
-        if (groups.isNotEmpty()) discovery.saveGroups(groups)
+        if (changed && groups.isNotEmpty()) discovery.saveGroups(groups)
         val s = active ?: return
         val updated = groups.firstOrNull { it.coordinatorUuid == s.group.coordinatorUuid }
         if (updated != null) {
@@ -291,6 +323,70 @@ class SonosController @Inject constructor(
 
     /** Every room of the group plays on its own again. */
     fun ungroup(groupId: String) = setGroupMembers(groupId, emptySet())
+
+    fun toggleFavorite(memberUuids: Set<String>) {
+        if (memberUuids.isEmpty()) return
+        val current = _favorites.value
+        val next = if (memberUuids in current) current - setOf(memberUuids) else current + listOf(memberUuids)
+        _favorites.value = next
+        prefs.edit().putString(KEY_FAVORITES, JSONArray(next.map { JSONArray(it.toList()) }).toString()).apply()
+    }
+
+    private fun readFavorites(): List<Set<String>> = runCatching {
+        val array = JSONArray(prefs.getString(KEY_FAVORITES, null) ?: return emptyList())
+        (0 until array.length()).mapNotNull { index ->
+            array.optJSONArray(index)?.let { ids -> (0 until ids.length()).map { ids.getString(it) }.toSet() }
+                ?.takeIf { it.isNotEmpty() }
+        }
+    }.getOrDefault(emptyList())
+
+    /**
+     * Plays on a favorite: a favorite that is a group right now just plays there; otherwise its rooms are grouped
+     * first, around a room of it that already leads a group, so the fewest speakers change.
+     */
+    fun playFavorite(memberUuids: Set<String>) {
+        val groups = _groups.value
+        groups.firstOrNull { group -> group.members.map { it.uuid }.toSet() == memberUuids }?.let {
+            connect(it.id)
+            return
+        }
+        val everyone = groups.flatMap { it.members }.associateBy { it.uuid }
+        val wanted = memberUuids.filter { it in everyone }
+        if (wanted.isEmpty()) {
+            toast(context.getString(R.string.sonos_favorite_gone))
+            return
+        }
+        val coordinatorUuid = wanted.firstOrNull { uuid -> groups.any { it.coordinatorUuid == uuid } } ?: wanted.first()
+        val coordinator = everyone.getValue(coordinatorUuid)
+        val ownGroup = groups.firstOrNull { it.coordinatorUuid == coordinatorUuid }
+        scope.launch {
+            commandMutex.withLock {
+                runCatching {
+                    // In someone else's group now: on its own first, so it can lead.
+                    if (ownGroup == null) {
+                        soap.call(coordinator.host, SonosService.AV_TRANSPORT, "BecomeCoordinatorOfStandaloneGroup", "InstanceID" to 0)
+                    }
+                    // Rooms of its group that are not in the favorite go on their own.
+                    ownGroup?.members?.filter { it.uuid != coordinatorUuid && it.uuid !in memberUuids }?.forEach { speaker ->
+                        soap.call(speaker.host, SonosService.AV_TRANSPORT, "BecomeCoordinatorOfStandaloneGroup", "InstanceID" to 0)
+                    }
+                    for (uuid in wanted) {
+                        if (uuid == coordinatorUuid || ownGroup?.members?.any { it.uuid == uuid } == true) continue
+                        soap.call(
+                            everyone.getValue(uuid).host, SonosService.AV_TRANSPORT, "SetAVTransportURI",
+                            "InstanceID" to 0,
+                            "CurrentURI" to "x-rincon:$coordinatorUuid",
+                            "CurrentURIMetaData" to ""
+                        )
+                    }
+                }.onFailure(::report)
+            }
+            delay(700)
+            val fresh = runCatching { discovery.readGroups(coordinator.host) }.getOrNull() ?: return@launch
+            applyGroups(fresh)
+            fresh.firstOrNull { it.coordinatorUuid == coordinatorUuid }?.let { connect(it.id) }
+        }
+    }
 
     /** Adds the rooms of [groupId] to the group that is playing now. */
     fun addToActiveGroup(groupId: String) {
@@ -1022,8 +1118,13 @@ class SonosController @Inject constructor(
             }
         }
         if (tick % 3 == 0) refreshVolumes(s)
-        if (tick % 15 == 14) runCatching { discovery.readGroups(s.group.coordinator.host) }.onSuccess(::applyGroups)
+        // Grouping or ungrouping in the Sonos app shows here within a few seconds.
+        if (tick % GROUP_POLL_TICKS == GROUP_POLL_TICKS - 1) {
+            runCatching { withContext(Dispatchers.Default) { discovery.readGroups(s.group.coordinator.host) } }.onSuccess(::applyGroups)
+        }
         if (active !== s) return
+        val stallBusy = now() - s.lastTrackCommandAt < TRACK_COMMAND_GRACE_MS || s.syncJob?.isActive == true
+        if (handleStalledSpeaker(s, transport, relMs, index, stallBusy)) return
 
         if (index !in s.queue.indices) return
         val busy = now() - s.lastTrackCommandAt < TRACK_COMMAND_GRACE_MS || s.syncJob?.isActive == true
@@ -1071,6 +1172,47 @@ class SonosController @Inject constructor(
             followLocal(s) { it.seekTo(it.currentPosition + offset) }
             s.speakerOffset.reset()
         }
+    }
+
+    /**
+     * The speaker says it plays, but its time stands still: it cannot fetch the song, mostly because Navidrome is out
+     * of reach. The phone then stops too instead of acting as if music plays, and says why. True when it stopped.
+     */
+    private suspend fun handleStalledSpeaker(s: ActiveSession, transport: String, relMs: Long, index: Int, busy: Boolean): Boolean {
+        val saysPlaying = transport == "PLAYING" || transport == "TRANSITIONING"
+        if (!saysPlaying || busy || relMs != s.lastSpeakerMs) {
+            if (relMs != s.lastSpeakerMs || !saysPlaying) s.stallHandled = false
+            s.lastSpeakerMs = relMs
+            s.speakerMovedAt = now()
+            return false
+        }
+        if (s.stallHandled || now() - s.speakerMovedAt < STALL_MS) return false
+        val local = readLocal() ?: return false
+        if (!local.playWhenReady) return false
+        s.stallHandled = true
+        val uri = s.queue.getOrNull(index)?.uri
+        val serverDown = uri != null && uri.startsWith("http") && !canReach(uri)
+        Timber.tag(TAG).w("Speaker stood still at %d ms for %d ms, server reachable: %s", relMs, now() - s.speakerMovedAt, !serverDown)
+        s.lastPlayPauseCommandAt = now()
+        followLocal(s) { it.pause() }
+        runCatching { avt(s, "Pause") }
+        toast(context.getString(if (serverDown) R.string.sonos_msg_server_unreachable else R.string.sonos_msg_stalled))
+        return true
+    }
+
+    /** Whether the phone can fetch the first byte of a song. Never logs the address: it holds the login. */
+    private suspend fun canReach(uri: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val connection = java.net.URL(uri).openConnection() as java.net.HttpURLConnection
+            try {
+                connection.connectTimeout = REACH_TIMEOUT_MS
+                connection.readTimeout = REACH_TIMEOUT_MS
+                connection.setRequestProperty("Range", "bytes=0-0")
+                connection.responseCode in 200..399
+            } finally {
+                connection.disconnect()
+            }
+        }.getOrDefault(false)
     }
 
     private fun followTrack(s: ActiveSession, mediaId: String, positionMs: Long) {
@@ -1126,10 +1268,17 @@ class SonosController @Inject constructor(
         private const val AUTO_ADVANCE_GRACE_MS = 7_000L
         private const val TAKEOVER_GRACE_MS = 6_000L
         private const val DRIFT_LIMIT_MS = 2_500L
+        /** Every fourth poll, about every four and a half seconds. */
+        private const val GROUP_POLL_TICKS = 4
+        private const val GROUP_WATCH_MS = 3_000L
+        /** Longer than a speaker needs to buffer a song from the server at home. */
+        private const val STALL_MS = 12_000L
+        private const val REACH_TIMEOUT_MS = 3_000
         /** A lyric line that is this far off is just noticeable. */
         private const val SYNC_LIMIT_MS = 250L
         private const val WARM_UP_INTERVAL_MS = 60_000L
         private const val KEY_SESSION = "session"
+        private const val KEY_FAVORITES = "favorites"
         private const val RESUME_GRACE_MS = 20_000L
         /** A speaker that is on pause only counts as still in use for this long. */
         private const val RESUME_PAUSED_WITHIN_MS = 12 * 60 * 60 * 1000L

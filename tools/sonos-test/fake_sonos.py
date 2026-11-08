@@ -59,7 +59,18 @@ def transition(sp):
     sp["until"] = time.time() + random.uniform(0.2, 0.6)
 
 
+def stalled():
+    """While the file in FAKE_SONOS_STALL exists, a playing speaker hangs as if it cannot fetch the song."""
+    path = os.environ.get("FAKE_SONOS_STALL")
+    return bool(path) and os.path.exists(path)
+
+
 def settle(sp):
+    if stalled() and sp["state"] in ("PLAYING", "TRANSITIONING"):
+        if sp["state"] == "PLAYING":
+            sp["pos"], sp["started"] = position(sp), None
+        sp["state"] = "TRANSITIONING"
+        return
     if sp["state"] == "TRANSITIONING" and time.time() >= sp.get("until", 0):
         sp["state"], sp["started"] = "PLAYING", time.time()
         log({"event": "now_playing", "track": sp["track"] + 1})

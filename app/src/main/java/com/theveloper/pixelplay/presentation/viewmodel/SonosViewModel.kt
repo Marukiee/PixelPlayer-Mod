@@ -45,6 +45,11 @@ class SonosViewModel @Inject constructor(
     val groups: StateFlow<List<SonosGroup>> = controller.groups
     val isScanning: StateFlow<Boolean> = controller.isScanning
     val session: StateFlow<SonosSessionState?> = controller.session
+    val favorites: StateFlow<List<Set<String>>> = controller.favorites
+
+    fun toggleFavorite(group: SonosGroup) = controller.toggleFavorite(group.members.map { it.uuid }.toSet())
+    fun toggleFavorite(memberUuids: Set<String>) = controller.toggleFavorite(memberUuids)
+    fun playFavorite(memberUuids: Set<String>) = controller.playFavorite(memberUuids)
     val inAppVolumeKeys = controller.inAppVolumeKeys
     val isEnabled: StateFlow<Boolean> = userPreferencesRepository.sonosEnabledFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
@@ -115,6 +120,9 @@ class SonosViewModel @Inject constructor(
     fun setVolumeKeys(enabled: Boolean) = viewModelScope.launch { userPreferencesRepository.setSonosVolumeKeys(enabled) }
 
     fun refresh() = controller.refresh()
+
+    /** Keeps the rooms up to date with the Sonos app while the connect panel is open. */
+    fun watchGroups(on: Boolean) = controller.watchGroups(on)
     fun connect(groupId: String) = controller.connect(groupId)
     fun switchToPhone() = controller.switchToPhone()
     fun setGroupVolume(volume: Int) = controller.setGroupVolume(volume)

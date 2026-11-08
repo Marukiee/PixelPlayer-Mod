@@ -47,6 +47,18 @@ Volgorde gekozen door Mark (2026-11-02):
    - [x] Volumebalk: het gevulde deel blijft ook bij een laag volume zichtbaar (stompje voor de schuif)
    - [x] Instellingen: een pagina Afspelen via met Lokale muziek, Navidrome, Sonos en Spotify, elk met een statusregel. De Spotify-pagina heeft na inloggen schakelaars voor de knop, podcasts en vanzelf zoeken, en de koppeling (Client ID, dashboard, Redirect URI)
    - [ ] Nog dubbel: albums van de server die ook lokaal staan (bibliotheek en zoekresultaten), en Liked Songs en de album- en artiestpagina's. Bij Liked Songs niet dezelfde regel gebruiken: die zou een servernummer met een ster verbergen terwijl het lokale nummer geen ster heeft
+22. [x] **Ronde mod.25** (wensen van Mark, 2026-11-08 ochtend):
+   - [x] Verbinden-paneel sluiten: de echte minispeler scheen door de kier boven de paneelrand (twee spelers), en het terug-gebaar van Material liet de kopie mee krimpen en daarna terugspringen. Nu verbergt de echte speler zich zolang de kopie omhoog staat (`MiniPlayerLift`), en het terug-gebaar is van ons: alleen het paneel krimpt, zoals bij Material
+   - [x] Paneel geopend vanuit de grote speler: de kopie vervaagt en krimpt met het laatste stuk paneel in plaats van in een keer te verdwijnen
+   - [x] Volumebalk: een tik ernaast sluit alleen de balk en tikt niet door op de hoes eronder
+   - [x] Wachtrij-pil boven het toetsenbord
+   - [x] Sonos speelt niets omdat Navidrome weg is: na 12 seconden stilstand pauzeert de app, met een melding of de server bereikbaar is. Nep-Sonos kan dit nabootsen met `FAKE_SONOS_STALL`
+   - [x] Groepen uit de Sonos-app: tijdens het spelen elke 4,5 seconde gelezen (was 17), met het paneel open elke 3 seconden
+   - [x] Favoriete kamers en groepen: ster in het menu, bovenaan in de lijst; een favoriete groep die uit elkaar is blijft als rij en een tik groepeert hem en speelt daar
+   - [x] Recente zoekopdrachten: een aangetikt nummer staat met hoes in de plaats van zijn zoekopdracht, zoals bij Spotify. Oudere zoekopdrachten krijgen eenmalig het nummer dat binnen een paar seconden daarna begon, uit de luistergeschiedenis
+   - [x] Vanzelf op Spotify zoeken staat standaard aan
+   - [x] Animaties gemeten op de emulator met de GPU van de Mac: speler, wachtrij en tabs blijven onder 5 ms werk per frame. Uitschieters bij het openen van het Verbinden-paneel (Bluetooth- en wifi-vragen in de animatie, nu na het openen) en de eerste keer Zoeken (Spotify-opslag, nu bij het starten op de achtergrond). Na de reparatie: sluiten van het paneel van 12 naar 7 ms, eerste keer Zoeken van 18 naar 8 ms
+   - [ ] Nog over: het Verbinden-paneel openen heeft 1 tot 4 frames van 10 tot 20 ms (de eerste opbouw van het paneel), en de eerste keer Bibliotheek een paar frames van 10 tot 20 ms. Op de telefoon (120 Hz, budget 8 ms) meten
 21. [ ] YouTube als bron (Mark, 2026-11-08, "misschien"): uitgezocht, zie "YouTube als bron". Keuze van Mark
 
 ## Luistergegevens naar Navidrome

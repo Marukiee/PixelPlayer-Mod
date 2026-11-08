@@ -130,7 +130,7 @@ fun SpotifySearchSection(
         whenOnSonos {
             playerViewModel.playSongKeepingQueue(song, queueName)
             // Into the recent searches, with the search term, like a song from the library.
-            playerViewModel.addRecentSearchSong(song)
+            playerViewModel.addRecentSearchSong(song, cleaned)
             playerViewModel.onSearchQuerySubmitted(cleaned)
         }
     }

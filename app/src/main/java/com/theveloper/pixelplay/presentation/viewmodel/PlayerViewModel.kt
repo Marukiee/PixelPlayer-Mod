@@ -2647,7 +2647,7 @@ class PlayerViewModel @Inject constructor(
     /** The songs tapped in Search, newest first, shown with the recent search terms. */
     val recentSearchSongs get() = searchStateHolder.recentSearchSongs
 
-    fun addRecentSearchSong(song: Song) = searchStateHolder.addRecentSearchSong(song)
+    fun addRecentSearchSong(song: Song, query: String? = null) = searchStateHolder.addRecentSearchSong(song, query)
 
     fun removeRecentSearchSong(songId: String) = searchStateHolder.removeRecentSearchSong(songId)
 

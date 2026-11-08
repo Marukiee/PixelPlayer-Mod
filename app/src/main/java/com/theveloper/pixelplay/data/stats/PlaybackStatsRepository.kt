@@ -480,6 +480,14 @@ class PlaybackStatsRepository @Inject constructor(
             .toList()
     }
 
+    /** When each kept play started, for matching a search with the song it started. */
+    suspend fun loadPlaybackStarts(): List<PlaybackHistoryEntry> = withContext(Dispatchers.IO) {
+        readEvents().map { event ->
+            val start = event.startTimestamp ?: (event.timestamp - event.durationMs)
+            PlaybackHistoryEntry(songId = event.songId, timestamp = start.coerceAtLeast(0L))
+        }
+    }
+
     /** Everything still kept, for looking back through it. [loadPlaybackHistory] is the recent part. */
     suspend fun loadAllPlaybackHistory(): List<PlaybackHistoryEntry> = withContext(Dispatchers.IO) {
         readEvents().map { event ->

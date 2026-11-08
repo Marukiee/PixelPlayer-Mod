@@ -1,3 +1,13 @@
+- Sonos: favoriete kamers en groepen met een ster, een tik groepeert en speelt
+- Sonos: groeperen in de Sonos-app zie je binnen een paar seconden in de app
+- Sonos: is Navidrome niet bereikbaar, dan pauzeert de app en zegt waarom
+- Verbinden-paneel: geen dubbele speler meer bij het sluiten, terug-gebaar zonder sprong, en vanuit de grote speler zakt de speler soepel weg
+- Volumebalk: een tik ernaast sluit alleen de balk
+- Wachtrij-pil staat boven het toetsenbord
+- Recente zoekopdrachten tonen het aangetikte nummer met hoes, ook van eerder
+- Niets lokaal gevonden? Dan zoekt hij meteen op Spotify
+- Verbinden-paneel en Zoeken openen soepeler
+
 - Zoeken: recente zoekopdrachten en nummers als je op de zoekbalk tikt, elk met een kruisje
 - Zoeken: filter Podcasts als Spotify gekoppeld is
 - Geen dubbele nummers meer: staat iets lokaal en op de server, dan zie je het lokale nummer

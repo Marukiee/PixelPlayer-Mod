@@ -73,8 +73,9 @@ class SpotifyAuth @Inject constructor(
     private fun readPreferences() = Preferences(
         showButton = prefs.getBoolean(KEY_SHOW_BUTTON, true),
         podcasts = prefs.getBoolean(KEY_PODCASTS, true),
-        // Off at first: an app in development mode may not ask Spotify much.
-        autoSearch = prefs.getBoolean(KEY_AUTO_SEARCH, false)
+        // On at first: nothing in the library means Spotify is asked at once. Only then, and once per search term
+        // after the typing stops, so an app in development mode stays well within what it may ask.
+        autoSearch = prefs.getBoolean(KEY_AUTO_SEARCH, true)
     )
 
     /** Only for the emulator tests: a file next to `sonos_hosts.txt` points both bases at a stub. */
