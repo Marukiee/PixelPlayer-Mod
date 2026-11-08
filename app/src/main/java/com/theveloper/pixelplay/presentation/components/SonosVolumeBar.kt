@@ -1,5 +1,6 @@
 package com.theveloper.pixelplay.presentation.components
 
+import androidx.compose.runtime.mutableIntStateOf
 import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -231,7 +232,8 @@ private fun SonosVolumeBar(state: SonosVolumeBarState, session: SonosSessionStat
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                // More on top than below: under the last slider its touch room already leaves space.
+                .padding(start = 10.dp, end = 10.dp, top = 12.dp, bottom = 6.dp)
         ) {
             if (canFold && (roomsBuilt || open)) {
                 // Revealed from the bottom up, so the speakers come out from behind the group line.
@@ -260,7 +262,7 @@ private fun SonosVolumeBar(state: SonosVolumeBarState, session: SonosSessionStat
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
-                            // Room for the fold button of the group line, so all numbers stand under each other.
+                            // Room for the fold button of the group line, so all sliders end in one place.
                             trailing = { Spacer(Modifier.width(BarButtonSize)) }
                         )
                     }
@@ -299,8 +301,8 @@ private fun SonosVolumeBar(state: SonosVolumeBarState, session: SonosSessionStat
                         }
                     }
                 },
-                trailing = {
-                    if (canFold) {
+                trailing = if (!canFold) null else {
+                    {
                         val arrowTurn by animateFloatAsState(
                             targetValue = if (open) 0f else 180f,
                             animationSpec = sonosMotion.defaultSpatialSpec(),
@@ -329,7 +331,11 @@ private fun SonosVolumeBar(state: SonosVolumeBarState, session: SonosSessionStat
     }
 }
 
-/** A round button with a name above a slider and its number, so the group and every speaker line up. */
+/**
+ * One volume line: the name and its number on top, like a heading, and below them the slider between its buttons.
+ * The buttons sit on the slider's middle, the number right above where the slider ends, and every line starts and
+ * ends its slider in the same place, so the group and the speakers read as one column.
+ */
 @Composable
 private fun BarVolumeLine(
     name: String,
@@ -337,34 +343,78 @@ private fun BarVolumeLine(
     prominent: Boolean,
     onValueChange: (Int) -> Unit,
     leading: @Composable () -> Unit,
-    trailing: @Composable () -> Unit,
+    trailing: (@Composable () -> Unit)?,
     muted: Boolean = false
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(BarButtonSize), contentAlignment = Alignment.Center) { leading() }
-        Spacer(Modifier.width(8.dp))
-        Column(modifier = Modifier.weight(1f)) {
+    val haptics = LocalHapticFeedback.current
+    var fingerValue by remember { mutableStateOf<Float?>(null) }
+    var lastStep by remember { mutableIntStateOf(-1) }
+    val sliderValue = glidingVolume(target = value?.toFloat() ?: 0f, fingerValue = fingerValue)
+    val sliderAlpha by animateFloatAsState(
+        targetValue = if (muted) 0.4f else 1f,
+        animationSpec = sonosMotion.defaultEffectsSpec(),
+        label = "barVolumeMutedAlpha"
+    )
+    // Under the finger the number the speaker gets, or it would drop a step on letting go.
+    val number = if (value != null) (fingerValue?.toInt() ?: sliderValue.roundToInt()).toString() else ""
+    val textStyle = if (prominent) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium
+    val textColor = MaterialTheme.colorScheme.onTertiaryContainer
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = BarButtonSize + BarSliderGap + BarTextInset,
+                    end = (if (trailing != null) BarButtonSize + BarSliderGap else 0.dp) + BarTextInset
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = name,
-                style = if (prominent) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                style = textStyle,
+                color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 2.dp)
+                modifier = Modifier.weight(1f)
             )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = number,
+                style = textStyle.copy(fontFeatureSettings = "tnum"),
+                color = textColor,
+                maxLines = 1
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(BarButtonSize), contentAlignment = Alignment.Center) { leading() }
+            Spacer(Modifier.width(BarSliderGap))
             // A thin slider needs less height than the 48.dp a slider asks for.
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides if (prominent) 48.dp else 40.dp) {
-                VolumeRow(
-                    value = value,
+                DeviceVolumeSlider(
+                    value = sliderValue,
+                    onValueChange = { v ->
+                        fingerValue = v
+                        val step = v.toInt()
+                        if (step != lastStep) {
+                            lastStep = step
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onValueChange(step)
+                        }
+                    },
+                    onValueChangeFinished = { fingerValue = null },
                     description = name,
-                    onValueChange = onValueChange,
                     prominent = prominent,
-                    muted = muted
+                    enabled = value != null,
+                    modifier = Modifier
+                        .weight(1f)
+                        .graphicsLayer { alpha = sliderAlpha }
                 )
             }
+            if (trailing != null) {
+                Spacer(Modifier.width(BarSliderGap))
+                trailing()
+            }
         }
-        Spacer(Modifier.width(4.dp))
-        trailing()
     }
 }
 
@@ -415,4 +465,7 @@ private const val HideAfterMs = 3_000L
 private val BarGap = 8.dp
 private val FallbackMargin = 16.dp
 private val BarButtonSize = 40.dp
+private val BarSliderGap = 8.dp
+/** The track's round end starts a little in: text lines up with it, not with the slider's edge. */
+private val BarTextInset = 4.dp
 private val BarOrigin = TransformOrigin(0.5f, 1f)

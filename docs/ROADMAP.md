@@ -59,6 +59,7 @@ Volgorde gekozen door Mark (2026-11-02):
    - [x] Vanzelf op Spotify zoeken staat standaard aan
    - [x] Animaties gemeten op de emulator met de GPU van de Mac: speler, wachtrij en tabs blijven onder 5 ms werk per frame. Uitschieters bij het openen van het Verbinden-paneel (Bluetooth- en wifi-vragen in de animatie, nu na het openen) en de eerste keer Zoeken (Spotify-opslag, nu bij het starten op de achtergrond). Na de reparatie: sluiten van het paneel van 12 naar 7 ms, eerste keer Zoeken van 18 naar 8 ms
    - [ ] Nog over: het Verbinden-paneel openen heeft 1 tot 4 frames van 10 tot 20 ms (de eerste opbouw van het paneel), en de eerste keer Bibliotheek een paar frames van 10 tot 20 ms. Op de telefoon (120 Hz, budget 8 ms) meten
+23. [x] **Ronde mod.26** (Mark, 2026-11-08): volumebalk opnieuw ingedeeld (naam links en getal rechts boven de schuif, demp- en uitklapknop midden op de schuif, alle schuiven beginnen en eindigen gelijk, evenveel ruimte boven als onder); getal in het Verbinden-paneel tegen de schuif aan. Statistieken: topalbums en topartiesten openen hun pagina, nummers spelen af
 21. [ ] YouTube als bron (Mark, 2026-11-08, "misschien"): uitgezocht, zie "YouTube als bron". Keuze van Mark
 
 ## Luistergegevens naar Navidrome

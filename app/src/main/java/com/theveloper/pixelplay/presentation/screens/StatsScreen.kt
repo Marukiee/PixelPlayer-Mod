@@ -2,6 +2,9 @@
 
 package com.theveloper.pixelplay.presentation.screens
 
+import com.theveloper.pixelplay.presentation.navigation.Screen
+import com.theveloper.pixelplay.presentation.navigation.navigateSafely
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -140,8 +143,14 @@ private const val PULL_TO_REFRESH_MIN_DURATION_MS = 3500L
 @Composable
 fun StatsScreen(
     navController: NavController,
+    playerViewModel: com.theveloper.pixelplay.presentation.viewmodel.PlayerViewModel? = null,
     statsViewModel: StatsViewModel = hiltViewModel()
 ) {
+    // Every top artist, album and song leads somewhere: its page, or it plays.
+    val openArtist: (Long) -> Unit = { id -> navController.navigateSafely(Screen.ArtistDetail.createRoute(id)) }
+    val openAlbum: (Long) -> Unit = { id -> navController.navigateSafely(Screen.AlbumDetail.createRoute(id)) }
+    val statsQueueName = stringResource(R.string.stats_tracks_in_range_title)
+    val playSong: (String) -> Unit = { id -> playerViewModel?.playSongById(id, statsQueueName) }
     val uiState by statsViewModel.uiState.collectAsStateWithLifecycle()
     val summary = uiState.summary
     val lazyListState = rememberLazyListState()
@@ -314,12 +323,14 @@ fun StatsScreen(
                     item {
                         TopArtistsCard(
                             summary = summary,
+                            onArtistClick = openArtist,
                             modifier = Modifier.padding(horizontal = 20.dp)
                         )
                     }
                     item {
                         TopAlbumsCard(
                             summary = summary,
+                            onAlbumClick = openAlbum,
                             modifier = Modifier.padding(horizontal = 20.dp)
                         )
                     }
@@ -332,6 +343,7 @@ fun StatsScreen(
                     item {
                         SongStatsCard(
                             summary = summary,
+                            onSongClick = playSong,
                             modifier = Modifier.padding(horizontal = 20.dp)
                         )
                     }
@@ -1887,6 +1899,7 @@ private fun categoryPaletteFor(dimension: CategoryDimension): CategoryChartPalet
 @Composable
 private fun TopArtistsCard(
     summary: PlaybackStatsRepository.PlaybackStatsSummary?,
+    onArtistClick: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -1917,7 +1930,10 @@ private fun TopArtistsCard(
                 val maxDuration = artists.maxOf { it.totalDurationMs }.coerceAtLeast(1L)
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     artists.forEachIndexed { index, artistSummary ->
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.statsRowClick(artistSummary.artistId?.let { id -> { onArtistClick(id) } })
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -1971,6 +1987,13 @@ private fun TopArtistsCard(
     }
 }
 
+/** A row of a top list that opens its page: a press shows over the whole row, with a little room around it. */
+@Composable
+private fun Modifier.statsRowClick(onClick: (() -> Unit)?): Modifier =
+    if (onClick == null) this else this
+        .clip(RoundedCornerShape(18.dp))
+        .clickable(onClick = onClick)
+
 @Composable
 private fun ArtistAvatar(
     name: String,
@@ -2004,6 +2027,7 @@ private fun ArtistAvatar(
 @Composable
 private fun TopAlbumsCard(
     summary: PlaybackStatsRepository.PlaybackStatsSummary?,
+    onAlbumClick: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val containerColor = MaterialTheme.colorScheme.tertiaryContainer
@@ -2034,7 +2058,10 @@ private fun TopAlbumsCard(
                 val maxDuration = albums.maxOf { it.totalDurationMs }.coerceAtLeast(1L)
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     albums.forEachIndexed { index, albumSummary ->
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.statsRowClick(albumSummary.albumId?.let { id -> { onAlbumClick(id) } })
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -2094,6 +2121,7 @@ private fun TopAlbumsCard(
 @Composable
 private fun SongStatsCard(
     summary: PlaybackStatsRepository.PlaybackStatsSummary?,
+    onSongClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -2162,6 +2190,7 @@ private fun SongStatsCard(
                         }
 
                         Surface(
+                            onClick = { onSongClick(songSummary.songId) },
                             shape = RoundedCornerShape(20.dp),
                             color = rowContainerColor
                         ) {

@@ -1200,8 +1200,8 @@ internal fun DeviceCardVolumeNumber(number: String) {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onTertiaryContainer,
         maxLines = 1,
-        textAlign = TextAlign.End,
-        // Room for 100%, so the slider keeps its width while it moves.
+        // Right against the slider it belongs to; the room for 100 stays, so the slider keeps its width.
+        textAlign = TextAlign.Start,
         modifier = Modifier.widthIn(min = 36.dp)
     )
 }

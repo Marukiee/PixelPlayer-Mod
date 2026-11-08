@@ -2651,6 +2651,14 @@ class PlayerViewModel @Inject constructor(
 
     fun removeRecentSearchSong(songId: String) = searchStateHolder.removeRecentSearchSong(songId)
 
+    /** Plays one song from the library by its id, such as from the listening stats. */
+    fun playSongById(songId: String, queueName: String) {
+        viewModelScope.launch {
+            val song = runCatching { musicRepository.getSong(songId).first() }.getOrNull() ?: return@launch
+            showAndPlaySong(song, listOf(song), queueName)
+        }
+    }
+
     /**
      * Plays a song from the recent searches with the library's own copy of it, so a moved or retagged file still
      * plays. A song that left the library goes from the list too.

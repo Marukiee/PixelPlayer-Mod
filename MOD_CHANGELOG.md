@@ -1,3 +1,6 @@
+- Volumebalk opnieuw ingedeeld: naam en getal boven de schuif, knoppen op een lijn met de schuif
+- Statistieken: tik op een topalbum, topartiest of nummer om het te openen of af te spelen
+
 - Sonos: favoriete kamers en groepen met een ster, een tik groepeert en speelt
 - Sonos: groeperen in de Sonos-app zie je binnen een paar seconden in de app
 - Sonos: is Navidrome niet bereikbaar, dan pauzeert de app en zegt waarom

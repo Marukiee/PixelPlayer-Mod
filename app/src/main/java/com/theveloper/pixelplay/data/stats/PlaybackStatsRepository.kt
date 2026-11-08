@@ -77,7 +77,9 @@ class PlaybackStatsRepository @Inject constructor(
         val artist: String,
         val totalDurationMs: Long,
         val playCount: Int,
-        val uniqueSongs: Int
+        val uniqueSongs: Int,
+        /** For opening the artist page; null when no song in the library names this artist. */
+        val artistId: Long? = null
     )
 
     data class GenrePlaybackSummary(
@@ -92,7 +94,9 @@ class PlaybackStatsRepository @Inject constructor(
         val albumArtUri: String?,
         val totalDurationMs: Long,
         val playCount: Int,
-        val uniqueSongs: Int
+        val uniqueSongs: Int,
+        /** For opening the album page, from a local copy when there is one. */
+        val albumId: Long? = null
     )
 
     data class TimelineEntry(
@@ -372,11 +376,16 @@ class PlaybackStatsRepository @Inject constructor(
                     .map { it.songId }
                     .toSet()
                     .size
+                val artistSongsInLibrary = artistSongs.mapNotNull { songMap[it.songId] }
                 ArtistPlaybackSummary(
                     artist = artist,
                     totalDurationMs = flattened.sumOf { it.durationMs },
                     playCount = flattened.size,
-                    uniqueSongs = uniqueSongCount
+                    uniqueSongs = uniqueSongCount,
+                    artistId = artistSongsInLibrary.firstNotNullOfOrNull { song ->
+                        song.artists.firstOrNull { it.name.trim().equals(artist, ignoreCase = true) }?.id
+                            ?: song.artistId.takeIf { song.artist.trim().equals(artist, ignoreCase = true) }
+                    }
                 )
             }
             .sortedWith(
@@ -397,12 +406,16 @@ class PlaybackStatsRepository @Inject constructor(
                     .asSequence()
                     .mapNotNull { songMap[it.key] }
                     .firstOrNull()
+                val pageSong = groupedSongs
+                    .mapNotNull { songMap[it.key] }
+                    .minByOrNull { if (it.contentUriString.startsWith("content://")) 0 else 1 }
                 AlbumPlaybackSummary(
                     album = album,
                     albumArtUri = firstSong?.albumArtUriString,
                     totalDurationMs = flattened.sumOf { it.durationMs },
                     playCount = flattened.size,
-                    uniqueSongs = uniqueSongCount
+                    uniqueSongs = uniqueSongCount,
+                    albumId = pageSong?.albumId
                 )
             }
             .sortedWith(
