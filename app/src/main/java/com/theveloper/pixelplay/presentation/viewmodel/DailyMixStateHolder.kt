@@ -1,6 +1,6 @@
 package com.theveloper.pixelplay.presentation.viewmodel
 
-import com.theveloper.pixelplay.data.model.withoutDuplicateTracks
+import com.theveloper.pixelplay.data.model.preferLocalCopies
 import com.theveloper.pixelplay.data.DailyMixManager
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
@@ -76,12 +76,13 @@ class DailyMixStateHolder @Inject constructor(
                 val favoriteIds = favoriteSongIdsFlow.first()
 
                 // Generate daily mix
-                val mix = dailyMixManager.generateDailyMix(allSongs, favoriteIds).withoutDuplicateTracks()
+                // The mixes pick from the whole library: a song that is also on the phone plays as the local file.
+                val mix = dailyMixManager.generateDailyMix(allSongs, favoriteIds).preferLocalCopies(allSongs)
                 _dailyMixSongs.value = mix.toImmutableList()
                 userPreferencesRepository.saveDailyMixSongIds(mix.map { it.id })
 
                 // Generate your mix
-                val yourMix = dailyMixManager.generateYourMix(allSongs, favoriteIds).withoutDuplicateTracks()
+                val yourMix = dailyMixManager.generateYourMix(allSongs, favoriteIds).preferLocalCopies(allSongs)
                 _yourMixSongs.value = yourMix.toImmutableList()
                 userPreferencesRepository.saveYourMixSongIds(yourMix.map { it.id })
             } else {
@@ -99,13 +100,13 @@ class DailyMixStateHolder @Inject constructor(
         scope?.launch {
             val dailyMixIds = userPreferencesRepository.dailyMixSongIdsFlow.first()
             if (dailyMixIds.isNotEmpty() && _dailyMixSongs.value.isEmpty()) {
-                val songs = withContext(Dispatchers.IO) {
-                    musicRepository.getSongsByIds(dailyMixIds).first()
+                val (songs, library) = withContext(Dispatchers.IO) {
+                    musicRepository.getSongsByIds(dailyMixIds).first() to musicRepository.getAllSongsOnce()
                 }
                 if (songs.isNotEmpty()) {
-                    // Maintain persisted order
+                    // Maintain persisted order; a mix saved with server copies now plays the local files.
                     val songMap = songs.associateBy { it.id }
-                    val orderedSongs = dailyMixIds.mapNotNull { songMap[it] }.withoutDuplicateTracks()
+                    val orderedSongs = dailyMixIds.mapNotNull { songMap[it] }.preferLocalCopies(library)
                     _dailyMixSongs.value = orderedSongs.toImmutableList()
                 }
             }
@@ -115,12 +116,12 @@ class DailyMixStateHolder @Inject constructor(
         scope?.launch {
             val yourMixIds = userPreferencesRepository.yourMixSongIdsFlow.first()
             if (yourMixIds.isNotEmpty() && _yourMixSongs.value.isEmpty()) {
-                val songs = withContext(Dispatchers.IO) {
-                    musicRepository.getSongsByIds(yourMixIds).first()
+                val (songs, library) = withContext(Dispatchers.IO) {
+                    musicRepository.getSongsByIds(yourMixIds).first() to musicRepository.getAllSongsOnce()
                 }
                 if (songs.isNotEmpty()) {
                     val songMap = songs.associateBy { it.id }
-                    val orderedSongs = yourMixIds.mapNotNull { songMap[it] }.withoutDuplicateTracks()
+                    val orderedSongs = yourMixIds.mapNotNull { songMap[it] }.preferLocalCopies(library)
                     _yourMixSongs.value = orderedSongs.toImmutableList()
                 }
             }

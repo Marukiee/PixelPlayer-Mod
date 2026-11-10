@@ -1,6 +1,6 @@
 package com.theveloper.pixelplay.presentation.viewmodel
 
-import com.theveloper.pixelplay.data.model.withoutDuplicateTracks
+import com.theveloper.pixelplay.data.model.preferLocalCopies
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.theveloper.pixelplay.data.database.MusicDao
@@ -57,10 +57,12 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _rediscoverSongs.value = withContext(Dispatchers.IO) {
                 val playedBefore = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(REDISCOVER_MIN_AGE_DAYS)
+                // A like from the server can sit on its copy there: the local file plays instead.
+                val library = musicRepository.getAllSongsOnce()
                 musicDao.getFavoriteSongsNotPlayedSince(playedBefore)
                     .shuffled(Random(LocalDate.now().toEpochDay()))
                     .map { it.toSong() }
-                    .withoutDuplicateTracks()
+                    .preferLocalCopies(library)
                     .take(REDISCOVER_POOL_SIZE)
             }
         }
@@ -106,7 +108,9 @@ class HomeViewModel @Inject constructor(
     }
 
     suspend fun songsForGenre(genre: String): List<Song> =
-        withContext(Dispatchers.IO) { musicRepository.getMusicByGenre(genre).first().withoutDuplicateTracks() }
+        withContext(Dispatchers.IO) {
+            musicRepository.getMusicByGenre(genre).first().preferLocalCopies(musicRepository.getAllSongsOnce())
+        }
 
     suspend fun songsForArtist(artistId: Long): List<Song> =
         withContext(Dispatchers.IO) { musicRepository.getSongsForArtist(artistId).first() }

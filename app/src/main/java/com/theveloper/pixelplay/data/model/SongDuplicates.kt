@@ -28,6 +28,23 @@ fun List<Song>.withoutDuplicateTracks(): List<Song> {
     return kept
 }
 
+/**
+ * Swaps every server song for its copy on the phone when [library] has one, then leaves one row per recording. A
+ * mix picks from the whole library, so it can pick only the server copy; this still plays the local file, which
+ * needs no connection. A server song with no local copy stays.
+ */
+fun List<Song>.preferLocalCopies(library: List<Song>): List<Song> {
+    if (none { it.isRemote }) return withoutDuplicateTracks()
+    val localByTitle = HashMap<String, MutableList<Song>>()
+    for (song in library) {
+        if (!song.isRemote) localByTitle.getOrPut(SearchTextNormalizer.fold(song.title)) { mutableListOf() } += song
+    }
+    return map { song ->
+        if (!song.isRemote) song
+        else localByTitle[SearchTextNormalizer.fold(song.title)]?.firstOrNull { it.isSameRecordingAs(song) } ?: song
+    }.withoutDuplicateTracks()
+}
+
 private fun Song.isSameRecordingAs(other: Song): Boolean {
     val artistMatches = NavidromeSongMatcher.artistMatches(
         SearchTextNormalizer.fold(artist),

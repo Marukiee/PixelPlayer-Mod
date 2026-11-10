@@ -38,4 +38,25 @@ class SongDuplicatesTest {
     fun `the same title by someone else stays`() {
         assertEquals(listOf("a", "b"), listOf(song("a"), song("b", artist = "Abba")).withoutDuplicateTracks().ids())
     }
+
+    @Test
+    fun `a mix with only the server copy plays the file from the library`() {
+        val library = listOf(song("file"), song("server", uri = "navidrome://x", ms = 200_900), song("other", title = "Else"))
+        val mix = listOf(song("server", uri = "navidrome://x", ms = 200_900), song("other", title = "Else"))
+        assertEquals(listOf("file", "other"), mix.preferLocalCopies(library).ids())
+    }
+
+    @Test
+    fun `a server song with no copy on the phone stays`() {
+        val library = listOf(song("file", title = "Else"))
+        val mix = listOf(song("server", uri = "navidrome://x"))
+        assertEquals(listOf("server"), mix.preferLocalCopies(library).ids())
+    }
+
+    @Test
+    fun `a live version on the phone does not stand in for the studio song`() {
+        val library = listOf(song("live", ms = 260_000))
+        val mix = listOf(song("server", uri = "navidrome://x"))
+        assertEquals(listOf("server"), mix.preferLocalCopies(library).ids())
+    }
 }

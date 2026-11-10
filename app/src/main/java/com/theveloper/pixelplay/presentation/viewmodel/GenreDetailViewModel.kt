@@ -1,11 +1,11 @@
 package com.theveloper.pixelplay.presentation.viewmodel
 
+import com.theveloper.pixelplay.data.model.preferLocalCopies
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.theveloper.pixelplay.data.model.Genre
 import com.theveloper.pixelplay.data.model.Song
-import com.theveloper.pixelplay.data.model.withoutDuplicateTracks
 import com.theveloper.pixelplay.data.repository.MusicRepository
 import com.theveloper.pixelplay.utils.SearchTextNormalizer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -65,7 +65,8 @@ class GenreDetailViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(genre = genre, isLoadingGenreName = false)
 
                 val (songs, sorted) = withContext(Dispatchers.Default) {
-                    val songs = musicRepository.getMusicByGenre(genre.name).first().withoutDuplicateTracks()
+                    // The server may tag a song with another genre than the file: look for the local copy everywhere.
+                    val songs = musicRepository.getMusicByGenre(genre.name).first().preferLocalCopies(musicRepository.getAllSongsOnce())
                     songs to songs.sortedFor(_uiState.value.sortOption)
                 }
                 _uiState.value = _uiState.value.copy(songs = songs, sortedSongs = sorted, isLoadingSongs = false)

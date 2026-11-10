@@ -1,3 +1,5 @@
+- Your Mix, Daily Mix, Rediscover en genre-mixen spelen altijd het lokale bestand als een nummer ook op de server staat
+
 - Volumebalk opnieuw ingedeeld: naam en getal boven de schuif, knoppen op een lijn met de schuif
 - Statistieken: tik op een topalbum, topartiest of nummer om het te openen of af te spelen
 
