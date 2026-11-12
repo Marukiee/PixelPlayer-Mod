@@ -1,5 +1,7 @@
 package com.theveloper.pixelplay.data.sonos
 
+import android.os.Looper
+import android.os.Handler
 import android.content.Context
 import android.media.MediaRoute2Info
 import android.media.MediaRoute2ProviderService
@@ -19,10 +21,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Tells Android which speakers the music is on, so the media card in the quick settings names them
- * instead of "This phone". The system takes that name from a routing session, and setting it directly
- * (setRemotePlaybackInfo) needs a system permission. So the app offers the current Sonos group as a
- * route of its own and moves itself onto it.
+ * Offers the Sonos rooms in Android's own output menu, the cast button in the media card and in the island of
+ * phones like Oppo's, and names the group there while the music is on it. Every room or group is a route of the app's
+ * own; picking one there starts the music in that room, picking the phone brings it back. The name in the media card
+ * comes from a routing session, and setting it directly (setRemotePlaybackInfo) needs a system permission, so the app
+ * moves itself onto the route of the group that plays.
  */
 @Singleton
 class SonosOutputRoute @Inject constructor(
@@ -31,6 +34,7 @@ class SonosOutputRoute @Inject constructor(
 ) {
     private val router by lazy { MediaRouter2.getInstance(context) }
     private val executor by lazy { ContextCompat.getMainExecutor(context) }
+    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
     private val discovery = RouteDiscoveryPreference.Builder(listOf(FEATURE), false).build()
 
     private var provider: SonosRouteProvider? = null
@@ -39,6 +43,10 @@ class SonosOutputRoute @Inject constructor(
     private var stopping = false
 
     var current: SonosSessionState? = null
+        private set
+
+    /** The rooms and groups to offer; empty while Sonos is off. */
+    var rooms: List<SonosGroup> = emptyList()
         private set
 
     private val _controllerId = MutableStateFlow<String?>(null)
@@ -66,42 +74,81 @@ class SonosOutputRoute @Inject constructor(
         }
     }
 
+    /** The rooms Android's output menu offers. Kept up while Sonos is on, also when the music plays on the phone. */
+    fun updateRooms(groups: List<SonosGroup>, enabled: Boolean) {
+        rooms = if (enabled) groups else emptyList()
+        provider?.publish(rooms, current)
+        if (rooms.isNotEmpty()) listen() else if (current == null) unlisten()
+    }
+
     fun update(state: SonosSessionState?) {
+        val wasPlaying = current != null
         current = state
+        provider?.publish(rooms, state)
         if (state == null) {
-            leaveRoute()
+            if (wasPlaying) leaveSession()
+            if (rooms.isEmpty()) unlisten()
             return
         }
-        provider?.publish(state)
-        if (!listening) {
-            listening = true
-            stopping = false
-            router.registerRouteCallback(executor, routeCallback, discovery)
-            router.registerTransferCallback(executor, transferCallback)
-        }
+        listen()
         moveOntoRoute()
     }
 
-    private fun moveOntoRoute() {
-        if (!listening || transferring || _controllerId.value != null) return
-        val route = router.routes.firstOrNull { FEATURE in it.features } ?: return
-        transferring = true
-        router.transferTo(route)
+    private fun listen() {
+        if (listening) return
+        listening = true
+        // The output menu only shows an app's own routes while the app asks for them.
+        router.registerRouteCallback(executor, routeCallback, discovery)
+        router.registerTransferCallback(executor, transferCallback)
     }
 
-    private fun leaveRoute() {
+    private fun unlisten() {
         if (!listening) return
         listening = false
+        router.unregisterTransferCallback(transferCallback)
+        router.unregisterRouteCallback(routeCallback)
+    }
+
+    /** Onto the route of the group that plays, so the media card names it. Once on it, the session follows by itself. */
+    private fun moveOntoRoute() {
+        val state = current ?: return
+        if (!listening || transferring || _controllerId.value != null) return
+        val routeId = SonosRouteProvider.routeIdFor(state.group)
+        val route = router.routes.firstOrNull { FEATURE in it.features && it.id.endsWith(":$routeId") } ?: return
+        stopping = false
+        transferring = true
+        router.transferTo(route)
+        releaseTransferWait()
+    }
+
+    /** The music stopped on the speakers: off the route, but the rooms stay in the menu. */
+    private fun leaveSession() {
         stopping = true
         transferring = false
         _controllerId.value = null
-        router.stop()
-        router.unregisterTransferCallback(transferCallback)
-        router.unregisterRouteCallback(routeCallback)
-        provider?.clear()
+        if (listening) router.stop()
     }
 
-    /** Somebody picked another output in Android's own menu, so the speakers stop here too. */
+    /**
+     * A room was picked in Android's own menu: play there. The system moves the app onto the route itself, so the
+     * app does not move itself again while that happens.
+     */
+    internal fun playOn(group: SonosGroup) {
+        stopping = false
+        transferring = true
+        releaseTransferWait()
+        if (current?.group?.coordinatorUuid != group.coordinatorUuid) sonos.connect(group.id)
+    }
+
+    /** A move that never reports back must not block the next one. */
+    private fun releaseTransferWait() {
+        mainHandler.postDelayed({ transferring = false }, TRANSFER_WAIT_MS)
+    }
+
+    /** Android's menu is open, or a router asked for routes: a fresh look for rooms, at most once a minute. */
+    internal fun onSystemLooking() = sonos.warmUp()
+
+    /** Somebody picked the phone or another output in Android's own menu, so the speakers stop here too. */
     internal fun onReleased() {
         if (stopping || current == null) return
         sonos.switchToPhone()
@@ -111,7 +158,7 @@ class SonosOutputRoute @Inject constructor(
 
     internal fun attach(service: SonosRouteProvider) {
         provider = service
-        current?.let(service::publish)
+        service.publish(rooms, current)
     }
 
     internal fun detach(service: SonosRouteProvider) {
@@ -120,8 +167,9 @@ class SonosOutputRoute @Inject constructor(
 
     internal companion object {
         const val TAG = "SonosOutputRoute"
-        /** Our own feature, so no other app sees this route as something it could cast to. */
+        /** Our own feature, so no other app sees these routes as something it could cast to. */
         const val FEATURE = "com.theveloper.pixelplay.route.SONOS"
+        const val TRANSFER_WAIT_MS = 5_000L
     }
 }
 
@@ -131,8 +179,9 @@ class SonosRouteProvider : MediaRoute2ProviderService() {
     @Inject lateinit var output: SonosOutputRoute
 
     private var clientPackage: String? = null
-    private var publishedName: String? = null
-    private var publishedVolume: Int? = null
+    private var publishedRoutes: List<MediaRoute2Info>? = null
+    /** The room picked in Android's menu, shown as selected until the speakers report in. */
+    private var pickedRouteId: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -144,74 +193,114 @@ class SonosRouteProvider : MediaRoute2ProviderService() {
         super.onDestroy()
     }
 
-    fun publish(state: SonosSessionState) {
-        val name = state.group.displayName
-        // Android's output menu takes the slider's value from the route, not from the session.
-        if (name != publishedName || state.groupVolume != publishedVolume) {
-            publishedName = name
-            publishedVolume = state.groupVolume
-            notifyRoutes(listOf(routeFor(state)))
+    fun publish(rooms: List<SonosGroup>, state: SonosSessionState?) {
+        val groups = buildList {
+            addAll(rooms)
+            // The group that plays, also if the last search for rooms missed it.
+            if (state != null && none { it.coordinatorUuid == state.group.coordinatorUuid }) add(state.group)
         }
-        clientPackage?.let { notifySessionUpdated(sessionFor(state, it)) }
+        if (state != null && pickedRouteId == routeIdFor(state.group)) pickedRouteId = null
+        val routes = groups.map { group -> routeFor(group, state?.takeIf { it.group.coordinatorUuid == group.coordinatorUuid }) }
+        // Android's output menu takes the slider's value from the route, not from the session.
+        if (routes != publishedRoutes) {
+            publishedRoutes = routes
+            notifyRoutes(routes)
+        }
+        val packageName = clientPackage ?: return
+        sessionFor(packageName, state)?.let(::notifySessionUpdated)
     }
 
-    fun clear() {
-        publishedName = null
-        publishedVolume = null
-        notifyRoutes(emptyList())
-    }
-
-    private fun routeFor(state: SonosSessionState): MediaRoute2Info =
-        MediaRoute2Info.Builder(ROUTE_ID, state.group.displayName)
+    private fun routeFor(group: SonosGroup, playing: SonosSessionState?): MediaRoute2Info =
+        MediaRoute2Info.Builder(routeIdFor(group), group.displayName)
             .addFeature(SonosOutputRoute.FEATURE)
-            .setVolumeHandling(MediaRoute2Info.PLAYBACK_VOLUME_VARIABLE)
-            .setVolumeMax(MAX_VOLUME)
-            .setVolume(state.groupVolume ?: 0)
-            .apply { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) setType(MediaRoute2Info.TYPE_REMOTE_SPEAKER) }
+            .apply {
+                if (playing != null) {
+                    setVolumeHandling(MediaRoute2Info.PLAYBACK_VOLUME_VARIABLE)
+                    setVolumeMax(MAX_VOLUME)
+                    setVolume(playing.groupVolume ?: 0)
+                } else {
+                    setVolumeHandling(MediaRoute2Info.PLAYBACK_VOLUME_FIXED)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    setType(if (group.members.size > 1) MediaRoute2Info.TYPE_GROUP else MediaRoute2Info.TYPE_REMOTE_SPEAKER)
+                }
+            }
             .build()
 
-    private fun sessionFor(state: SonosSessionState, packageName: String): RoutingSessionInfo =
-        RoutingSessionInfo.Builder(SESSION_ID, packageName)
-            .addSelectedRoute(ROUTE_ID)
-            .setName(state.group.displayName)
+    /** The session on the speakers: the room that plays, or was just picked, with the other rooms to move to. */
+    private fun sessionFor(packageName: String, state: SonosSessionState?): RoutingSessionInfo? {
+        val routes = publishedRoutes.orEmpty()
+        val selectedId = pickedRouteId ?: state?.group?.let(::routeIdFor) ?: return null
+        val selected = routes.firstOrNull { it.originalIdOrId() == selectedId }
+        return RoutingSessionInfo.Builder(SESSION_ID, packageName)
+            .addSelectedRoute(selectedId)
+            .apply { routes.map { it.originalIdOrId() }.filter { it != selectedId }.forEach(::addTransferableRoute) }
+            .setName(selected?.name ?: state?.group?.displayName ?: "")
             .setVolumeHandling(MediaRoute2Info.PLAYBACK_VOLUME_VARIABLE)
             .setVolumeMax(MAX_VOLUME)
-            .setVolume(state.groupVolume ?: 0)
+            .setVolume(state?.groupVolume ?: 0)
             .build()
+    }
+
+    private fun MediaRoute2Info.originalIdOrId(): String = id.substringAfterLast(':')
+
+    private fun groupFor(routeId: String): SonosGroup? =
+        (output.rooms + listOfNotNull(output.current?.group)).firstOrNull { routeIdFor(it) == routeId }
 
     override fun onCreateSession(requestId: Long, packageName: String, routeId: String, sessionHints: Bundle?) {
-        val state = output.current
-        if (state == null) {
+        val group = groupFor(routeId)
+        if (group == null) {
             notifyRequestFailed(requestId, REASON_ROUTE_NOT_AVAILABLE)
             return
         }
         clientPackage = packageName
-        notifySessionCreated(requestId, sessionFor(state, packageName))
+        // Picked in Android's menu while the music was elsewhere: start it in that room.
+        if (output.current?.group?.coordinatorUuid != group.coordinatorUuid) {
+            pickedRouteId = routeId
+            output.playOn(group)
+        }
+        val session = sessionFor(packageName, output.current)
+        if (session == null) notifyRequestFailed(requestId, REASON_ROUTE_NOT_AVAILABLE) else notifySessionCreated(requestId, session)
+    }
+
+    override fun onTransferToRoute(requestId: Long, sessionId: String, routeId: String) {
+        val group = groupFor(routeId)
+        val packageName = clientPackage
+        if (group == null || packageName == null) {
+            notifyRequestFailed(requestId, REASON_ROUTE_NOT_AVAILABLE)
+            return
+        }
+        pickedRouteId = routeId
+        output.playOn(group)
+        sessionFor(packageName, output.current)?.let(::notifySessionUpdated)
     }
 
     override fun onReleaseSession(requestId: Long, sessionId: String) {
         clientPackage = null
+        pickedRouteId = null
         notifySessionReleased(sessionId)
         output.onReleased()
+    }
+
+    override fun onDiscoveryPreferenceChanged(preference: RouteDiscoveryPreference) {
+        if (SonosOutputRoute.FEATURE in preference.preferredFeatures) output.onSystemLooking()
     }
 
     override fun onSetRouteVolume(requestId: Long, routeId: String, volume: Int) = output.setVolume(volume)
 
     override fun onSetSessionVolume(requestId: Long, sessionId: String, volume: Int) = output.setVolume(volume)
 
-    // A Sonos group is changed in the app's own panel, not route by route from here.
+    // Rooms are grouped in the app's own panel, not route by route from here.
     override fun onSelectRoute(requestId: Long, sessionId: String, routeId: String) =
         notifyRequestFailed(requestId, REASON_INVALID_COMMAND)
 
     override fun onDeselectRoute(requestId: Long, sessionId: String, routeId: String) =
         notifyRequestFailed(requestId, REASON_INVALID_COMMAND)
 
-    override fun onTransferToRoute(requestId: Long, sessionId: String, routeId: String) =
-        notifyRequestFailed(requestId, REASON_INVALID_COMMAND)
-
-    private companion object {
-        const val ROUTE_ID = "sonos"
+    internal companion object {
         const val SESSION_ID = "sonos_session"
         const val MAX_VOLUME = 100
+
+        fun routeIdFor(group: SonosGroup): String = "room_${group.coordinatorUuid}"
     }
 }

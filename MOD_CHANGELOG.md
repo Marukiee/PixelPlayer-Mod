@@ -1,3 +1,5 @@
+- Alle Sonos-kamers in het castmenu van Android (mediakaart en eiland), ook als je op de telefoon speelt; kies er een om daar te spelen
+
 - Your Mix, Daily Mix, Rediscover en genre-mixen spelen altijd het lokale bestand als een nummer ook op de server staat
 
 - Volumebalk opnieuw ingedeeld: naam en getal boven de schuif, knoppen op een lijn met de schuif

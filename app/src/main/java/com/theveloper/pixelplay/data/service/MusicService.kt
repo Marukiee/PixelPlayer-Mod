@@ -922,6 +922,12 @@ class MusicService : MediaLibraryService() {
             }
         }
         serviceScope.launch {
+            // Every room in Android's own output menu, also while the music plays on the phone.
+            kotlinx.coroutines.flow.combine(sonosController.groups, userPreferencesRepository.sonosEnabledFlow) { groups, enabled ->
+                groups to enabled
+            }.collect { (groups, enabled) -> sonosOutputRoute.updateRooms(groups, enabled) }
+        }
+        serviceScope.launch {
             sonosOutputRoute.controllerId.collect {
                 (mediaSession?.player as? SonosSessionPlayer)?.onSonosVolumeChanged()
             }
