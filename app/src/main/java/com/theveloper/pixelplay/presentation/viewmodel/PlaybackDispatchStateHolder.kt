@@ -13,6 +13,7 @@ import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.theveloper.pixelplay.R
 import com.theveloper.pixelplay.data.service.cast.CastRemotePlaybackState
 import com.theveloper.pixelplay.data.model.Song
+import com.theveloper.pixelplay.data.model.withLocalCopiesFrom
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
 import com.theveloper.pixelplay.data.repository.MusicRepository
 import com.theveloper.pixelplay.data.service.player.DualPlayerEngine
@@ -585,7 +586,9 @@ class PlaybackDispatchStateHolder @Inject constructor(
         cancelPendingFullQueuePlayback()
         val requestToken = beginDirectPlaybackRequest()
         directPlaybackJob = cb.scope.launch {
-            val result = queueStateHolder.prepareShuffledQueueSuspending(songsToPlay, queueName, startAtZero)
+            val localFirst = songsToPlay.withLocalCopiesFrom(musicRepository.getLocalCopyCandidates(songsToPlay))
+            throwIfDirectPlaybackRequestIsStale(requestToken)
+            val result = queueStateHolder.prepareShuffledQueueSuspending(localFirst, queueName, startAtZero)
             throwIfDirectPlaybackRequestIsStale(requestToken)
             if (result == null) {
                 cb.sendToast(context.getString(R.string.player_view_model_no_songs_to_shuffle))

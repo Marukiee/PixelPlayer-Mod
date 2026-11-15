@@ -1,3 +1,8 @@
+- Shuffle all, de Your Mix-knop op Home en de snelle-instellingentegel spelen altijd het lokale bestand als een nummer ook op de server staat; shufflen van favorieten, artiesten en afspeellijsten ook
+- Verbinden-paneel: eerst Deze telefoon, dan Sonos, daaronder de apparaten in de buurt
+- Speler: het label met bestandsinfo verspringt niet meer bij een ander nummer
+- Speler: bij langzaam vegen over de hoezen schuift de volgende hoes er soepel in
+
 - Alle Sonos-kamers in het castmenu van Android (mediakaart en eiland), ook als je op de telefoon speelt; kies er een om daar te spelen
 
 - Your Mix, Daily Mix, Rediscover en genre-mixen spelen altijd het lokale bestand als een nummer ook op de server staat

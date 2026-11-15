@@ -105,7 +105,7 @@ fun AlbumCarouselSection(
         isActive = expansionFraction > 0.08f,
         pagerState = carouselState.pagerState,
         queue = queue,
-        radius = 1,
+        radius = if (carouselStyle == CarouselStyle.NO_PEEK) 1 else 2,
         targetSize = targetSize,
         anchorIndex = effectiveTargetIndex
     )

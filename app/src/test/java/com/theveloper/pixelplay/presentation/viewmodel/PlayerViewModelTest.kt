@@ -219,6 +219,7 @@ class PlayerViewModelTest {
         coEvery { mockMusicRepository.getFavoriteSongsOnce(any()) } returns emptyList()
         coEvery { mockMusicRepository.getFirstPlayableSong() } returns null
         coEvery { mockMusicRepository.getRandomSongs(any()) } returns emptyList()
+        coEvery { mockMusicRepository.getLocalCopyCandidates(any()) } returns emptyList()
         coEvery { mockMusicRepository.getSongIdsSorted(any(), any()) } returns emptyList()
         coEvery { mockMusicRepository.getFavoriteSongIdsSorted(any(), any()) } returns emptyList()
         every { mockMusicRepository.telegramRepository } returns mockTelegramRepository

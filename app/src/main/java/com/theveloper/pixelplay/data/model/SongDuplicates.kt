@@ -45,6 +45,30 @@ fun List<Song>.preferLocalCopies(library: List<Song>): List<Song> {
     }.withoutDuplicateTracks()
 }
 
+/**
+ * Swaps every server song for its copy on the phone from [candidates], keeping the order and the length of the
+ * list. Only a server row whose local copy is already in the list, or was swapped in earlier, is dropped, so the
+ * queue never holds the same file twice. Other repeats stay, such as a song a playlist holds twice on purpose.
+ */
+fun List<Song>.withLocalCopiesFrom(candidates: List<Song>): List<Song> {
+    if (candidates.isEmpty() || none { it.isRemote }) return this
+    val localByTitle = HashMap<String, MutableList<Song>>()
+    for (song in candidates) {
+        if (!song.isRemote) localByTitle.getOrPut(SearchTextNormalizer.fold(song.title)) { mutableListOf() } += song
+    }
+    val idsInList = mapTo(HashSet()) { it.id }
+    val swappedIn = HashSet<String>()
+    return mapNotNull { song ->
+        if (!song.isRemote) return@mapNotNull song
+        val local = localByTitle[SearchTextNormalizer.fold(song.title)]?.firstOrNull { it.isSameRecordingAs(song) }
+        when {
+            local == null -> song
+            local.id in idsInList || !swappedIn.add(local.id) -> null
+            else -> local
+        }
+    }
+}
+
 private fun Song.isSameRecordingAs(other: Song): Boolean {
     val artistMatches = NavidromeSongMatcher.artistMatches(
         SearchTextNormalizer.fold(artist),

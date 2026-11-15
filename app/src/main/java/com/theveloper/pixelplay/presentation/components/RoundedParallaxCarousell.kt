@@ -265,7 +265,8 @@ private fun RoundedCarousel(
         ),
         pageSize = pageSize,
         pageSpacing = itemSpacing,
-        beyondViewportPageCount = maxNonFocalVisibleItemCount,
+        // One more than the peeks, so the cover that slides in next is already drawn when it starts to show.
+        beyondViewportPageCount = maxNonFocalVisibleItemCount + 1,
         snapPosition = snapPosition,
         flingBehavior = flingBehavior,
         userScrollEnabled = userScrollEnabled,
@@ -315,15 +316,18 @@ private fun RoundedCarousel(
 
         //val clipShape = rememberRoundedClipShape(carouselItemInfo, itemCornerRadius)
 
-        val animatedAlpha by animateFloatAsState(
-            targetValue = if (carouselStyle == CarouselStyle.ONE_PEEK && page > state.pagerState.currentPage + 1) 0f else 1f,
-            animationSpec = tween(durationMillis = 200),
-            label = "CarouselItemAlpha"
-        )
-
         Box(
             modifier = Modifier
-                .graphicsLayer { alpha = animatedAlpha }
+                .graphicsLayer {
+                    // One peek shows the focused cover and the next. The one after that fades in with the finger
+                    // while it slides in, instead of popping in once the swipe passes halfway.
+                    alpha = if (carouselStyle == CarouselStyle.ONE_PEEK) {
+                        val scrollPosition = state.pagerState.currentPage + state.pagerState.currentPageOffsetFraction
+                        (2f - (page - scrollPosition)).coerceIn(0f, 1f)
+                    } else {
+                        1f
+                    }
+                }
                 .carouselItem(
                     index = page,
                     state = state,

@@ -59,4 +59,23 @@ class SongDuplicatesTest {
         val mix = listOf(song("server", uri = "navidrome://x"))
         assertEquals(listOf("server"), mix.preferLocalCopies(library).ids())
     }
+
+    @Test
+    fun `a shuffled queue plays the file instead of the server copy and keeps its order`() {
+        val queue = listOf(song("other", title = "Else"), song("server", uri = "navidrome://x", ms = 201_000), song("only", title = "Rare", uri = "navidrome://y"))
+        val candidates = listOf(song("file"))
+        assertEquals(listOf("other", "file", "only"), queue.withLocalCopiesFrom(candidates).ids())
+    }
+
+    @Test
+    fun `a server row whose file is already in the queue is dropped, other repeats stay`() {
+        val queue = listOf(song("server", uri = "navidrome://x"), song("file"), song("other", title = "Else"), song("other", title = "Else"))
+        assertEquals(listOf("file", "other", "other"), queue.withLocalCopiesFrom(listOf(song("file"))).ids())
+    }
+
+    @Test
+    fun `without candidates the queue stays as it is`() {
+        val queue = listOf(song("server", uri = "navidrome://x"))
+        assertEquals(listOf("server"), queue.withLocalCopiesFrom(emptyList()).ids())
+    }
 }

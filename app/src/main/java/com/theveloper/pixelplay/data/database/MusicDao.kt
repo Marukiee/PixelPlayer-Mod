@@ -626,18 +626,37 @@ interface MusicDao {
 
     /**
      * Returns random songs for efficient shuffle without loading all songs into memory.
-     * Uses SQLite RANDOM() for true randomness.
+     * Uses SQLite RANDOM() for true randomness. With [filterMode] 0 a server song that is also on the phone is
+     * left out, so the sample plays the local file, like the song list.
      */
     @Query("""
         SELECT * FROM songs
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
+        """ + HIDE_SERVER_COPIES_OF_LOCAL_SONGS + """
         ORDER BY RANDOM()
         LIMIT :limit
     """)
     suspend fun getRandomSongs(
         limit: Int,
-        allowedParentDirs: List<String> = emptyList(),
-        applyDirectoryFilter: Boolean = false
+        allowedParentDirs: List<String>,
+        applyDirectoryFilter: Boolean,
+        filterMode: Int
+    ): List<SongEntity>
+
+    /**
+     * Songs on the phone whose title matches one of [titles], ignoring case. The caller checks artist and length,
+     * so a queue can swap a server song for the local file.
+     */
+    @Query("SELECT " + SONG_LIST_PROJECTION + """
+        FROM songs
+        WHERE source_type = 0
+        AND title COLLATE NOCASE IN (:titles)
+        AND (:applyDirectoryFilter = 0 OR parent_directory_path IN (:allowedParentDirs))
+    """)
+    suspend fun getLocalSongsWithTitles(
+        titles: List<String>,
+        allowedParentDirs: List<String>,
+        applyDirectoryFilter: Boolean
     ): List<SongEntity>
 
     @Query("""

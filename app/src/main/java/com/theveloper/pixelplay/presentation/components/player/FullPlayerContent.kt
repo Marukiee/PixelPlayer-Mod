@@ -69,6 +69,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -1286,6 +1287,7 @@ private fun FullPlayerProgressSection(
         audioMimeType = audioMimeType,
         audioBitrate = audioBitrate,
         audioSampleRate = audioSampleRate,
+        audioInfoForThisSong = isMetadataForCurrentSong,
         isRemoteSource = isRemoteSource,
         isSpotifySource = isSpotifySource,
         showAudioFileInfo = showPlayerFileInfo,
@@ -1685,6 +1687,7 @@ private fun PlayerProgressBarSection(
     audioMimeType: String?,
     audioBitrate: Int?,
     audioSampleRate: Int?,
+    audioInfoForThisSong: Boolean = true,
     isRemoteSource: Boolean = false,
     isSpotifySource: Boolean = false,
     showAudioFileInfo: Boolean,
@@ -1735,15 +1738,23 @@ private fun PlayerProgressBarSection(
             null
         }
     }
-    var displayAudioMetaLabel by remember(songId) { mutableStateOf<String?>(null) }
-    LaunchedEffect(songId, audioMetaLabel, showAudioFileInfo) {
+    // The chip keeps the last song's info until the new song's own file info is in, then changes once. Resetting it
+    // per song made it vanish for a few frames and come back from the library tags first, small, on every skip.
+    var displayAudioChip by remember { mutableStateOf<AudioChipInfo?>(null) }
+    LaunchedEffect(songId, audioMetaLabel, audioInfoForThisSong, showAudioFileInfo, isRemoteSource, isSpotifySource) {
         if (!showAudioFileInfo) {
-            displayAudioMetaLabel = null
-        } else if (!audioMetaLabel.isNullOrBlank()) {
-            displayAudioMetaLabel = audioMetaLabel
-        } else {
+            displayAudioChip = null
+            return@LaunchedEffect
+        }
+        val target = audioMetaLabel?.takeIf { it.isNotBlank() }?.let { AudioChipInfo(it, isRemoteSource, isSpotifySource) }
+        if (!audioInfoForThisSong && !isSpotifySource && displayAudioChip != null) {
+            kotlinx.coroutines.delay(AUDIO_CHIP_WAIT_MS)
+        }
+        if (target == null) {
             kotlinx.coroutines.delay(500)
-            displayAudioMetaLabel = null
+            displayAudioChip = null
+        } else {
+            displayAudioChip = target
         }
     }
     val durationForCalc = displayDurationValue.coerceAtLeast(1L)
@@ -1837,7 +1848,7 @@ private fun PlayerProgressBarSection(
                  ProgressPlaceholder(
                      color = placeholderColor,
                      onColor = placeholderOnColor,
-                     showAudioMetaChip = showAudioFileInfo && !displayAudioMetaLabel.isNullOrBlank()
+                     showAudioMetaChip = showAudioFileInfo && displayAudioChip != null
                  )
              }
         }
@@ -1894,9 +1905,7 @@ private fun PlayerProgressBarSection(
                 duration = displayDurationValue,
                 isVisible = isVisible,
                 textColor = timeTextColor,
-                audioMetaLabel = displayAudioMetaLabel,
-                isRemoteSource = isRemoteSource,
-                isSpotifySource = isSpotifySource,
+                audioChip = displayAudioChip,
                 horizontalTrackInset = progressSectionHorizontalInset
             )
         }
@@ -1955,9 +1964,7 @@ private fun EfficientTimeLabels(
     duration: Long,
     isVisible: Boolean,
     textColor: Color,
-    audioMetaLabel: String?,
-    isRemoteSource: Boolean = false,
-    isSpotifySource: Boolean = false,
+    audioChip: AudioChipInfo?,
     horizontalTrackInset: Dp
 ) {
     val coarsePositionMs by remember(isVisible, positionState) {
@@ -1999,46 +2006,75 @@ private fun EfficientTimeLabels(
             )
         }
 
-        if (!audioMetaLabel.isNullOrBlank()) {
+        // Keeps the last chip while it fades out, so the exit shows the text that was there.
+        val lastAudioChip = remember { arrayOfNulls<AudioChipInfo>(1) }
+        if (audioChip != null) lastAudioChip[0] = audioChip
+        AnimatedVisibility(
+            visible = audioChip != null,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 58.dp),
+            enter = fadeIn(tween(220)) + scaleIn(tween(260, easing = FastOutSlowInEasing), initialScale = 0.92f),
+            exit = fadeOut(tween(160)) + scaleOut(tween(200), targetScale = 0.92f)
+        ) {
             Surface(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 58.dp),
                 shape = RoundedCornerShape(999.dp),
                 color = textColor.copy(alpha = 0.14f),
                 contentColor = textColor.copy(alpha = 0.96f)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                ) {
-                    // Source badge: Spotify, streamed (Navidrome/web) or a local file.
-                    if (isSpotifySource) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_spotify),
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = if (isRemoteSource) Icons.Rounded.Language else Icons.Rounded.Smartphone,
-                            contentDescription = if (isRemoteSource) "Streaming source" else "Local source",
-                            modifier = Modifier.size(12.dp)
-                        )
-                    }
-                    Text(
-                        text = audioMetaLabel,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                AnimatedContent(
+                    targetState = audioChip ?: lastAudioChip[0],
+                    transitionSpec = {
+                        (fadeIn(tween(220, delayMillis = 90)) togetherWith fadeOut(tween(90)))
+                            .using(SizeTransform(clip = false) { _, _ -> tween(300, easing = FastOutSlowInEasing) })
+                    },
+                    contentAlignment = Alignment.Center,
+                    label = "audioChip"
+                ) { chip ->
+                    if (chip != null) AudioChipRow(chip)
                 }
             }
         }
+    }
+}
+
+/** What the chip under the progress bar shows: the file info and where the song plays from. */
+@Immutable
+private data class AudioChipInfo(val label: String, val isRemote: Boolean, val isSpotify: Boolean)
+
+/** How long a new song may take to report its own file info before the chip falls back to the library tags. */
+private const val AUDIO_CHIP_WAIT_MS = 700L
+
+@Composable
+private fun AudioChipRow(chip: AudioChipInfo) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+    ) {
+        // Source badge: Spotify, streamed (Navidrome/web) or a local file.
+        if (chip.isSpotify) {
+            Icon(
+                painter = painterResource(R.drawable.ic_spotify),
+                contentDescription = null,
+                modifier = Modifier.size(12.dp)
+            )
+        } else {
+            Icon(
+                imageVector = if (chip.isRemote) Icons.Rounded.Language else Icons.Rounded.Smartphone,
+                contentDescription = if (chip.isRemote) "Streaming source" else "Local source",
+                modifier = Modifier.size(12.dp)
+            )
+        }
+        Text(
+            text = chip.label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

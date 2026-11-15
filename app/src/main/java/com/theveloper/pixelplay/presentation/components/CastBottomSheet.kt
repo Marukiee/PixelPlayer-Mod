@@ -1307,6 +1307,8 @@ private fun CastDevicesTabContent(
             .padding(horizontal = 20.dp)
             .padding(bottom = 20.dp)
     ) {
+        // With Sonos on, the phone and the rooms come first and the nearby Cast and Bluetooth devices below them.
+        val ownDevicesFirst = extraDeviceCount > 0
         // With every radio off there is nothing to pick yet, so the switches come first.
         if (allConnectivityOff) {
             ConnectivitySection(
@@ -1316,11 +1318,16 @@ private fun CastDevicesTabContent(
                 onOpenBluetoothSettings = onOpenBluetoothSettings,
                 modifier = Modifier.padding(bottom = DeviceRowSpacing)
             )
-        } else {
+        }
+        if (ownDevicesFirst) {
+            leadingDevices()
+            extraDevices()
+        }
+        if (!allConnectivityOff) {
             DeviceSectionHeader(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = DeviceRowSpacing),
+                    .padding(top = if (ownDevicesFirst) 4.dp else 0.dp, bottom = DeviceRowSpacing),
                 hasDevices = state.devices.isNotEmpty(),
                 onRefresh = onRefresh
             )
@@ -1341,7 +1348,7 @@ private fun CastDevicesTabContent(
             }
         }
 
-        leadingDevices()
+        if (!ownDevicesFirst) leadingDevices()
 
         AnimatedVisibility(
             visible = state.devices.isEmpty() && extraDeviceCount == 0,
@@ -1362,7 +1369,7 @@ private fun CastDevicesTabContent(
             )
         }
 
-        extraDevices()
+        if (!ownDevicesFirst) extraDevices()
 
         if (!allConnectivityOff) {
             ConnectivitySection(

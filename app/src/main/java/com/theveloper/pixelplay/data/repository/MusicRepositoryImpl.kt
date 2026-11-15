@@ -351,7 +351,25 @@ class MusicRepositoryImpl @Inject constructor(
 
     override suspend fun getRandomSongs(limit: Int): List<Song> = withContext(Dispatchers.IO) {
         val filter = cachedDirFilter.value
-        musicDao.getRandomSongs(limit, filter.allowedParentDirs, filter.applyFilter).map { it.toSong() }
+        musicDao.getRandomSongs(
+            limit = limit,
+            allowedParentDirs = filter.allowedParentDirs,
+            applyDirectoryFilter = filter.applyFilter,
+            filterMode = 0
+        ).map { it.toSong() }
+    }
+
+    override suspend fun getLocalCopyCandidates(songs: List<Song>): List<Song> = withContext(Dispatchers.IO) {
+        val titles = songs.asSequence()
+            .filter { !it.contentUriString.startsWith("content://") && it.title.isNotBlank() }
+            .map { it.title }
+            .distinct()
+            .toList()
+        if (titles.isEmpty()) return@withContext emptyList()
+        val filter = cachedDirFilter.value
+        titles.chunked(400).flatMap { chunk ->
+            musicDao.getLocalSongsWithTitles(chunk, filter.allowedParentDirs, filter.applyFilter)
+        }.map { it.toSong() }
     }
 
     override suspend fun getSongsPage(
