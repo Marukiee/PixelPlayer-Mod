@@ -1287,7 +1287,10 @@ private fun FullPlayerProgressSection(
         audioMimeType = audioMimeType,
         audioBitrate = audioBitrate,
         audioSampleRate = audioSampleRate,
-        audioInfoForThisSong = isMetadataForCurrentSong,
+        // On a song change the player first reports this song with empty file info, which the library tags fill in;
+        // on the phone those often lack the sample rate. Complete means the playing file reported all three itself.
+        audioInfoComplete = isMetadataForCurrentSong &&
+            playbackMetadataMimeType != null && playbackMetadataBitrate != null && playbackMetadataSampleRate != null,
         isRemoteSource = isRemoteSource,
         isSpotifySource = isSpotifySource,
         showAudioFileInfo = showPlayerFileInfo,
@@ -1687,7 +1690,7 @@ private fun PlayerProgressBarSection(
     audioMimeType: String?,
     audioBitrate: Int?,
     audioSampleRate: Int?,
-    audioInfoForThisSong: Boolean = true,
+    audioInfoComplete: Boolean = true,
     isRemoteSource: Boolean = false,
     isSpotifySource: Boolean = false,
     showAudioFileInfo: Boolean,
@@ -1741,14 +1744,16 @@ private fun PlayerProgressBarSection(
     // The chip keeps the last song's info until the new song's own file info is in, then changes once. Resetting it
     // per song made it vanish for a few frames and come back from the library tags first, small, on every skip.
     var displayAudioChip by remember { mutableStateOf<AudioChipInfo?>(null) }
-    LaunchedEffect(songId, audioMetaLabel, audioInfoForThisSong, showAudioFileInfo, isRemoteSource, isSpotifySource) {
+    val songShownAt = remember(songId) { android.os.SystemClock.uptimeMillis() }
+    LaunchedEffect(songId, audioMetaLabel, audioInfoComplete, showAudioFileInfo, isRemoteSource, isSpotifySource) {
         if (!showAudioFileInfo) {
             displayAudioChip = null
             return@LaunchedEffect
         }
         val target = audioMetaLabel?.takeIf { it.isNotBlank() }?.let { AudioChipInfo(it, isRemoteSource, isSpotifySource) }
-        if (!audioInfoForThisSong && !isSpotifySource && displayAudioChip != null) {
-            kotlinx.coroutines.delay(AUDIO_CHIP_WAIT_MS)
+        if (!audioInfoComplete && !isSpotifySource && displayAudioChip != null) {
+            val waited = android.os.SystemClock.uptimeMillis() - songShownAt
+            kotlinx.coroutines.delay((AUDIO_CHIP_WAIT_MS - waited).coerceAtLeast(0L))
         }
         if (target == null) {
             kotlinx.coroutines.delay(500)

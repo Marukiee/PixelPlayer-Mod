@@ -1,3 +1,6 @@
+- Speler: bij vegen sluit de volgende hoes meteen netjes aan op de hoes ervoor
+- Speler: het label met bestandsinfo wordt bij een ander nummer niet meer even kort
+
 - Shuffle all, de Your Mix-knop op Home en de snelle-instellingentegel spelen altijd het lokale bestand als een nummer ook op de server staat; shufflen van favorieten, artiesten en afspeellijsten ook
 - Verbinden-paneel: eerst Deze telefoon, dan Sonos, daaronder de apparaten in de buurt
 - Speler: het label met bestandsinfo verspringt niet meer bij een ander nummer

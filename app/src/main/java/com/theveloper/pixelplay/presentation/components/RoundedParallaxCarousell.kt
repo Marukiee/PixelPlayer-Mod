@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
@@ -318,6 +319,15 @@ private fun RoundedCarousel(
 
         Box(
             modifier = Modifier
+                .carouselItem(
+                    index = page,
+                    state = state,
+                    strategy = { pageSize.strategy },
+                    carouselItemDrawInfo = carouselItemInfo,
+                    clipShape = clipShape
+                )
+                // Inside the item's own layer, which slides the item onto its keyline. Around it, a see-through layer
+                // clipped the cover to its unshifted pager slot, so it showed only once that slot came into view.
                 .graphicsLayer {
                     // One peek shows the focused cover and the next. The one after that fades in with the finger
                     // while it slides in, instead of popping in once the swipe passes halfway.
@@ -327,14 +337,8 @@ private fun RoundedCarousel(
                     } else {
                         1f
                     }
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
                 }
-                .carouselItem(
-                    index = page,
-                    state = state,
-                    strategy = { pageSize.strategy },
-                    carouselItemDrawInfo = carouselItemInfo,
-                    clipShape = clipShape
-                )
         ) {
             scope.content(page)
         }
