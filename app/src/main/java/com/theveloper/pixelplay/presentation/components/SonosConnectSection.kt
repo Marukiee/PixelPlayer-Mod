@@ -172,7 +172,9 @@ internal fun SonosDeviceSection(
     onRefresh: () -> Unit,
     favorites: List<Set<String>> = emptyList(),
     onToggleFavorite: (Set<String>) -> Unit = {},
-    onPlayFavorite: (Set<String>) -> Unit = {}
+    onPlayFavorite: (Set<String>) -> Unit = {},
+    /** False without Wi-Fi: the rooms stay listed, the hint says they need the home Wi-Fi. */
+    onHomeNetwork: Boolean = true
 ) {
     Row(
         modifier = Modifier
@@ -190,6 +192,7 @@ internal fun SonosDeviceSection(
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             val hint = when {
+                !onHomeNetwork -> stringResource(R.string.sonos_needs_wifi)
                 isScanning && groups.isEmpty() -> stringResource(R.string.sonos_searching)
                 groups.isEmpty() -> stringResource(R.string.sonos_none_found)
                 else -> stringResource(R.string.sonos_tap_hint)

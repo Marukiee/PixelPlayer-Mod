@@ -124,6 +124,10 @@ class SonosController @Inject constructor(
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
+    /** Whether the phone is on Wi-Fi (or Ethernet), the only way to the speakers. A VPN on top of it does not count. */
+    private val _onHomeNetwork = MutableStateFlow(true)
+    val onHomeNetwork: StateFlow<Boolean> = _onHomeNetwork.asStateFlow()
+
     private val _session = MutableStateFlow<SonosSessionState?>(null)
     val session: StateFlow<SonosSessionState?> = _session.asStateFlow()
 
@@ -206,6 +210,7 @@ class SonosController @Inject constructor(
     )
 
     init {
+        watchHomeNetwork()
         // Rooms from the last search show up right away; a fresh search runs in the background.
         _groups.value = discovery.cachedGroups()
         scope.launch { resumeSavedSession() }
@@ -345,6 +350,7 @@ class SonosController @Inject constructor(
      * first, around a room of it that already leads a group, so the fewest speakers change.
      */
     fun playFavorite(memberUuids: Set<String>) {
+        if (!explainIfNoHomeNetwork()) return
         val groups = _groups.value
         groups.firstOrNull { group -> group.members.map { it.uuid }.toSet() == memberUuids }?.let {
             connect(it.id)
@@ -457,6 +463,7 @@ class SonosController @Inject constructor(
 
     fun connect(groupId: String) {
         val group = _groups.value.firstOrNull { it.id == groupId } ?: return
+        if (!explainIfNoHomeNetwork()) return
         val previous = active
         if (previous?.group?.coordinatorUuid == group.coordinatorUuid) return
         scope.launch {
@@ -1228,6 +1235,56 @@ class SonosController @Inject constructor(
 
     private suspend fun avt(s: ActiveSession, action: String, vararg args: Pair<String, Any>): Map<String, String> =
         soap.call(s.group.coordinator.host, SonosService.AV_TRANSPORT, action, "InstanceID" to 0, *args)
+
+    /**
+     * The speakers are only reachable on the home network. Without Wi-Fi (or Ethernet) a tap would wait for a timeout
+     * and show a socket error, so it says why instead. A VPN such as Tailscale on top of Wi-Fi is fine: Android lists
+     * the Wi-Fi network next to it.
+     */
+    private fun explainIfNoHomeNetwork(): Boolean {
+        val onHomeNetwork = hasHomeNetwork()
+        _onHomeNetwork.value = onHomeNetwork
+        if (!onHomeNetwork) toast(context.getString(R.string.sonos_msg_no_wifi))
+        return onHomeNetwork
+    }
+
+    private fun hasHomeNetwork(): Boolean {
+        val connectivity = context.getSystemService(android.net.ConnectivityManager::class.java) ?: return true
+        return runCatching {
+            @Suppress("DEPRECATION")
+            connectivity.allNetworks.any { network ->
+                val caps = connectivity.getNetworkCapabilities(network) ?: return@any false
+                caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+                    caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+            }
+        }.getOrDefault(true)
+    }
+
+    /** Follows Wi-Fi and Ethernet coming and going, so the Connect panel can say the rooms need the home Wi-Fi. */
+    private fun watchHomeNetwork() {
+        val connectivity = context.getSystemService(android.net.ConnectivityManager::class.java) ?: return
+        val homeNetworks = java.util.Collections.synchronizedSet(HashSet<android.net.Network>())
+        val request = android.net.NetworkRequest.Builder()
+            .addTransportType(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+            .addTransportType(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+            // A home network without internet still reaches the speakers.
+            .removeCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        runCatching {
+            connectivity.registerNetworkCallback(request, object : android.net.ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: android.net.Network) {
+                    homeNetworks += network
+                    _onHomeNetwork.value = true
+                }
+
+                override fun onLost(network: android.net.Network) {
+                    homeNetworks -= network
+                    _onHomeNetwork.value = homeNetworks.isNotEmpty()
+                }
+            })
+        }.onFailure { Timber.tag(TAG).w(it, "Cannot follow the Wi-Fi state") }
+        _onHomeNetwork.value = hasHomeNetwork()
+    }
 
     private fun report(error: Throwable) {
         // A newer volume or sync request replaced this one; that is not a failure.

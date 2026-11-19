@@ -1,3 +1,10 @@
+- Speler: tik op de titel om naar het album te gaan
+- Sonos: zonder wifi zegt de app dat de speakers alleen via je wifi thuis werken, in plaats van een foutmelding na een tijd
+- Spotify: grote knop naar het Spotify-dashboard en uitleg bij de Redirect URI
+- Home: bij Your Mix staat "made for you", zodat de regel niet meer wordt afgekapt
+- Minispeler: de hoeken ronden mee af als de navigatiebalk in of uit beeld schuift
+- Recently Played: de maand staat boven de datums en schuift mee, en de datumknopjes zijn beter leesbaar
+
 - Speler: bij vegen sluit de volgende hoes meteen netjes aan op de hoes ervoor
 - Speler: het label met bestandsinfo wordt bij een ander nummer niet meer even kort
 

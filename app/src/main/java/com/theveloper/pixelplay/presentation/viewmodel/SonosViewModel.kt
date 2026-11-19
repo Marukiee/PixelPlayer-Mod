@@ -44,6 +44,7 @@ class SonosViewModel @Inject constructor(
 ) : ViewModel() {
     val groups: StateFlow<List<SonosGroup>> = controller.groups
     val isScanning: StateFlow<Boolean> = controller.isScanning
+    val onHomeNetwork: StateFlow<Boolean> = controller.onHomeNetwork
     val session: StateFlow<SonosSessionState?> = controller.session
     val favorites: StateFlow<List<Set<String>>> = controller.favorites
 

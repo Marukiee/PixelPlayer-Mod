@@ -273,6 +273,7 @@ fun CastBottomSheet(
     val sonosFavorites by sonosViewModel.favorites.collectAsStateWithLifecycle()
     val sonosGroups by sonosViewModel.groups.collectAsStateWithLifecycle()
     val sonosScanning by sonosViewModel.isScanning.collectAsStateWithLifecycle()
+    val sonosOnHomeNetwork by sonosViewModel.onHomeNetwork.collectAsStateWithLifecycle()
     val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
     // Coordinator of the group whose Group sheet is open, or null.
     var sonosGroupSheetFor by remember { mutableStateOf<String?>(null) }
@@ -643,6 +644,7 @@ fun CastBottomSheet(
                                     onStop = sonosViewModel::switchToPhone,
                                     onRefresh = sonosViewModel::refresh,
                                     favorites = sonosFavorites,
+                                    onHomeNetwork = sonosOnHomeNetwork,
                                     onToggleFavorite = sonosViewModel::toggleFavorite,
                                     onPlayFavorite = { ids ->
                                         if (isRemoteSession) {

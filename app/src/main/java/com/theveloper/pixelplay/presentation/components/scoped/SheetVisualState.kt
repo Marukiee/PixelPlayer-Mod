@@ -47,8 +47,14 @@ internal fun rememberSheetVisualState(
     isNavBarHidden: Boolean,
     isPlaying: Boolean,
     hasCurrentSong: Boolean,
-    swipeDismissProgress: Float
+    swipeDismissProgress: Float,
+    /**
+     * 0 with the navigation bar in view, 1 with it gone, in between while it slides. The collapsed corners follow it,
+     * so they round off with the bar instead of jumping when [isNavBarHidden] flips at the end of the slide.
+     */
+    navBarHiddenFractionProvider: () -> Float = { if (isNavBarHidden) 1f else 0f }
 ): SheetVisualState {
+    val navBarHiddenFraction = rememberUpdatedState(navBarHiddenFractionProvider)
     // Compute in px to be read inside graphicsLayer (draw phase) — zero relayout per drag frame.
     val density = LocalDensity.current
     val baseBottomPadding = remember(containerHeight, sheetCollapsedTargetY, density) {
@@ -116,15 +122,8 @@ internal fun rememberSheetVisualState(
         currentSheetContentState
     ) {
         {
-            val collapsedCornerTarget = if (isNavBarHidden) {
-                32.dp
-            } else if (navBarStyle == NavBarStyle.DEFAULT) {
-                navBarCornerRadiusDp
-            } else if (navBarStyle == NavBarStyle.FULL_WIDTH) {
-                32.dp
-            } else {
-                navBarCornerRadiusDp
-            }
+            val withNavBar = if (navBarStyle == NavBarStyle.FULL_WIDTH) 32.dp else navBarCornerRadiusDp
+            val collapsedCornerTarget = lerp(withNavBar, 32.dp, navBarHiddenFraction.value().coerceIn(0f, 1f))
 
             val effectiveFraction = playerContentExpansionFraction.value * (1f - predictiveBackCollapseProgress)
             val safeFraction = effectiveFraction.coerceIn(0f, 1f)
@@ -165,15 +164,13 @@ internal fun rememberSheetVisualState(
         currentSheetContentState
     ) {
         {
-            val collapsedRadius = if (isNavBarHidden) {
-                32.dp
-            } else if (navBarStyle == NavBarStyle.DEFAULT) {
-                10.dp
-            } else if (navBarStyle == NavBarStyle.FULL_WIDTH) {
-                32.dp
-            } else {
-                navBarCornerRadiusDp
+            val hiddenFraction = navBarHiddenFraction.value().coerceIn(0f, 1f)
+            val withNavBar = when (navBarStyle) {
+                NavBarStyle.DEFAULT -> 10.dp
+                NavBarStyle.FULL_WIDTH -> 32.dp
+                else -> navBarCornerRadiusDp
             }
+            val collapsedRadius = lerp(withNavBar, 32.dp, hiddenFraction)
 
             val effectiveFraction = playerContentExpansionFraction.value * (1f - predictiveBackCollapseProgress)
             val safeFraction = effectiveFraction.coerceIn(0f, 1f)
@@ -183,13 +180,8 @@ internal fun rememberSheetVisualState(
                     lerp(collapsedRadius, expandedTarget, safeFraction)
                 } else {
                     if (!isPlayingState.value || !hasCurrentSongState.value) {
-                        if (isNavBarHidden) {
-                            32.dp
-                        } else if (navBarStyle == NavBarStyle.DEFAULT) {
-                            10.dp
-                        } else {
-                            navBarCornerRadiusDp
-                        }
+                        val idleWithNavBar = if (navBarStyle == NavBarStyle.DEFAULT) 10.dp else navBarCornerRadiusDp
+                        lerp(idleWithNavBar, 32.dp, hiddenFraction)
                     } else {
                         collapsedRadius
                     }

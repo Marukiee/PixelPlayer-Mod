@@ -432,6 +432,11 @@ fun FullPlayerContent(
         }
     }
 
+    // The title opens the song's album, as the artist line opens the artist and the cover the album.
+    val onSongMetadataTitleClick = {
+        playerViewModel.triggerAlbumNavigationFromPlayer(song.albumId)
+    }
+
     var pendingCarouselIndex by remember { mutableStateOf<Int?>(null) }
     val currentQueueIndex = remember(song.id, currentMediaItemIndex, currentPlaybackQueue) {
         resolveQueueIndex(
@@ -610,6 +615,7 @@ fun FullPlayerContent(
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
+            onTitleClick = onSongMetadataTitleClick,
             isPlayingProvider = isPlayingProvider
         )
     }
@@ -633,6 +639,7 @@ fun FullPlayerContent(
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
+            onTitleClick = onSongMetadataTitleClick,
             isPlayingProvider = isPlayingProvider
         )
     }
@@ -1373,6 +1380,7 @@ private fun FullPlayerSongMetadataSection(
     chipContentColor: Color,
     onQueueClick: () -> Unit,
     onArtistClick: () -> Unit,
+    onTitleClick: () -> Unit,
     isPlayingProvider: () -> Boolean = { true }
 ) {
     val shouldDelay = loadingTweaks.delayAll || loadingTweaks.delaySongMetadata
@@ -1418,6 +1426,7 @@ private fun FullPlayerSongMetadataSection(
             showQueueButton = isLandscape,
             onClickQueue = onQueueClick,
             onClickArtist = onArtistClick,
+            onClickTitle = onTitleClick,
             isPlayingProvider = isPlayingProvider
         )
     }
@@ -1517,6 +1526,7 @@ private fun SongMetadataDisplaySection(
     showQueueButton: Boolean,
     onClickQueue: () -> Unit,
     onClickArtist: () -> Unit,
+    onClickTitle: () -> Unit,
     modifier: Modifier = Modifier,
     isPlayingProvider: () -> Boolean = { true }
 ) {
@@ -1539,6 +1549,7 @@ private fun SongMetadataDisplaySection(
                 gradientEdgeColor = gradientEdgeColor,
                 playerViewModel = playerViewModel,
                 onClickArtist = onClickArtist,
+                onClickTitle = onClickTitle.takeIf { currentSong.albumId != -1L },
                 modifier = Modifier
                     .weight(1f)
                     .align(Alignment.CenterVertically),
@@ -2257,6 +2268,8 @@ private fun PlayerSongInfo(
     gradientEdgeColor: Color,
     playerViewModel: PlayerViewModel,
     onClickArtist: () -> Unit,
+    /** Opens the album; null when the song has none, then the title is not a link. */
+    onClickTitle: (() -> Unit)?,
     modifier: Modifier = Modifier,
     isPlayingProvider: () -> Boolean = { true }
 ) {
@@ -2298,7 +2311,19 @@ private fun PlayerSongInfo(
             style = titleStyle,
             gradientEdgeColor = gradientEdgeColor,
             expansionFractionProvider = expansionFractionProvider,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onClickTitle != null) {
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onClickTitle
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
             canScroll = isPlayingProvider()
         )
         Spacer(modifier = Modifier.height(2.dp))

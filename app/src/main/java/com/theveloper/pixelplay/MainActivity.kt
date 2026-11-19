@@ -1069,7 +1069,8 @@ class MainActivity : ComponentActivity() {
                             hideMiniPlayer = shouldHideMiniPlayer,
                             containerHeight = containerHeight,
                             navController = navController,
-                            isNavBarHidden = isNavBarEffectivelyHidden
+                            isNavBarHidden = isNavBarEffectivelyHidden,
+                            navBarHiddenFractionProvider = { 1f - navBarVisibilityProgressState.value }
                         )
 
                         val dismissUndoBarSlice by remember {

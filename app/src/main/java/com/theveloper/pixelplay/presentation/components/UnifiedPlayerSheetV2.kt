@@ -120,7 +120,9 @@ fun UnifiedPlayerSheetV2(
     collapsedStateHorizontalPadding: Dp = 12.dp,
     navController: NavHostController,
     hideMiniPlayer: Boolean = false,
-    isNavBarHidden: Boolean = false
+    isNavBarHidden: Boolean = false,
+    /** How far the navigation bar has slid away, 0 to 1; the collapsed corners follow it. */
+    navBarHiddenFractionProvider: (() -> Float)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -399,7 +401,8 @@ fun UnifiedPlayerSheetV2(
         isNavBarHidden = isNavBarHidden,
         isPlaying = infrequentPlayerState.isPlaying,
         hasCurrentSong = infrequentPlayerState.currentSong != null,
-        swipeDismissProgress = 0f
+        swipeDismissProgress = 0f,
+        navBarHiddenFractionProvider = navBarHiddenFractionProvider ?: { if (isNavBarHidden) 1f else 0f }
     )
     val currentBottomPadding = sheetVisualState.currentBottomPadding
     val baseBottomPadding = sheetVisualState.baseBottomPadding

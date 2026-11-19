@@ -3573,6 +3573,20 @@ private fun SpotifySettingsBlock() {
             ) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SpotifyDashboardButton()
+                        SpotifyWhereToFind(
+                            lead = stringResource(R.string.spotify_settings_dashboard_button_lead),
+                            path = listOf("Create app"),
+                            tail = stringResource(R.string.spotify_settings_dashboard_button_hint)
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = stringResource(R.string.spotify_settings_redirect_explain),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceContainerHighest,
                             shape = RoundedCornerShape(16.dp),
@@ -3632,28 +3646,11 @@ private fun SpotifySettingsBlock() {
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            FilledTonalButton(
-                                onClick = {
-                                    runCatching {
-                                        context.startActivity(
-                                            android.content.Intent(
-                                                android.content.Intent.ACTION_VIEW,
-                                                android.net.Uri.parse(com.theveloper.pixelplay.data.spotify.SpotifyAuth.DASHBOARD_URL)
-                                            )
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(stringResource(R.string.spotify_settings_open_dashboard), maxLines = 1)
-                            }
-                            Button(
-                                onClick = { if (!spotifyViewModel.login(clientId)) clientIdMissing = true },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(stringResource(R.string.spotify_settings_login), maxLines = 1)
-                            }
+                        Button(
+                            onClick = { if (!spotifyViewModel.login(clientId)) clientIdMissing = true },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        ) {
+                            Text(stringResource(R.string.spotify_settings_login), maxLines = 1)
                         }
                         SpotifyWhereToFind(
                             lead = stringResource(R.string.spotify_settings_refused_lead),
@@ -3704,6 +3701,7 @@ private fun SpotifyPreferencesSections(
     }
 
     SettingsSubsection(title = stringResource(R.string.spotify_settings_link_section)) {
+        SpotifyDashboardButton(modifier = Modifier.padding(bottom = 8.dp))
         SettingsItem(
             title = stringResource(R.string.spotify_settings_client_id_label),
             subtitle = maskedClientId(clientId),
@@ -3711,26 +3709,10 @@ private fun SpotifyPreferencesSections(
             trailingIcon = { Icon(Icons.Rounded.Edit, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             onClick = { changeClientId = true }
         )
-        SettingsItem(
-            title = stringResource(R.string.spotify_settings_dashboard_title),
-            subtitle = stringResource(R.string.spotify_settings_dashboard_text),
-            leadingIcon = { Icon(painterResource(R.drawable.ic_spotify), null, tint = MaterialTheme.colorScheme.secondary) },
-            trailingIcon = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-            onClick = {
-                runCatching {
-                    context.startActivity(
-                        android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse(com.theveloper.pixelplay.data.spotify.SpotifyAuth.DASHBOARD_URL)
-                        )
-                    )
-                }
-            }
-        )
         val copiedText = stringResource(R.string.spotify_settings_copied)
         SettingsItem(
             title = stringResource(R.string.spotify_settings_redirect_label),
-            subtitle = redirectUri,
+            subtitle = redirectUri + "\n" + stringResource(R.string.spotify_settings_redirect_explain_short),
             leadingIcon = { Icon(Icons.Rounded.Link, null, tint = MaterialTheme.colorScheme.secondary) },
             trailingIcon = { Icon(Icons.Rounded.ContentCopy, stringResource(R.string.spotify_settings_copy), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             onClick = {
@@ -3824,6 +3806,38 @@ private fun sourceStatus(
         else -> stringResource(R.string.sources_not_connected)
     }
     else -> stringResource(category.subtitleRes)
+}
+
+/** Big button to developer.spotify.com, where the free app with its Client ID and Redirect URI is made. */
+@Composable
+private fun SpotifyDashboardButton(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    FilledTonalButton(
+        onClick = {
+            runCatching {
+                context.startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(com.theveloper.pixelplay.data.spotify.SpotifyAuth.DASHBOARD_URL)
+                    )
+                )
+            }
+        },
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp)
+    ) {
+        Icon(painterResource(R.drawable.ic_spotify), contentDescription = null, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = stringResource(R.string.spotify_settings_dashboard_button),
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+    }
 }
 
 /** Where something is in Spotify: the path in bold with arrows between, the rest small and quiet. */

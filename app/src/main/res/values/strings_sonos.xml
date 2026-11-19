@@ -35,6 +35,8 @@
 
     <string name="sonos_msg_skipped">Not on Navidrome, skipped: %1$s</string>
     <string name="sonos_msg_stopped">Not on Navidrome, stopped at: %1$s</string>
+    <string name="sonos_msg_no_wifi">Sonos only works on your Wi-Fi at home. Turn on Wi-Fi to play there</string>
+    <string name="sonos_needs_wifi">Only on your Wi-Fi at home</string>
     <string name="sonos_msg_failed">Sonos did not respond (%1$s)</string>
     <string name="sonos_msg_taken_over">%1$s is playing something else now</string>
     <string name="sonos_msg_lost">Lost the connection with %1$s</string>

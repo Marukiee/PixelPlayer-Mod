@@ -35,6 +35,8 @@
 
     <string name="sonos_msg_skipped">Niet op Navidrome, overgeslagen: %1$s</string>
     <string name="sonos_msg_stopped">Niet op Navidrome, gestopt bij: %1$s</string>
+    <string name="sonos_msg_no_wifi">Sonos werkt alleen via je wifi thuis. Zet wifi aan om daar te spelen</string>
+    <string name="sonos_needs_wifi">Alleen via je wifi thuis</string>
     <string name="sonos_msg_failed">Sonos reageerde niet (%1$s)</string>
     <string name="sonos_msg_taken_over">%1$s speelt nu iets anders</string>
     <string name="sonos_msg_lost">Verbinding met %1$s kwijt</string>

@@ -14,6 +14,11 @@
     <string name="spotify_settings_logged_in_unknown">Ingelogd</string>
     <string name="spotify_settings_logout">Uitloggen</string>
     <string name="spotify_settings_open_dashboard">Dashboard</string>
+    <string name="spotify_settings_dashboard_button">Open het Spotify-dashboard</string>
+    <string name="spotify_settings_dashboard_button_lead">Tik daar op</string>
+    <string name="spotify_settings_dashboard_button_hint">\u0020voor je gratis app. Daarin staat je Client ID.</string>
+    <string name="spotify_settings_redirect_explain">Na het inloggen stuurt Spotify je via dit adres terug naar PixelPlayer. Plak het in je app:</string>
+    <string name="spotify_settings_redirect_explain_short">Brengt je na het inloggen terug naar de app. Tik om te kopiëren</string>
     <string name="spotify_settings_redirect_label">Redirect URI</string>
     <string name="spotify_settings_copy">Kopieer</string>
     <string name="spotify_settings_copied">Gekopieerd</string>

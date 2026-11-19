@@ -22,6 +22,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.runtime.key
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.Layout
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -342,10 +346,8 @@ private fun HistoryContent(
         var next = 0
         days.map { day -> next.also { next += 1 + day.plays.size } }
     }
-    val stripItems = remember(days) { historyStripItems(days) }
-    val stripIndexOfDay = remember(stripItems) {
-        stripItems.withIndex().mapNotNull { (index, item) -> (item as? HistoryStripItem.Day)?.let { it.date to index } }.toMap()
-    }
+    // The strip holds only days; the months sit above it (HistoryMonthLabels).
+    val stripIndexOfDay = remember(days) { days.withIndex().associate { (index, day) -> day.date to index } }
 
     // A day picked at the end of the list may not reach the top, so it stays selected until the list is dragged.
     var pickedDay by remember { mutableStateOf<LocalDate?>(null) }
@@ -379,6 +381,7 @@ private fun HistoryContent(
         }
     }
 
+    HistoryMonthLabels(days = days, stripState = stripState)
     LazyRow(
         state = stripState,
         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -386,15 +389,12 @@ private fun HistoryContent(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
     ) {
-        items(stripItems, key = { it.key }, contentType = { it::class }) { item ->
-            when (item) {
-                is HistoryStripItem.Month -> HistoryMonthMarker(item.month)
-                is HistoryStripItem.Day -> HistoryDayPill(
-                    date = item.date,
-                    selected = item.date == selectedDay,
-                    onClick = { goToDay(item.date) }
-                )
-            }
+        items(days, key = { "day_${it.date}" }, contentType = { "history_day_pill" }) { day ->
+            HistoryDayPill(
+                date = day.date,
+                selected = day.date == selectedDay,
+                onClick = { goToDay(day.date) }
+            )
         }
     }
 
@@ -491,54 +491,70 @@ private fun HistoryContent(
     }
 }
 
-private sealed interface HistoryStripItem {
-    val key: String
-
-    data class Month(val month: YearMonth) : HistoryStripItem {
-        override val key = "month_$month"
+/**
+ * The month above the day strip, so it shows halfway through a month too. Each month's name sits above its newest day
+ * and stays at the left edge while its days are in view; the next month's name pushes it out, like a sticky header.
+ * Placed from the strip's scroll position in the layout step, so scrolling moves it without recomposing.
+ */
+@Composable
+private fun HistoryMonthLabels(days: List<HistoryDay>, stripState: LazyListState) {
+    val monthOfIndex = remember(days) { days.map { YearMonth.from(it.date) } }
+    val firstIndexOfMonth = remember(monthOfIndex) {
+        buildMap { monthOfIndex.forEachIndexed { index, month -> putIfAbsent(month, index) } }
     }
-
-    data class Day(val date: LocalDate) : HistoryStripItem {
-        override val key = "day_$date"
-    }
-}
-
-private fun historyStripItems(days: List<HistoryDay>): List<HistoryStripItem> = buildList {
-    var month: YearMonth? = null
-    days.forEach { day ->
-        val dayMonth = YearMonth.from(day.date)
-        if (dayMonth != month) {
-            add(HistoryStripItem.Month(dayMonth))
-            month = dayMonth
+    val visibleMonths by remember(monthOfIndex) {
+        derivedStateOf {
+            stripState.layoutInfo.visibleItemsInfo.mapNotNull { monthOfIndex.getOrNull(it.index) }.distinct()
         }
-        add(HistoryStripItem.Day(day.date))
+    }
+    val density = LocalDensity.current
+    val insetPx = with(density) { 4.dp.roundToPx() }
+    val gapPx = with(density) { 12.dp.roundToPx() }
+    Layout(
+        content = { visibleMonths.forEach { month -> key(month) { HistoryMonthName(month) } } },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds()
+            .padding(bottom = 8.dp)
+    ) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+        val months = visibleMonths
+        val height = placeables.maxOfOrNull { it.height } ?: 0
+        layout(constraints.maxWidth, height) {
+            val info = stripState.layoutInfo
+            // Item offsets start after the strip's own side padding; the label lines up with the pill's text.
+            val edgePx = info.beforeContentPadding + insetPx
+            fun firstVisibleOf(month: YearMonth) = info.visibleItemsInfo.firstOrNull { monthOfIndex.getOrNull(it.index) == month }
+            fun startOf(month: YearMonth): Int? {
+                val first = firstVisibleOf(month) ?: return null
+                // Above its newest day while that day is in view, else held at the left edge.
+                val x = if (first.index == firstIndexOfMonth[month]) first.offset + edgePx else edgePx
+                return maxOf(x, edgePx)
+            }
+            placeables.forEachIndexed { i, placeable ->
+                val month = months.getOrNull(i) ?: return@forEachIndexed
+                var x = startOf(month) ?: return@forEachIndexed
+                months.getOrNull(i + 1)?.let(::startOf)?.let { nextX -> x = minOf(x, nextX - placeable.width - gapPx) }
+                placeable.place(x, 0)
+            }
+        }
     }
 }
 
 @Composable
-private fun HistoryMonthMarker(month: YearMonth) {
+private fun HistoryMonthName(month: YearMonth) {
     val locale = Locale.getDefault()
     val label = remember(month, locale) {
-        month.format(DateTimeFormatter.ofPattern("MMM", locale)).trimEnd('.').replaceFirstChar { it.titlecase(locale) }
+        val pattern = if (month.year == YearMonth.now().year) "LLLL" else "LLLL yyyy"
+        month.format(DateTimeFormatter.ofPattern(pattern, locale)).replaceFirstChar { it.titlecase(locale) }
     }
-    Column(
-        modifier = Modifier.padding(horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (month.year != YearMonth.now().year) {
-            Text(
-                text = month.year.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -551,7 +567,8 @@ private fun HistoryDayPill(date: LocalDate, selected: Boolean, onClick: () -> Un
         label = "dayPillCorner"
     )
     val container by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+        // Unselected days on the brightest container, so they stand apart from the page behind them.
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
         animationSpec = motion.defaultEffectsSpec(),
         label = "dayPillContainer"
     )
@@ -575,7 +592,13 @@ private fun HistoryDayPill(date: LocalDate, selected: Boolean, onClick: () -> Un
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = weekday, style = MaterialTheme.typography.labelSmall, maxLines = 1, textAlign = TextAlign.Center)
+            Text(
+                text = weekday,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
             Text(
                 text = date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.titleMedium,
