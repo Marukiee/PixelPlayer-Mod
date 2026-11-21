@@ -1096,7 +1096,9 @@ class MusicService : MediaSessionService() {
                 navidromeId = navidromeId,
                 positionMs = positionMs,
                 state = state,
-                playbackRate = playbackRate
+                playbackRate = playbackRate,
+                // Mod: NavidromeScrobbles is what counts a listen. Without this a newer server counts the report as well.
+                ignoreScrobble = true
             )
         }
     }
@@ -1181,12 +1183,7 @@ class MusicService : MediaSessionService() {
             }
             if (playbackState == Player.STATE_ENDED) {
                 listeningStatsTracker.finalizeCurrentSession()
-                val mediaItem = (mediaSession?.player ?: engine.masterPlayer).currentMediaItem
-                getNavidromeId(mediaItem)?.let { navidromeId ->
-                    appScope.launch(Dispatchers.IO) {
-                        navidromeRepository.scrobble(navidromeId, submission = true)
-                    }
-                }
+                // Mod: NavidromeScrobbles counts listens, for local songs too, and only past half the song.
 
                 sleepTimerController.onPlaybackEnded()
                 reportNavidromePlayback("stopped")
@@ -1227,13 +1224,7 @@ class MusicService : MediaSessionService() {
             if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
                 val finishedItem = oldPosition.mediaItem
                 if (isNavidromeMediaItem(finishedItem)) {
-                    val prevId = getNavidromeId(finishedItem)
                     reportNavidromePlayback("stopped", finishedItem)
-                    if (prevId != null) {
-                        appScope.launch(Dispatchers.IO) {
-                            navidromeRepository.scrobble(prevId, submission = true)
-                        }
-                    }
                 }
             }
 

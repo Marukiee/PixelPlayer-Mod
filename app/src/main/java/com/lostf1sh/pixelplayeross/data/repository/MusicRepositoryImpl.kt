@@ -100,7 +100,8 @@ class MusicRepositoryImpl @Inject constructor(
     private val favoritesDao: FavoritesDao,
     private val artistImageRepository: ArtistImageRepository,
     private val folderTreeBuilder: FolderTreeBuilder,
-    private val jellyfinRepository: JellyfinRepository? = null
+    private val jellyfinRepository: JellyfinRepository? = null,
+    private val navidromeFavoritesSyncProvider: dagger.Lazy<com.lostf1sh.pixelplayeross.data.navidrome.NavidromeFavoritesSync>? = null
 ) : MusicRepository {
 
     companion object {
@@ -917,6 +918,8 @@ class MusicRepositoryImpl @Inject constructor(
         } else {
             writeLocalFavorite()
         }
+        // Mod: the like goes to Navidrome as a star.
+        navidromeFavoritesSyncProvider?.get()?.onLocalChange(id, isFavorite)
     }
 
     override suspend fun getFavoriteSongIdsOnce(): Set<String> = withContext(Dispatchers.IO) {

@@ -76,6 +76,10 @@ class NavidromeRepository @Inject constructor(
         private const val KEY_USERNAME = "username"
         private const val KEY_PASSWORD = "password"
         private const val KEY_AUTH_METHOD = "auth_method"
+        // Mod: same keys as the Google-based mod.
+        private const val KEY_FAV_SYNC_STARRED = "fav_sync_starred"
+        private const val KEY_FAV_SYNC_TOTAL = "fav_sync_total"
+        private const val KEY_FAV_SYNC_TIME = "fav_sync_time"
         private const val KEY_LAST_FULL_SYNC = "last_full_sync"
 
         private const val NAVIDROME_SONG_ID_OFFSET = 9_000_000_000_000L
@@ -170,6 +174,47 @@ class NavidromeRepository @Inject constructor(
      */
     val username: String?
         get() = prefs.getString(KEY_USERNAME, null)
+
+    /** Mod: who the app is logged in as. What was agreed with one account says nothing about another. */
+    val accountKey: String?
+        get() {
+            val server = serverUrl ?: return null
+            val user = username ?: return null
+            return "${NavidromeCredentials(server, "", "").normalizedServerUrl}|$user"
+        }
+
+    /** Mod: records the outcome of the last favorites to Navidrome sync so the UI can show it. */
+    fun setLastFavoritesSyncSummary(starred: Int, total: Int) {
+        prefs.edit {
+            putInt(KEY_FAV_SYNC_STARRED, starred)
+                .putInt(KEY_FAV_SYNC_TOTAL, total)
+                .putLong(KEY_FAV_SYNC_TIME, System.currentTimeMillis())
+        }
+    }
+
+    /** Mod: (starred, total, epochMillis) of the last favorites sync, or null if it never ran. */
+    val lastFavoritesSyncSummary: Triple<Int, Int, Long>?
+        get() {
+            val time = prefs.getLong(KEY_FAV_SYNC_TIME, 0L)
+            if (time <= 0L) return null
+            return Triple(
+                prefs.getInt(KEY_FAV_SYNC_STARRED, 0),
+                prefs.getInt(KEY_FAV_SYNC_TOTAL, 0),
+                time
+            )
+        }
+
+    /** Mod: the songs starred on the server as "Title, Artist", ordered by title. */
+    suspend fun getStarredSongSummaries(): Result<List<String>> = withContext(Dispatchers.IO) {
+        if (!isLoggedIn) return@withContext Result.failure(IllegalStateException("Not logged in to Navidrome"))
+        api.getStarredSongs().map { songs ->
+            songs.map { song ->
+                val title = song.optString("title").ifBlank { "?" }
+                val artist = song.optString("artist").ifBlank { "?" }
+                "$title, $artist"
+            }.sorted()
+        }
+    }
 
     val selectedMusicFolderIdsFlow: Flow<Set<String>> =
         userPreferencesRepository.navidromeSelectedMusicFolderIdsFlow

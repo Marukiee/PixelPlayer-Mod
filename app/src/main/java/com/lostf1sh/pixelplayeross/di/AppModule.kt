@@ -308,7 +308,8 @@ object AppModule {
         favoritesDao: FavoritesDao,
         artistImageRepository: ArtistImageRepository,
         folderTreeBuilder: FolderTreeBuilder,
-        jellyfinRepository: com.lostf1sh.pixelplayeross.data.jellyfin.JellyfinRepository
+        jellyfinRepository: com.lostf1sh.pixelplayeross.data.jellyfin.JellyfinRepository,
+        navidromeFavoritesSync: dagger.Lazy<com.lostf1sh.pixelplayeross.data.navidrome.NavidromeFavoritesSync>
     ): MusicRepository {
         return MusicRepositoryImpl(
             context = context,
@@ -322,7 +323,8 @@ object AppModule {
             favoritesDao = favoritesDao,
             artistImageRepository = artistImageRepository,
             folderTreeBuilder = folderTreeBuilder,
-            jellyfinRepository = jellyfinRepository
+            jellyfinRepository = jellyfinRepository,
+            navidromeFavoritesSyncProvider = navidromeFavoritesSync
         )
 
     }

@@ -545,10 +545,12 @@ class NavidromeApiService @Inject constructor(
      * Standard Subsonic scrobble API.
      * Used as fallback for now playing and marking as played.
      */
-    suspend fun scrobble(id: String, submission: Boolean = true): Result<Unit> {
+    suspend fun scrobble(id: String, submission: Boolean = true, timeMs: Long? = null): Result<Unit> {
         val params = mutableMapOf<String, String>()
         params["id"] = id
         params["submission"] = submission.toString()
+        // Mod: when the listen started, so a listen sent later still lands on its own time.
+        timeMs?.let { params["time"] = it.toString() }
         
         Timber.d("$TAG: Calling scrobble API: id=$id, submission=$submission")
         return requestAndParse("scrobble", params).fold(
@@ -573,6 +575,14 @@ class NavidromeApiService @Inject constructor(
         artistId?.let { params["artistId"] = it }
 
         return requestAndParse("star", params).map { true }
+    }
+
+    /** Mod: the songs starred on the server, to check that the app's likes reached it. */
+    suspend fun getStarredSongs(): Result<List<JSONObject>> {
+        return requestAndParse("getStarred2").map { response ->
+            val songs = response.optJSONObject("starred2")?.optJSONArray("song")
+            (0 until (songs?.length() ?: 0)).mapNotNull { songs?.optJSONObject(it) }
+        }
     }
 
     /**

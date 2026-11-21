@@ -16,6 +16,9 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self): self.do_GET()
     def do_GET(self):
         u = urlparse(self.path); q = parse_qs(u.query); ep = u.path.rsplit("/", 1)[-1].replace(".view", "")
+        # Only the call and the song id, never the login in the address.
+        if ep in ("scrobble", "star", "unstar"):
+            print(ep, q.get("id", [""])[0], q.get("time", [""])[0], q.get("submission", [""])[0], flush=True)
         if ep == "getCoverArt": return self.out(COVER, "image/png")
         if ep == "stream":
             total = len(DATA); start, end = 0, total - 1; code = 200

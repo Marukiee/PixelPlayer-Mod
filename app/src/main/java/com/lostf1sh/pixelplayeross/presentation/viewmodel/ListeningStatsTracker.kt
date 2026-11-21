@@ -33,7 +33,8 @@ import timber.log.Timber
 class ListeningStatsTracker @Inject constructor(
     private val dailyMixManager: DailyMixManager,
     private val playbackStatsRepository: PlaybackStatsRepository,
-    private val scrobbleManager: ScrobbleManager
+    private val scrobbleManager: ScrobbleManager,
+    private val navidromeScrobbles: com.lostf1sh.pixelplayeross.data.navidrome.NavidromeScrobbles
 ) {
     private var currentSession: ActiveSession? = null
     private var pendingVoluntarySongId: String? = null
@@ -262,6 +263,13 @@ class ListeningStatsTracker @Inject constructor(
             _playbackHistory.update { current ->
                 (listOf(historyEntry) + current).take(MAX_INTERNAL_PLAYBACK_HISTORY_ITEMS)
             }
+            // Mod: not in the background like the rest, so a listen that ends with the app closing still goes out.
+            navidromeScrobbles.onListened(
+                songId = songId,
+                listenedMs = listened,
+                durationMs = session.totalDurationMs,
+                endedAtMs = timestamp
+            )
             persistPlayback(
                 songId = songId,
                 listened = listened,

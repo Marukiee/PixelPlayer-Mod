@@ -133,6 +133,8 @@ class SyncManager @Inject constructor(
         observeSyncCompletion()
         observeAppForeground()
         schedulePeriodicMaintenance()
+        scheduleNavidromeFavoritesSync()
+        scheduleNavidromeScrobbles()
     }
 
     /**
@@ -140,6 +142,52 @@ class SyncManager @Inject constructor(
      * name distinct from [SyncWorker.WORK_NAME], so it never drives the foreground sync
      * indicator. KEEP preserves the existing schedule across launches.
      */
+    /** Mod: also runs right away for whatever is left from last time, since no new listen may come to set it off. */
+    private fun scheduleNavidromeScrobbles() {
+        workManager.enqueueUniquePeriodicWork(
+            NavidromeScrobbleWorker.PERIODIC_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            NavidromeScrobbleWorker.periodicWork()
+        )
+        workManager.enqueueUniqueWork(
+            NavidromeScrobbleWorker.SEND_WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            NavidromeScrobbleWorker.sendWork()
+        )
+    }
+
+    /**
+     * Mod: the periodic sync of likes with the user's Navidrome server, at the chosen interval (0 = off). The worker
+     * does nothing without a Navidrome login, so scheduling it is always safe.
+     */
+    private fun scheduleNavidromeFavoritesSync() {
+        sharingScope.launch {
+            userPreferencesRepository.navidromeFavoritesSyncIntervalHoursFlow
+                .distinctUntilChanged()
+                .collect { hours ->
+                    if (hours <= 0) {
+                        workManager.cancelUniqueWork(NavidromeFavoritesSyncWorker.PERIODIC_WORK_NAME)
+                    } else {
+                        // UPDATE applies a new interval without dropping the existing schedule.
+                        workManager.enqueueUniquePeriodicWork(
+                            NavidromeFavoritesSyncWorker.PERIODIC_WORK_NAME,
+                            ExistingPeriodicWorkPolicy.UPDATE,
+                            NavidromeFavoritesSyncWorker.periodicWork(hours.toLong())
+                        )
+                    }
+                }
+        }
+    }
+
+    /** Mod: syncs likes with Navidrome now, from the settings. REPLACE so every tap runs again. */
+    fun syncFavoritesToNavidromeNow() {
+        workManager.enqueueUniqueWork(
+            NavidromeFavoritesSyncWorker.ONE_TIME_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            NavidromeFavoritesSyncWorker.oneTimeWork()
+        )
+    }
+
     private fun schedulePeriodicMaintenance() {
         workManager.enqueueUniquePeriodicWork(
             SyncWorker.PERIODIC_MAINTENANCE_WORK_NAME,
@@ -496,6 +544,12 @@ class SyncManager @Inject constructor(
         }
         lastForegroundSyncTime = now
         Timber.tag(TAG).i("Foreground catch-up - scheduling local incremental sync")
+        // Mod: nothing tells the app about a star set on the server, so this is when it looks.
+        workManager.enqueueUniqueWork(
+            NavidromeFavoritesSyncWorker.ONE_TIME_WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            NavidromeFavoritesSyncWorker.foregroundWork()
+        )
         // User just returned to the app; surface anything indexed while backgrounded
         // without waiting for playback to stop.
         enqueueBypassLocalSync()

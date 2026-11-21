@@ -456,6 +456,10 @@ interface MusicDao {
         refreshArtistTrackCounts()
     }
 
+    /** Mod: what the Navidrome likes sync needs to match songs. */
+    @Query("SELECT id, title, artist_name AS artist, album_name AS album, duration AS durationMs, content_uri_string AS contentUri FROM songs")
+    suspend fun getSongsForFavoritesSync(): List<FavoriteSyncSongRow>
+
     @Query("SELECT id, title, artist_name, album_name, duration, content_uri_string, sample_rate FROM songs WHERE id IN (:songIds)")
     suspend fun getSongMatchRows(songIds: List<Long>): List<SongMatchRow>
 

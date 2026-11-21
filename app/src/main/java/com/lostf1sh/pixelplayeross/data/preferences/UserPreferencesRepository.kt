@@ -299,6 +299,8 @@ constructor(
         val UPDATE_LAST_NOTIFIED_VERSION = stringPreferencesKey("update_last_notified_version")
 
         // Mod: same keys as the Google-based mod, so the settings carry over.
+        // How often to push local favorites to Navidrome as stars, in hours. 0 = off.
+        val NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS = intPreferencesKey("navidrome_favorites_sync_interval_hours")
         val SONOS_ENABLED = booleanPreferencesKey("sonos_enabled")
         val SONOS_SKIP_UNAVAILABLE = booleanPreferencesKey("sonos_skip_unavailable")
         val SONOS_VOLUME_KEYS = booleanPreferencesKey("sonos_volume_keys")
@@ -352,6 +354,14 @@ constructor(
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.RECAP_HOME_CARD_DISMISSED_YEAR] = year
         }
+    }
+
+    /** Mod: how often to push favorites to Navidrome, in hours. 0 = off. Default 24h. */
+    val navidromeFavoritesSyncIntervalHoursFlow: Flow<Int> =
+        dataStore.data.map { it[PreferencesKeys.NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS] ?: 24 }
+
+    suspend fun setNavidromeFavoritesSyncIntervalHours(hours: Int) {
+        dataStore.edit { it[PreferencesKeys.NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS] = hours }
     }
 
     val sonosEnabledFlow: Flow<Boolean> =
