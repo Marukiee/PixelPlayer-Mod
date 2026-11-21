@@ -336,6 +336,13 @@ interface MusicDao {
     @Query("DELETE FROM favorites WHERE songId IN (SELECT id FROM songs WHERE source_type = 0)")
     suspend fun deleteLocalFavorites()
 
+    /**
+     * Songs that come in through a scan carry is_favorite = 0, also when the favorites table
+     * already holds them (imported likes, a restored backup, or a rebuild). Copies the flag back.
+     */
+    @Query("UPDATE songs SET is_favorite = 1 WHERE is_favorite = 0 AND id IN (SELECT songId FROM favorites WHERE isFavorite = 1)")
+    suspend fun reapplyFavoriteFlags()
+
     @Query("DELETE FROM lyrics WHERE songId IN (:songIds)")
     suspend fun deleteLyricsBySongIds(songIds: List<Long>)
 
@@ -441,6 +448,7 @@ interface MusicDao {
         crossRefs.chunked(CROSS_REF_BATCH_SIZE).forEach { chunk ->
             insertSongArtistCrossRefs(chunk)
         }
+        reapplyFavoriteFlags()
 
         deleteOrphanedAlbums()
         deleteOrphanedArtists()
@@ -1946,6 +1954,7 @@ interface MusicDao {
         crossRefs.chunked(CROSS_REF_BATCH_SIZE).forEach { chunk ->
             insertSongArtistCrossRefs(chunk)
         }
+        reapplyFavoriteFlags()
     }
 
     @Transaction
@@ -1956,7 +1965,8 @@ interface MusicDao {
         crossRefs: List<SongArtistCrossRef>
     ) {
         deleteLocalSongArtistCrossRefs()
-        deleteLocalFavorites()
+        // Mod: a rebuild keeps the likes. MediaStore ids stay the same, so the rows match again
+        // once the songs are back; reapplyFavoriteFlags() below restores the flag.
         deleteLocalLyrics()
         clearLocalSongs()
         deleteOrphanedAlbums()
@@ -1968,6 +1978,7 @@ interface MusicDao {
         crossRefs.chunked(CROSS_REF_BATCH_SIZE).forEach { chunk ->
             insertSongArtistCrossRefs(chunk)
         }
+        reapplyFavoriteFlags()
         refreshAlbumSongCounts()
         refreshArtistTrackCounts()
     }
