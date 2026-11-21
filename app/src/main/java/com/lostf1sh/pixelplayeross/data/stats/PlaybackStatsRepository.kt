@@ -3,6 +3,7 @@ package com.lostf1sh.pixelplayeross.data.stats
 import android.content.Context
 import android.util.AtomicFile
 import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import com.google.gson.JsonElement
 import com.google.gson.reflect.TypeToken
 import com.lostf1sh.pixelplayeross.R
@@ -53,12 +54,13 @@ class PlaybackStatsRepository @Inject constructor(
 
     private val sessionGapThresholdMs = TimeUnit.MINUTES.toMillis(30)
 
+    // Written with these names; the old mod's release build wrote shortened ones (a to e), which still read.
     data class PlaybackEvent(
-        val songId: String,
-        val timestamp: Long,
-        val durationMs: Long,
-        val startTimestamp: Long? = null,
-        val endTimestamp: Long? = null
+        @SerializedName(value = "songId", alternate = ["a"]) val songId: String,
+        @SerializedName(value = "timestamp", alternate = ["b"]) val timestamp: Long,
+        @SerializedName(value = "durationMs", alternate = ["c"]) val durationMs: Long,
+        @SerializedName(value = "startTimestamp", alternate = ["d"]) val startTimestamp: Long? = null,
+        @SerializedName(value = "endTimestamp", alternate = ["e"]) val endTimestamp: Long? = null
     )
 
     data class PlaybackHistoryEntry(

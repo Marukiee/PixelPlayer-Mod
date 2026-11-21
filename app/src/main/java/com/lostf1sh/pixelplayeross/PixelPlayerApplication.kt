@@ -83,6 +83,9 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
     @Inject
     lateinit var songMetadataEditor: dagger.Lazy<SongMetadataEditor>
 
+    @Inject
+    lateinit var legacyModDataImporter: dagger.Lazy<com.lostf1sh.pixelplayeross.data.migration.LegacyModDataImporter>
+
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
@@ -136,6 +139,9 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
+
+        // Likes, playlists and play counts from the mod on the old PixelPlayer base, once.
+        startupScope.launch { legacyModDataImporter.get().importOnce() }
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
 
