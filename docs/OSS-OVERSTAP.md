@@ -20,6 +20,20 @@ Bestaande schermen met veel mod-werk, opnieuw aanbrengen op de OSS-versie: Zoeke
 
 Het verbinden-paneel zat in `CastBottomSheet`, dat OSS samen met Cast heeft weggehaald. Het paneel krijgt een eigen plek (telefoon, Sonos, Bluetooth) in dezelfde vorm als nu.
 
+## Keuzes van Mark (2026-11-21)
+
+Op de vergelijkpagina koos Mark overal mijn voorstel:
+
+1. Home: zijn homepage van de mod terug (Your Mix-kaart, Listened this week, Made for you, artiesten, Rediscover; bovenin alleen PixelPlayer en instellingen).
+2. Speler: bovenbalk van de mod (kamerpil plus menuknop, geen titel Now Playing) en de golvende tijdbalk. De bladwijzer van OSS gaat naar het menu achter de drie puntjes.
+3. Minispeler van de mod, met de uitvoerknop en de ring om de afspeelknop.
+4. Zoeken van de mod: recente zoekopdrachten, filters, Spotify, lokaal gaat voor.
+5. Verbinden-paneel: blijft zoals overgezet.
+6. Instellingen: Afspelen via terug als eigen onderdeel bovenaan; de nieuwe onderdelen van OSS blijven.
+7. Naam onder het icoon: PixelPlayer.
+
+Daarbij: kleine dingen die OSS mooier heeft gemaakt (iconen, de nieuwe zoekbalk en andere bijgewerkte onderdelen) gaan mee. De opbouw en functies komen van de mod, het uiterlijk van zulke losse onderdelen van OSS.
+
 ## Volgorde
 
 1. Branch `oss-basis` vanaf `oss/main`, met applicationId, sleutel, versienummer en release-workflow van de mod. Bouwt en start op de emulator.

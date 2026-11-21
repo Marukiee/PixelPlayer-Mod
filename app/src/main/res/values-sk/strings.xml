@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name_change_title">Zmena názvu aplikácie</string>
-    <string name="app_name_change_message">Aplikácia sa teraz volá PixelPlayerOSS. Príjemné počúvanie!</string>
+    <string name="app_name_change_message">Aplikácia sa teraz volá PixelPlayer. Príjemné počúvanie!</string>
     <string name="do_not_show_again">Viac nezobrazovať</string>
     <string name="dismiss">Zavrieť</string>
     <string name="all_files_access_title">Vyžaduje sa osobitné povolenie</string>
-    <string name="all_files_access_description">Na úpravu metadát skladieb (súborov .mp3) potrebuje PixelPlayerOSS osobitný prístup ku všetkým súborom. Vďaka nemu môže meniť značky priamo v súboroch. Ak chcete povoliť úpravy metadát, udeľte prístup na nasledujúcej obrazovke.</string>
+    <string name="all_files_access_description">Na úpravu metadát skladieb (súborov .mp3) potrebuje PixelPlayer osobitný prístup ku všetkým súborom. Vďaka nemu môže meniť značky priamo v súboroch. Ak chcete povoliť úpravy metadát, udeľte prístup na nasledujúcej obrazovke.</string>
     <string name="grant_permission_button">Udeliť povolenie</string>
     <string name="error">Chyba</string>
     <string name="cancel">Zrušiť</string>

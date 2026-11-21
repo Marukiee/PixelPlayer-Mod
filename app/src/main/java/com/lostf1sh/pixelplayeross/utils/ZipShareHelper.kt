@@ -55,7 +55,7 @@ object ZipShareHelper {
             cleanupOldZips(zipDir)
             
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val zipFile = File(zipDir, "PixelPlayerOSS_Songs_$timestamp.zip")
+            val zipFile = File(zipDir, "PixelPlayer_Songs_$timestamp.zip")
             
             ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zipOut ->
                 val totalSongs = songs.size
@@ -185,7 +185,7 @@ object ZipShareHelper {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "application/zip"
             putExtra(Intent.EXTRA_STREAM, zipUri)
-            putExtra(Intent.EXTRA_SUBJECT, "PixelPlayerOSS: $songCount Songs")
+            putExtra(Intent.EXTRA_SUBJECT, "PixelPlayer: $songCount Songs")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         
