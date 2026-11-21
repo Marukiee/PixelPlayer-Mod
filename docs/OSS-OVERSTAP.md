@@ -46,3 +46,17 @@ Daarbij: kleine dingen die OSS mooier heeft gemaakt (iconen, de nieuwe zoekbalk 
 8. Daarna de rest van de roadmap op de nieuwe basis.
 
 De oude mod (branch `mark-mod`) blijft bestaan tot de OSS-versie op de telefoon goed werkt.
+
+## Stand op 2026-11-21, 23:15 (verder om 01:20, daarna uitbrengen)
+
+Mark: "stop voor nu en ga verder om 1:20", daarna "breng dan alles uit als nieuwe release". Dus om 01:20 de rest afmaken en uitbrengen als 0.8.0-mod.32 (code 41).
+
+Klaar en gecommit op `oss-basis`: import oude gegevens, likes bij scans, Sonos en verbinden-paneel, Navidrome-sterren en scrobbles, navigatiebalk 450 ms, naam PixelPlayer, Afspelen via in de instellingen, sha256 in de release-workflow.
+
+Bezig (niet gecommit): `SearchScreen.kt` heeft de mod-diff als patch gekregen, 13 van 19 stukken. De 6 afgewezen stukken staan in de scratchpad (`oss/rej_search.rej`); verdwenen, maak de patch dan opnieuw met `git diff 63cb59b9 mark-mod -- .../SearchScreen.kt` in broncode, pakketnaam omzetten, `patch -p1 --dry-run`. Zoekbalk van OSS houden (Marks wens). Nodig erbij: `SpotifySearchSection.kt`, `data/search/RecentSearchSongs.kt`, de zoek- en Spotify-functies in `PlayerViewModel` (recentSearchSongs, playSongKeepingQueue, sendToast), `EnhancedSongListItem` met trailingIcon.
+
+Nog te doen, in deze volgorde: Zoeken afmaken, minispeler (3A), speler (2A, bladwijzer in het menu), homepage (1A), lokaal gaat voor overal, dan release. De mod-diffs passen grotendeels als patch (minispeler/UnifiedPlayerSheetShared 2 van 6, FullPlayerContent 25 van 35, HomeScreen 5 van 14, PlayerViewModel 5 van 10).
+
+Updatekaart: de gedeelde module `markupdate` bouwt nog niet op AGP 9 (gemeld aan de Tandem-sessie). Is die er om 01:20 niet, dan gaat de release zonder kaart; de update-check van OSS moet dan uit of naar Marukiee/PixelPlayer-Mod wijzen, nooit naar de OSS-releases.
+
+Release: branch `oss-basis` naar remote `mod` pushen (nooit `origin` of `oss`), changelog bovenaan MOD_CHANGELOG.md als nieuw blok met lege regel erna, tag `v0.8.0-mod.32`, `gh run watch`, `gh release view`, handtekening `fe01845b...` nakijken, APK naar `PixelPlayer/apk/`.
