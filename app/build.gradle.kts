@@ -78,7 +78,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.lostf1sh.pixelplayeross"
+        // Marks mod installs over the app already on his phone: same id and the same key keep likes, history and the
+        // encrypted logins. The code keeps the OSS namespace.
+        applicationId = "com.theveloper.pixelplay"
         minSdk = 30
         targetSdk = 37
         versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 1

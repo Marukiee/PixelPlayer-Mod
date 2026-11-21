@@ -1,0 +1,113 @@
+- Speler: tik op de titel om naar het album te gaan
+- Sonos: zonder wifi zegt de app dat de speakers alleen via je wifi thuis werken, in plaats van een foutmelding na een tijd
+- Spotify: grote knop naar het Spotify-dashboard en uitleg bij de Redirect URI
+- Home: bij Your Mix staat "made for you", zodat de regel niet meer wordt afgekapt
+- Minispeler: de hoeken ronden mee af als de navigatiebalk in of uit beeld schuift
+- Recently Played: de maand staat boven de datums en schuift mee, en de datumknopjes zijn beter leesbaar
+
+- Speler: bij vegen sluit de volgende hoes meteen netjes aan op de hoes ervoor
+- Speler: het label met bestandsinfo wordt bij een ander nummer niet meer even kort
+
+- Shuffle all, de Your Mix-knop op Home en de snelle-instellingentegel spelen altijd het lokale bestand als een nummer ook op de server staat; shufflen van favorieten, artiesten en afspeellijsten ook
+- Verbinden-paneel: eerst Deze telefoon, dan Sonos, daaronder de apparaten in de buurt
+- Speler: het label met bestandsinfo verspringt niet meer bij een ander nummer
+- Speler: bij langzaam vegen over de hoezen schuift de volgende hoes er soepel in
+
+- Alle Sonos-kamers in het castmenu van Android (mediakaart en eiland), ook als je op de telefoon speelt; kies er een om daar te spelen
+
+- Your Mix, Daily Mix, Rediscover en genre-mixen spelen altijd het lokale bestand als een nummer ook op de server staat
+
+- Volumebalk opnieuw ingedeeld: naam en getal boven de schuif, knoppen op een lijn met de schuif
+- Statistieken: tik op een topalbum, topartiest of nummer om het te openen of af te spelen
+
+- Sonos: favoriete kamers en groepen met een ster, een tik groepeert en speelt
+- Sonos: groeperen in de Sonos-app zie je binnen een paar seconden in de app
+- Sonos: is Navidrome niet bereikbaar, dan pauzeert de app en zegt waarom
+- Verbinden-paneel: geen dubbele speler meer bij het sluiten, terug-gebaar zonder sprong, en vanuit de grote speler zakt de speler soepel weg
+- Volumebalk: een tik ernaast sluit alleen de balk
+- Wachtrij-pil staat boven het toetsenbord
+- Recente zoekopdrachten tonen het aangetikte nummer met hoes, ook van eerder
+- Niets lokaal gevonden? Dan zoekt hij meteen op Spotify
+- Verbinden-paneel en Zoeken openen soepeler
+
+- Zoeken: recente zoekopdrachten en nummers als je op de zoekbalk tikt, elk met een kruisje
+- Zoeken: filter Podcasts als Spotify gekoppeld is
+- Geen dubbele nummers meer: staat iets lokaal en op de server, dan zie je het lokale nummer
+- Geen lokale resultaten? Dan zegt Zoeken dat, als Spotify wel iets vindt
+- Instellingen: alles over afspelen bij elkaar onder Afspelen via, en meer Spotify-instellingen
+- Vegen in Zoeken gaat door tot de rand
+- Volumebalk is ook bij een laag volume gevuld
+- Spotify-zoeken werkt weer als je ingelogd bent
+
+Ook in deze versie (sinds 0.7.5-mod.1):
+- Spotify in Search: zoek nummers en podcasts op Spotify en speel ze op je Sonos, in dezelfde wachtrij
+- Instellingen, Spotify: koppelen met een eigen gratis Spotify-app
+- De telefoon blijft koel en zuinig terwijl de Sonos speelt
+- Na een herstart speelt het eerste Navidrome-nummer weer gewoon
+- Zoekfilters op één rij die je opzij scrolt
+- Volumeknoppen in de app: een volumebalk voor de Sonos boven de minispeler, met dempknop en volume per speaker
+- Volume glijdt bij elke stap en het getal telt mee, ook in het Verbinden-paneel
+- Your Mix op de homepage: de Play-knop groeit en krimpt soepel als hele pil, Shuffle blijft rond
+- Genrepagina en Your Mix: nieuwe kop met de hoezen groot en helemaal in beeld
+- Play it, Shuffle en de sorteerknoppen bewegen nu net als de knoppen in de speler
+- Duur in woorden: 3 hours and 3 minutes
+- Muziek bedienen in Connect device: de mini player gaat mee boven het paneel
+- Volumeschuif gaat soepel mee met de volumetoetsen in plaats van in sprongen
+- Individueel volume klapt soepel uit, zonder hapering
+- Wat je luistert gaat nu naar Navidrome met het echte tijdstip, ook de Sonos en lokale bestanden die ook op de server staan
+- Geen verbinding of een herstart: de luisterbeurt blijft bewaard en gaat later alsnog mee
+- Niets telt meer dubbel op de server, doorskippen telt niet
+- Veiliger: geen inloggegevens meer in de logs, serveradres en thuisadressen niet meer in de back-up
+- Ongebruikte code opgeruimd
+- Likes gaan direct naar Navidrome en sterren komen terug, twee kanten op
+- Navidrome staat nu in Instellingen, de cloudknop bovenin is weg
+- Genrepagina's opnieuw: zelfde opbouw als Your Mix, geen zijbalk, geen menu rechtsonder, geen dubbele nummers
+- Homepage: Listened this week bovenaan, Recently Played als lijst onderaan met See all
+- Geschiedenis per dag met een rij dagen en een kalender om snel naar een datum te gaan
+- Vegen om aan de wachtrij toe te voegen sluit nu netjes aan op de rij
+- Kleuren staan standaard op Vibrant, kwaliteitslabels standaard uit
+- Play it en Shuffle bewegen mee als je ze indrukt
+- Mediakaart in het snelle paneel verdwijnt niet meer even als je naar het volgende nummer gaat
+- Verbinden-paneel opnieuw: gelijke hoeken, individueel volume achter een eigen knop
+- Verbinden-paneel sluit niet meer als je vegend van Devices naar Controls gaat
+- Pauzeknop werkt nu ook als je net hebt geskipt, en de Sonos start niet meer elk nummer tijdens het skippen
+- Android-mediakaart toont je speaker in plaats van This phone
+- Verbinden-paneel sluit met een korte veeg omlaag
+- Made for you en Your Mix tonen gewoon een pauzeknop als ze spelen
+- Adres voor hoesjes staat standaard ingevuld en is te wijzigen
+- Mini-speler: play-knop met voortgangsring of gevuld, te kiezen in Instellingen > Appearance
+- Speaker-icoon even groot en even dik als de andere iconen, in dezelfde accentkleur als je op een speaker speelt
+- App gesloten terwijl de Sonos speelt: bij openen pakt hij de speaker vanzelf weer op
+- Volumeknoppen regelen de Sonos nu ook buiten de app, en het volume staat in het eiland van Drip
+- Sonos neemt het nu ook over als Spotify op de speaker speelt
+- Speaker-pil in de speler sluit aan op de puntjes, met het icoon van je apparaat en een `+1` voor de groep
+- Geen grijze box meer als je iets op de homepage vasthoudt
+- Verbinden-paneel: groeit en krimpt mee met het wisselen van tab, en schuift rustig weg bij terug
+- Lyrics lopen gelijk met de Sonos
+- Mini-speler: speaker-knop in plaats van terugspoelen
+- Overzetten naar Sonos gaat verder op dezelfde plek
+- Speakers staan al klaar als je Verbinden opent
+- Groepsvolume zoals de Sonos-app
+- Drie puntjes bij een ruimte: groeperen, opheffen, toevoegen
+- Devices toont alle apparaten, Controls het apparaat dat speelt
+- Soepeler scrollen in het verbinden-paneel
+- Foto's bij Your artists this week
+- Thuisadres voor Sonos (Instellingen > Sonos): de app blijft Tailscale gebruiken, de speakers krijgen je thuisadres
+- Afspelen op Sonos: kies een ruimte bij de verbindknop in de speler, de speakers spelen vanaf Navidrome
+- Groeperen met vinkjes zoals in de Sonos-app, groepsvolume en volume per speaker
+- De hele wachtrij staat op de Sonos, dus hij speelt door als je telefoon uit is
+- Volumeknoppen regelen de Sonos; nieuw scherm Instellingen > Sonos
+- Your Mix-kaart opent de hele lijst, vlaggen als sticker op de genrekleur
+- Genrepagina's met een kop met instrument of vlag
+- Bovenbalk opgeschoond, speelsere vormen, Recently Played met collage
+- Nieuwe homepage met Your Mix-kaart, Mixen voor jou, je artiesten, Herontdekken en statistieken
+- Mini-speler: swipen trekt de speler een stukje mee en hij bounct terug
+- Terug-gebaar weer zoals vroeger en sneller afgerond
+- Back-up met likes importeren werkt weer
+- Zoeken zonder accenten en apostrofs: `hakan hellstrom` vindt Håkan Hellström
+- Lang drukken op volgende of vorige spoelt door
+- Kwaliteitslabels in lijsten, aan te zetten in Instellingen > Appearance
+- Meerdere genres per nummer (losse GENRE-velden)
+- Fixes uit open PR's van PixelPlayer en bijgewerkte bibliotheken
+
+Na het installeren één keer: Instellingen > Music Management > Full Rescan.
