@@ -301,6 +301,8 @@ constructor(
         // Mod: same keys as the Google-based mod, so the settings carry over.
         // How often to push local favorites to Navidrome as stars, in hours. 0 = off.
         val NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS = intPreferencesKey("navidrome_favorites_sync_interval_hours")
+        // Whether Navidrome songs appear in the local library. Off = Navidrome used only for streaming and Sonos.
+        val NAVIDROME_SHOW_IN_LIBRARY = booleanPreferencesKey("navidrome_show_in_library")
         val SONOS_ENABLED = booleanPreferencesKey("sonos_enabled")
         val SONOS_SKIP_UNAVAILABLE = booleanPreferencesKey("sonos_skip_unavailable")
         val SONOS_VOLUME_KEYS = booleanPreferencesKey("sonos_volume_keys")
@@ -362,6 +364,14 @@ constructor(
 
     suspend fun setNavidromeFavoritesSyncIntervalHours(hours: Int) {
         dataStore.edit { it[PreferencesKeys.NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS] = hours }
+    }
+
+    /** Mod: whether Navidrome songs are merged into the local library. Default true. */
+    val navidromeShowInLibraryFlow: Flow<Boolean> =
+        dataStore.data.map { it[PreferencesKeys.NAVIDROME_SHOW_IN_LIBRARY] ?: true }
+
+    suspend fun setNavidromeShowInLibrary(show: Boolean) {
+        dataStore.edit { it[PreferencesKeys.NAVIDROME_SHOW_IN_LIBRARY] = show }
     }
 
     val sonosEnabledFlow: Flow<Boolean> =

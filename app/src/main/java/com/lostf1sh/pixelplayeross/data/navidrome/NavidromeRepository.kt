@@ -801,6 +801,13 @@ class NavidromeRepository @Inject constructor(
      * Sync Navidrome songs to the unified music library.
      */
     suspend fun syncUnifiedLibrarySongsFromNavidrome() {
+        // Mod: when the user only wants Navidrome for streaming and Sonos, keep the library free of its songs.
+        if (!userPreferencesRepository.navidromeShowInLibraryFlow.first()) {
+            if (musicDao.getAllNavidromeSongIds().isNotEmpty()) {
+                musicDao.clearAllNavidromeSongs()
+            }
+            return
+        }
         val navidromeSongs = dao.getAllNavidromeSongsList()
         val existingUnifiedIds = musicDao.getAllNavidromeSongIds()
 

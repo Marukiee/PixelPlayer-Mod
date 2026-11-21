@@ -42,6 +42,10 @@ internal fun ColorScheme.settingsAccentColor(tone: SettingsIconTone): Color = wh
 /** Fixed per category, so a category keeps its tone in the main list and in search results. */
 internal val SettingsCategory.iconTone: SettingsIconTone
     get() = when (this) {
+        SettingsCategory.SOURCES -> SettingsIconTone.TERTIARY
+        SettingsCategory.NAVIDROME -> SettingsIconTone.PRIMARY
+        SettingsCategory.SONOS -> SettingsIconTone.SECONDARY
+        SettingsCategory.SPOTIFY -> SettingsIconTone.TERTIARY
         SettingsCategory.LIBRARY -> SettingsIconTone.PRIMARY
         SettingsCategory.APPEARANCE -> SettingsIconTone.TERTIARY
         SettingsCategory.PLAYBACK -> SettingsIconTone.SECONDARY
@@ -118,7 +122,10 @@ internal sealed interface MainSettingsEntry {
  */
 internal val mainSettingsEntries: List<MainSettingsEntry> = buildList {
     SettingsCategory.entries
-        .filter { it != SettingsCategory.DEVICE_CAPABILITIES && it != SettingsCategory.ABOUT }
+        .filter {
+            it != SettingsCategory.DEVICE_CAPABILITIES && it != SettingsCategory.ABOUT &&
+                it !in SettingsCategory.sourcePagesOnly
+        }
         .forEach { category ->
             add(MainSettingsEntry.Category(category))
             if (category == SettingsCategory.PLAYBACK) add(MainSettingsEntry.Destination.LYRICS)

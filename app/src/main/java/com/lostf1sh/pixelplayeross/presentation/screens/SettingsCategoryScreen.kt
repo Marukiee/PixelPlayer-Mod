@@ -462,6 +462,19 @@ fun SettingsCategoryScreen(
                     modifier = Modifier.background(Color.Transparent)
                ) {
                     when (category) {
+                        // Mod: "Play from" and its pages.
+                        SettingsCategory.SOURCES -> {
+                            SourcesHubBlock(navController)
+                        }
+                        SettingsCategory.NAVIDROME -> {
+                            NavidromeSettingsBlock(settingsViewModel, navController)
+                        }
+                        SettingsCategory.SONOS -> {
+                            SonosSettingsBlock()
+                        }
+                        SettingsCategory.SPOTIFY -> {
+                            SpotifySettingsBlock()
+                        }
                         SettingsCategory.LIBRARY -> {
                             SettingsSubsection(title = stringResource(R.string.setcat_library_structure)) {
                                 SettingsItem(
@@ -3013,7 +3026,7 @@ private fun BackupPasswordPromptDialog(
 }
 
 @Composable
-private fun SettingsSubsectionHeader(title: String) {
+internal fun SettingsSubsectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelMedium,
@@ -3023,7 +3036,7 @@ private fun SettingsSubsectionHeader(title: String) {
 }
 
 @Composable
-private fun SettingsSubsection(
+internal fun SettingsSubsection(
     title: String,
     addBottomSpace: Boolean = true,
     content: @Composable () -> Unit

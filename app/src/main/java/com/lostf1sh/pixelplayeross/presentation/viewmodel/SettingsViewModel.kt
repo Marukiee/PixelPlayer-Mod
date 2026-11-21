@@ -209,7 +209,8 @@ class SettingsViewModel @Inject constructor(
     private val backupManager: BackupManager,
     private val folderArtworkSettingsCoordinator: FolderArtworkSettingsCoordinator,
     @ApplicationContext private val context: Context,
-    @AppScope private val appScope: CoroutineScope
+    @AppScope private val appScope: CoroutineScope,
+    private val navidromeRepository: com.lostf1sh.pixelplayeross.data.navidrome.NavidromeRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -1310,4 +1311,72 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // ── Mod: the Navidrome page under "Play from" ──
+
+    /** How often (hours) to push favorites to Navidrome; 0 = off. */
+    val navidromeFavoritesSyncIntervalHours: kotlinx.coroutines.flow.StateFlow<Int> =
+        userPreferencesRepository.navidromeFavoritesSyncIntervalHoursFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 24)
+
+    fun setNavidromeFavoritesSyncIntervalHours(hours: Int) {
+        viewModelScope.launch { userPreferencesRepository.setNavidromeFavoritesSyncIntervalHours(hours) }
+    }
+
+    val navidromeLoggedIn: kotlinx.coroutines.flow.StateFlow<Boolean> = navidromeRepository.isLoggedInFlow
+
+    /** Who is logged in where, for the settings row. */
+    fun navidromeAccountLabel(): String? {
+        val username = navidromeRepository.username ?: return null
+        val host = navidromeRepository.serverUrl?.let { url ->
+            runCatching { java.net.URI(url).host }.getOrNull()
+        } ?: return username
+        return "$username, $host"
+    }
+
+    fun syncFavoritesToNavidromeNow() {
+        syncManager.syncFavoritesToNavidromeNow()
+    }
+
+    /** Whether Navidrome songs show up in the local library (off = streaming and Sonos only). */
+    val navidromeShowInLibrary: kotlinx.coroutines.flow.StateFlow<Boolean> =
+        userPreferencesRepository.navidromeShowInLibraryFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setNavidromeShowInLibrary(show: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.setNavidromeShowInLibrary(show) }
+    }
+
+    /** Non-null while the checker dialog is open: the "Title, Artist" list (may be empty). */
+    private val _navidromeStarred = kotlinx.coroutines.flow.MutableStateFlow<List<String>?>(null)
+    val navidromeStarred: kotlinx.coroutines.flow.StateFlow<List<String>?> = _navidromeStarred
+    private val _navidromeStarredLoading = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val navidromeStarredLoading: kotlinx.coroutines.flow.StateFlow<Boolean> = _navidromeStarredLoading
+    private val _navidromeStarredError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val navidromeStarredError: kotlinx.coroutines.flow.StateFlow<String?> = _navidromeStarredError
+    /** Last sync outcome as "starred X of Y favorites", or null if never synced. */
+    private val _navidromeSyncSummary = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val navidromeSyncSummary: kotlinx.coroutines.flow.StateFlow<String?> = _navidromeSyncSummary
+
+    fun loadNavidromeStarred() {
+        _navidromeStarred.value = emptyList()
+        _navidromeStarredError.value = null
+        _navidromeStarredLoading.value = true
+        _navidromeSyncSummary.value = navidromeRepository.lastFavoritesSyncSummary?.let { (starred, total, _) ->
+            "Last sync: starred $starred of $total favorites"
+        }
+        viewModelScope.launch {
+            val result = navidromeRepository.getStarredSongSummaries()
+            _navidromeStarredLoading.value = false
+            result.fold(
+                onSuccess = { _navidromeStarred.value = it },
+                onFailure = { _navidromeStarredError.value = it.message ?: "Failed to load" }
+            )
+        }
+    }
+
+    fun dismissNavidromeStarred() {
+        _navidromeStarred.value = null
+        _navidromeStarredError.value = null
+        _navidromeStarredLoading.value = false
+    }
 }

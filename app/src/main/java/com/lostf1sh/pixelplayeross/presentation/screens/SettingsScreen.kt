@@ -505,7 +505,9 @@ fun ExpressiveCategoryItem(
     category: SettingsCategory,
     onClick: () -> Unit,
     shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(24.dp),
-    customColors: Pair<Color, Color>? = null
+    customColors: Pair<Color, Color>? = null,
+    // Mod: the "Play from" page shows each source's state here instead of the category's subtitle.
+    subtitle: String? = null
 ) {
     Surface(
         onClick = onClick,
@@ -553,7 +555,7 @@ fun ExpressiveCategoryItem(
                     maxLines = 1
                 )
                 Text(
-                    text = stringResource(category.subtitleRes),
+                    text = subtitle ?: stringResource(category.subtitleRes),
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),

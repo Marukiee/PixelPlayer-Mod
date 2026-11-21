@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_category_navidrome_subtitle">Account, library and likes</string>
+    <string name="settings_category_navidrome_title">Navidrome</string>
+    <string name="settings_navidrome_account_section">Account</string>
+    <string name="settings_navidrome_account_title">Server</string>
+    <string name="settings_navidrome_fav_check_count">%1$d starred song(s)</string>
+    <string name="settings_navidrome_fav_check_dialog_title">Starred on Navidrome</string>
+    <string name="settings_navidrome_fav_check_empty">No starred songs on the server yet.</string>
+    <string name="settings_navidrome_fav_check_title">Check likes on Navidrome</string>
+    <string name="settings_navidrome_fav_sync_12h">Every 12 hours</string>
+    <string name="settings_navidrome_fav_sync_24h">Every 24 hours</string>
+    <string name="settings_navidrome_fav_sync_6h">Every 6 hours</string>
+    <string name="settings_navidrome_fav_sync_interval_subtitle">Likes go to Navidrome right away. Stars set on Navidrome come back when you open the app and at this interval. Off stops both.</string>
+    <string name="settings_navidrome_fav_sync_interval_title">Sync likes with Navidrome</string>
+    <string name="settings_navidrome_fav_sync_now">Sync likes now</string>
+    <string name="settings_navidrome_fav_sync_off">Off</string>
+    <string name="settings_navidrome_favorites_section">Library and likes</string>
+    <string name="settings_navidrome_not_connected">Not connected, tap to log in</string>
+    <string name="settings_navidrome_show_in_library_subtitle">Off = use Navidrome only for streaming, not mixed into your library. Turn off if you already have the same tracks locally. Applies on next Navidrome sync.</string>
+    <string name="settings_navidrome_show_in_library_title">Show Navidrome songs in library</string>
+</resources>
