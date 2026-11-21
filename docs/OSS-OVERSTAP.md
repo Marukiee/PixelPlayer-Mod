@@ -27,7 +27,8 @@ Het verbinden-paneel zat in `CastBottomSheet`, dat OSS samen met Cast heeft wegg
 3. Sonos en het verbinden-paneel, daarna Spotify, Navidrome-likes en luisterbeurten.
 4. De schermwijzigingen van de mod (Zoeken, speler, Home, Recently Played, Instellingen).
 5. Lokaal gaat voor, overal: zoeken, bibliotheek, albums, artiesten, Liked Songs, mixen, shuffle, en een tik in een lijst met servernummers.
-6. Screenshots van elk scherm dat er anders uitziet dan nu (ook door OSS zelf) naar Mark, pas na zijn akkoord de eerste OSS-release.
-7. Daarna de rest van de roadmap op de nieuwe basis.
+6. De updatemelding wordt de gedeelde updatekaart van Mark (module `markupdate` uit de Keeper-repo, via `sync.sh`, niet zelf bouwen of aanpassen). Die vervangt de `UpdateCheckScheduler` van OSS, die nu naar de OSS-releases kijkt, en kijkt naar Marukiee/PixelPlayer-Mod. Wacht tot de module er is.
+7. Screenshots van elk scherm dat er anders uitziet dan nu (ook door OSS zelf) naar Mark, pas na zijn akkoord de eerste OSS-release.
+8. Daarna de rest van de roadmap op de nieuwe basis.
 
 De oude mod (branch `mark-mod`) blijft bestaan tot de OSS-versie op de telefoon goed werkt.
