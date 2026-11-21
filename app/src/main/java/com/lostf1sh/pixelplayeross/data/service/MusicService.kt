@@ -55,6 +55,10 @@ import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
 import com.lostf1sh.pixelplayeross.data.service.player.AudioDecoderPolicy
 import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
+import com.lostf1sh.pixelplayeross.data.service.player.SonosAudioGate
+import com.lostf1sh.pixelplayeross.data.sonos.SonosController
+import com.lostf1sh.pixelplayeross.data.sonos.SonosOutputRoute
+import com.lostf1sh.pixelplayeross.data.sonos.SonosSessionPlayer
 import com.lostf1sh.pixelplayeross.data.service.player.FadingPlayer
 import com.lostf1sh.pixelplayeross.data.service.player.MappingPlayer
 import com.lostf1sh.pixelplayeross.data.service.player.PreviousButtonPlayer
@@ -72,7 +76,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -204,6 +211,12 @@ class MusicService : MediaSessionService() {
     @Inject
     lateinit var listeningStatsTracker: ListeningStatsTracker
     @Inject
+    lateinit var sonosController: SonosController
+    @Inject
+    lateinit var sonosOutputRoute: SonosOutputRoute
+    @Inject
+    lateinit var dripIslandSignal: DripIslandSignal
+    @Inject
     lateinit var sleepTimerSession: SleepTimerSession
     @Inject
     @AppScope
@@ -258,6 +271,8 @@ class MusicService : MediaSessionService() {
 
     companion object {
         private const val TAG = "MusicService_PixelPlayer"
+        private const val DRIP_REMOTE_NAME = "nl.markmaaktmedia.drip.REMOTE_NAME"
+        private const val DRIP_HIDE_ISLAND = "nl.markmaaktmedia.drip.HIDE_ISLAND"
         const val NOTIFICATION_ID = 101
         const val ACTION_SLEEP_TIMER_EXPIRED = "com.lostf1sh.pixelplayeross.ACTION_SLEEP_TIMER_EXPIRED"
         const val EXTRA_FORCE_FOREGROUND_ON_START =
@@ -319,6 +334,10 @@ class MusicService : MediaSessionService() {
         replayGainProcessor.onTransitionFinished()
     }
 
+    private fun Player.unwrapSonosPlayer(): Player {
+        return (this as? SonosSessionPlayer)?.wrapped ?: this
+    }
+
     private fun Player.unwrapPreviousButtonPlayer(): Player {
         return (this as? PreviousButtonPlayer)?.innerPlayer ?: this
     }
@@ -341,14 +360,16 @@ class MusicService : MediaSessionService() {
             innerPlayer = fadingPlayer,
             context = this
         )
-        return PreviousButtonPlayer(
+        val previousButtonPlayer = PreviousButtonPlayer(
             innerPlayer = mappingPlayer,
             behaviorProvider = { previousButtonBehavior }
         )
+        // Mod: outermost, so volume keys and the system output menu reach the Sonos while it plays there.
+        return SonosSessionPlayer(previousButtonPlayer, sonosController, sonosOutputRoute)
     }
 
     private fun Player.unwrapSessionPlayer(): Player =
-        unwrapPreviousButtonPlayer().unwrapMappingPlayer().unwrapFadingPlayer()
+        unwrapSonosPlayer().unwrapPreviousButtonPlayer().unwrapMappingPlayer().unwrapFadingPlayer()
 
     private fun publishMediaSessionPlayer(player: Player, logMessage: String) {
         val session = mediaSession ?: return
@@ -360,6 +381,7 @@ class MusicService : MediaSessionService() {
             val wrappedPlayer = wrapSessionPlayer(player)
             session.player = wrappedPlayer
             wrappedPlayer.addListener(playerListener)
+            (wrappedPlayer as? SonosSessionPlayer)?.announceDevice()
         }
 
         Timber.tag("MusicService").d(logMessage)
@@ -741,6 +763,36 @@ class MusicService : MediaSessionService() {
             .setBitmapLoader(CoilBitmapLoader(this, serviceScope))
             .build()
 
+        serviceScope.launch {
+            sonosController.remoteVolume.collect {
+                sonosOutputRoute.update(it)
+                (mediaSession?.player as? SonosSessionPlayer)?.onSonosVolumeChanged()
+            }
+        }
+        serviceScope.launch {
+            // Every room in Android's own output menu, also while the music plays on the phone.
+            combine(sonosController.groups, userPreferencesRepository.sonosEnabledFlow) { groups, enabled ->
+                groups to enabled
+            }.collect { (groups, enabled) -> sonosOutputRoute.updateRooms(groups, enabled) }
+        }
+        serviceScope.launch {
+            sonosOutputRoute.controllerId.collect {
+                (mediaSession?.player as? SonosSessionPlayer)?.onSonosVolumeChanged()
+            }
+        }
+        serviceScope.launch {
+            // Drip shows this name with the volume in its island, and moves away while our panel is open.
+            combine(
+                sonosController.remoteVolume.map { it?.group?.displayName }.distinctUntilChanged(),
+                dripIslandSignal.hidden
+            ) { name, hidden ->
+                Bundle().apply {
+                    name?.let { putString(DRIP_REMOTE_NAME, it) }
+                    if (hidden) putBoolean(DRIP_HIDE_ISLAND, true)
+                }
+            }.collect { mediaSession?.setSessionExtras(it) }
+        }
+
         val localOnlyProvider = LocalOnlyMediaNotificationProvider(this).also {
             it.setSmallIcon(R.drawable.monochrome_player)
         }
@@ -957,6 +1009,8 @@ class MusicService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        // The speakers play on, so the session stays for the notification and the volume keys.
+        if (SonosAudioGate.isMuted) return
         val session = mediaSession
         val continuePlayback = shouldContinuePlaybackAfterTaskRemoved(
             hasForegroundPlaybackIntent = session?.player?.hasForegroundPlaybackIntent() == true,

@@ -268,3 +268,14 @@ fun Song.toEntityWithoutPaths(): SongEntity {
         sourceType = SourceType.fromContentUri(this.contentUriString)
     )
 }
+
+/** The few columns needed to match a song to a Navidrome copy, for the Sonos resolver. */
+data class SongMatchRow(
+    val id: Long,
+    val title: String,
+    @ColumnInfo(name = "artist_name") val artistName: String,
+    @ColumnInfo(name = "album_name") val albumName: String,
+    val duration: Long,
+    @ColumnInfo(name = "content_uri_string") val contentUriString: String,
+    @ColumnInfo(name = "sample_rate") val sampleRate: Int?
+)

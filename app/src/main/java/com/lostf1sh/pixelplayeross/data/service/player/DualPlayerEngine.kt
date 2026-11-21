@@ -36,6 +36,7 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp3.Mp3Extractor
 import androidx.media3.extractor.flac.FlacExtractor
 import com.lostf1sh.pixelplayeross.data.equalizer.EqualizerAudioSink
+import com.lostf1sh.pixelplayeross.data.spotify.StandInAwareDataSource
 import com.lostf1sh.pixelplayeross.data.equalizer.EqualizerManager
 import com.lostf1sh.pixelplayeross.data.model.AudioOutputMode
 import com.lostf1sh.pixelplayeross.data.model.TransitionSettings
@@ -464,7 +465,8 @@ class DualPlayerEngine @Inject constructor(
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             if (playWhenReady) {
                 lastPlayWhenReadyAtMs = SystemClock.elapsedRealtime()
-                requestAudioFocus()
+                // Muted for Sonos: other apps may play on the phone without pausing the speakers.
+                if (!SonosAudioGate.isMuted) requestAudioFocus()
                 scheduleAudioOffloadFallbackIfNeeded(playerA)
             } else {
                 cancelAudioOffloadFallback()
@@ -810,6 +812,24 @@ class DualPlayerEngine @Inject constructor(
         }
     }
 
+    /**
+     * Playback moved to Sonos (true) or back to the phone (false). While on Sonos the local
+     * players stay muted followers: no audio focus, no pause on unplugged headphones, no crossfade.
+     */
+    fun setRemoteOutputActive(active: Boolean) {
+        SonosAudioGate.setActive(active)
+        if (!::playerA.isInitialized) return
+        playerA.setHandleAudioBecomingNoisy(!active)
+        playerB?.setHandleAudioBecomingNoisy(!active)
+        if (active) {
+            if (transitionRunning) cancelNext()
+            isFocusLossPause = false
+            abandonAudioFocus()
+        } else if (playerA.playWhenReady) {
+            requestAudioFocus()
+        }
+    }
+
     private fun abandonAudioFocus() {
         audioFocusRequest?.let {
             audioManager.abandonAudioFocusRequest(it)
@@ -1149,7 +1169,8 @@ class DualPlayerEngine @Inject constructor(
                         .build()
                 }
                 // Effects pass PCM through untouched while off, so DIRECT stays unmodified then.
-                return EqualizerAudioSink(sink, equalizerManager.settings)
+                // Mod: MutingAudioSink silences the phone while the music plays on Sonos.
+                return MutingAudioSink(EqualizerAudioSink(sink, equalizerManager.settings))
             }
 
             override fun buildVideoRenderers(
@@ -1237,7 +1258,8 @@ class DualPlayerEngine @Inject constructor(
             }
         }
         
-        val dataSourceFactory = DefaultDataSource.Factory(context)
+        // Spotify songs play on the Sonos; the phone gets silence of the same length, see SpotifyStandInDataSource.
+        val dataSourceFactory = StandInAwareDataSource.Factory(DefaultDataSource.Factory(context))
         val resolvingFactory = ResolvingDataSource.Factory(dataSourceFactory, resolver)
         val extractorsFactory = DefaultExtractorsFactory()
             .setMp3ExtractorFlags(Mp3Extractor.FLAG_ENABLE_CONSTANT_BITRATE_SEEKING)
@@ -1255,7 +1277,7 @@ class DualPlayerEngine @Inject constructor(
             addListener(UnsupportedAudioListener(this))
             setAudioAttributes(audioAttributes, false)
             applyAudioOffloadPreferences(this)
-            setHandleAudioBecomingNoisy(true)
+            setHandleAudioBecomingNoisy(!SonosAudioGate.isMuted)
             setWakeMode(C.WAKE_MODE_LOCAL)
             // Rebuilt players (offload fallback, output-mode change, crossfade auxiliary)
             // keep the user's chosen output.

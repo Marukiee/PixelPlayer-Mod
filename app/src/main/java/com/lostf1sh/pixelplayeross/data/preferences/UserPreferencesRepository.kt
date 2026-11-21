@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.data.preferences
 
 import android.content.Context
+import com.lostf1sh.pixelplayeross.BuildConfig
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -296,6 +297,13 @@ constructor(
         val UPDATE_CHANNEL = stringPreferencesKey("update_channel")
         val UPDATE_AUTO_CHECK = booleanPreferencesKey("update_auto_check")
         val UPDATE_LAST_NOTIFIED_VERSION = stringPreferencesKey("update_last_notified_version")
+
+        // Mod: same keys as the Google-based mod, so the settings carry over.
+        val SONOS_ENABLED = booleanPreferencesKey("sonos_enabled")
+        val SONOS_SKIP_UNAVAILABLE = booleanPreferencesKey("sonos_skip_unavailable")
+        val SONOS_VOLUME_KEYS = booleanPreferencesKey("sonos_volume_keys")
+        val SONOS_HOME_ADDRESS = stringPreferencesKey("sonos_home_address")
+        val SONOS_COVER_ADDRESS = stringPreferencesKey("sonos_cover_address")
     }
 
     /** Null until the user picks a channel; the updater then follows the installed build. */
@@ -344,6 +352,47 @@ constructor(
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.RECAP_HOME_CARD_DISMISSED_YEAR] = year
         }
+    }
+
+    val sonosEnabledFlow: Flow<Boolean> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_ENABLED] ?: true }
+
+    suspend fun setSonosEnabled(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SONOS_ENABLED] = enabled }
+    }
+
+    /** True: skip songs that are not on Navidrome while playing on Sonos. False: stop there. */
+    val sonosSkipUnavailableFlow: Flow<Boolean> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_SKIP_UNAVAILABLE] ?: true }
+
+    suspend fun setSonosSkipUnavailable(skip: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SONOS_SKIP_UNAVAILABLE] = skip }
+    }
+
+    val sonosVolumeKeysFlow: Flow<Boolean> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_VOLUME_KEYS] ?: true }
+
+    suspend fun setSonosVolumeKeys(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SONOS_VOLUME_KEYS] = enabled }
+    }
+
+    /** Navidrome base URL the speakers use, e.g. the home address when the app goes through Tailscale. Empty: same as the login. */
+    val sonosHomeAddressFlow: Flow<String> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_HOME_ADDRESS].orEmpty() }
+
+    suspend fun setSonosHomeAddress(address: String) {
+        dataStore.edit { it[PreferencesKeys.SONOS_HOME_ADDRESS] = address }
+    }
+
+    /**
+     * Https base URL for cover art in the Sonos app. Never set: the address this build came with.
+     * Saved empty: the user turned it off, and covers use the same address as the music.
+     */
+    val sonosCoverAddressFlow: Flow<String> =
+        dataStore.data.map { it[PreferencesKeys.SONOS_COVER_ADDRESS] ?: BuildConfig.SONOS_DEFAULT_COVER_ADDRESS }
+
+    suspend fun setSonosCoverAddress(address: String) {
+        dataStore.edit { it[PreferencesKeys.SONOS_COVER_ADDRESS] = address }
     }
 
     val isCrossfadeEnabledFlow: Flow<Boolean> =

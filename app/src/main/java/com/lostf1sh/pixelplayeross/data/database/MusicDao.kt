@@ -456,6 +456,12 @@ interface MusicDao {
         refreshArtistTrackCounts()
     }
 
+    @Query("SELECT id, title, artist_name, album_name, duration, content_uri_string, sample_rate FROM songs WHERE id IN (:songIds)")
+    suspend fun getSongMatchRows(songIds: List<Long>): List<SongMatchRow>
+
+    @Query("SELECT id, title, artist_name, album_name, duration, content_uri_string, sample_rate FROM songs WHERE source_type = 0")
+    suspend fun getLocalSongMatchRows(): List<SongMatchRow>
+
     @Query("SELECT DISTINCT parent_directory_path FROM songs")
     suspend fun getDistinctParentDirectories(): List<String>
 

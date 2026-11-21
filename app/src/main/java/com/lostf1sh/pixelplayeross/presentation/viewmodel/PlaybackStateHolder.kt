@@ -83,6 +83,13 @@ class PlaybackStateHolder @Inject constructor(
         _sliderUiMounted.value = mounted
     }
 
+    /** Mod: the connect panel covers the player, and each tick makes a second window draw during its animations. */
+    @Volatile
+    private var connectPanelOpen = false
+    fun setConnectPanelOpen(open: Boolean) {
+        connectPanelOpen = open
+    }
+
     private var isSeeking = false
     private var activePositionOccurrenceMediaId: String? = null
     private var activePositionOccurrenceToken: Long = 0L
@@ -574,7 +581,7 @@ class PlaybackStateHolder @Inject constructor(
 
     private fun currentProgressTickMs(): Long {
         if (!powerManager.isInteractive) return BACKGROUND_TICK_MS
-        return if (_sliderUiMounted.value) SLIDER_TICK_MS else MINIPLAYER_TICK_MS
+        return if (_sliderUiMounted.value && !connectPanelOpen) SLIDER_TICK_MS else MINIPLAYER_TICK_MS
     }
 
     fun stopProgressUpdates() {

@@ -114,6 +114,12 @@ class ConnectivityStateHolder @Inject constructor(
      * Initialize connectivity monitoring for the PlayerViewModel that owns [owner]. Monitoring
      * starts with the first owner and keeps running until the last one is cleared.
      */
+    /** Mod: the connect panel asks for fresh Wi-Fi and Bluetooth info once it is open. */
+    fun refreshLocalConnectionInfo(refreshBluetoothDevices: Boolean = false) {
+        updateWifiInfo()
+        updateAudioDevices()
+    }
+
     fun initialize(owner: CoroutineScope) {
         owners.push(owner)
         if (isInitialized) return

@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <!-- Sonos: SSDP discovery of speakers on the local network. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
@@ -80,6 +82,21 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- Spotify's answer after the login page; only counts for a login the app itself started. -->
+        <activity
+            android:name=".SpotifyLoginActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="pixelplaymod" android:host="spotify-callback" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".presentation.navidrome.auth.NavidromeLoginActivity"
             android:exported="false"
@@ -119,6 +136,15 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
+
+        <!-- Names the Sonos group in Android's media card. The base class only lets the system call it. -->
+        <service
+            android:name=".data.sonos.SonosRouteProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.MediaRoute2ProviderService" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".data.service.MusicService"

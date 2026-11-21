@@ -14,4 +14,11 @@
     <exclude domain="file" path="metadata_recovery/"/>
 
     <exclude domain="sharedpref" path="crash_handler_prefs.xml"/>
+
+    <!-- Mod: hold logins, the server address, the user name and addresses on the home network -->
+    <exclude domain="sharedpref" path="spotify_prefs.xml"/>
+    <exclude domain="sharedpref" path="spotify_prefs_plain.xml"/>
+    <exclude domain="sharedpref" path="navidrome_favorites_sync.xml"/>
+    <exclude domain="sharedpref" path="navidrome_scrobbles.xml"/>
+    <exclude domain="sharedpref" path="sonos.xml"/>
 </full-backup-content>

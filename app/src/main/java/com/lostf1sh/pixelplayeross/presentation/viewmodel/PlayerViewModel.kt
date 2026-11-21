@@ -878,6 +878,26 @@ class PlayerViewModel @Inject constructor(
     val bluetoothAudioDeviceStates: StateFlow<List<BluetoothAudioDeviceState>> = connectivityStateHolder.bluetoothAudioDeviceStates
     val bluetoothAudioDevices: StateFlow<List<String>> = connectivityStateHolder.bluetoothAudioDevices
 
+    // Mod: for the connect panel.
+    private val _trackVolume = MutableStateFlow(1.0f)
+    val trackVolume: StateFlow<Float> = _trackVolume.asStateFlow()
+
+    fun setTrackVolume(volume: Float) {
+        mediaController?.let {
+            val clampedVolume = volume.coerceIn(0f, 1f)
+            it.volume = clampedVolume
+            _trackVolume.value = clampedVolume
+        }
+    }
+
+    fun refreshLocalConnectionInfo(refreshBluetoothDevices: Boolean = false) {
+        connectivityStateHolder.refreshLocalConnectionInfo(refreshBluetoothDevices)
+    }
+
+    fun setConnectPanelOpen(open: Boolean) {
+        playbackStateHolder.setConnectPanelOpen(open)
+    }
+
 
 
     @Inject

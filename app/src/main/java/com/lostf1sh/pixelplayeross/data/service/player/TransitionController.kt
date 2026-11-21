@@ -34,6 +34,7 @@ private data class TransitionSettingsSnapshot(
     val resolution: TransitionResolution,
     val isCrossfadeEnabled: Boolean,
     val isSmartEnabled: Boolean,
+    val onSonos: Boolean = false,
 )
 
 /**
@@ -237,17 +238,26 @@ class TransitionController @Inject constructor(
                 settingsFlow,
                 isCrossfadeEnabledFlow,
                 userPreferencesRepository.smartCrossfadeEnabledFlow,
-            ) { resolution, isEnabled, isSmartEnabled ->
+                // Mod: on Sonos the muted phone must change track together with the speakers, so no crossfade.
+                SonosAudioGate.active,
+            ) { resolution, isEnabled, isSmartEnabled, onSonos ->
                 TransitionSettingsSnapshot(
                     resolution = resolution,
                     isCrossfadeEnabled = isEnabled,
                     isSmartEnabled = isSmartEnabled,
+                    onSonos = onSonos,
                 )
             }.distinctUntilChanged()
             .collectLatest { snapshot ->
                 needsDurationReschedule = false
                 val resolution = snapshot.resolution
                 val isEnabled = snapshot.isCrossfadeEnabled
+
+                if (snapshot.onSonos) {
+                    engine.cancelNext()
+                    engine.setPauseAtEndOfMediaItems(shouldPause = false)
+                    return@collectLatest
+                }
 
                 val settings = resolution.settings
                 Timber.tag("TransitionDebug").d(

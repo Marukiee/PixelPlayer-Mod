@@ -87,6 +87,16 @@ android {
         versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Your own https address for covers in the Sonos app. Stays out of the repository:
+        // comes from local.properties or a CI secret, and can be changed in the app's settings.
+        val localProperties = Properties().apply {
+            val file = rootProject.file("local.properties")
+            if (file.exists()) file.inputStream().use { load(it) }
+        }
+        val sonosCoverAddress = localProperties.getProperty("SONOS_COVER_ADDRESS")?.ifEmpty { null }
+            ?: System.getenv("SONOS_COVER_ADDRESS").orEmpty()
+        buildConfigField("String", "SONOS_DEFAULT_COVER_ADDRESS", "\"$sonosCoverAddress\"")
     }
 
     signingConfigs {

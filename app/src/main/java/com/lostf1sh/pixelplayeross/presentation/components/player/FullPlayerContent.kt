@@ -71,6 +71,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lostf1sh.pixelplayeross.presentation.components.LocalOpenConnectPanel
+import com.lostf1sh.pixelplayeross.presentation.components.PlayerOutputGlyph
+import com.lostf1sh.pixelplayeross.presentation.components.PlayerOutputIcon
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.SonosViewModel
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -806,24 +811,103 @@ fun FullPlayerContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val bluetoothOutputName = bluetoothName?.takeIf { isBluetoothEnabled }
+                            // Mod: opens the connect panel, and shows the Sonos room while the music plays there.
+                            val openConnectPanel = LocalOpenConnectPanel.current
+                            val sonosViewModel: SonosViewModel = hiltViewModel()
+                            val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
+                            val sonosGroup = sonosSession?.group
+                            val sonosConnecting = sonosSession?.isConnecting == true
+                            val outputIcon = PlayerOutputIcon.of(
+                                sonosRooms = sonosGroup?.members?.size,
+                                isBluetoothActive = bluetoothOutputName != null && sonosGroup == null
+                            )
+                            val pillLabel = when {
+                                sonosConnecting -> stringResource(R.string.player_connecting)
+                                sonosGroup != null -> sonosGroup.coordinator.name
+                                else -> ""
+                            }
+                            val extraRooms = if (sonosConnecting) 0 else (sonosGroup?.members?.size ?: 1) - 1
+                            val outputMotion = MaterialTheme.motionScheme
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
+                                    .height(42.dp)
                                     .clip(CircleShape)
                                     .background(playerOnAccentColor.copy(alpha = 0.7f))
-                                    .clickable { showAudioOutputSheet = true },
-                                contentAlignment = Alignment.Center
+                                    .clickable {
+                                        val open = openConnectPanel
+                                        if (open != null) open() else showAudioOutputSheet = true
+                                    }
+                                    // Outside the clip's content so the whole pill stretches and settles, not just what is in it.
+                                    .animateContentSize(outputMotion.defaultSpatialSpec())
+                                    .widthIn(min = 42.dp, max = if (sonosGroup != null) 210.dp else 42.dp),
+                                contentAlignment = Alignment.CenterStart
                             ) {
-                                Icon(
-                                    imageVector = if (bluetoothOutputName != null) {
-                                        Icons.Rounded.Bluetooth
-                                    } else {
-                                        Icons.Rounded.Speaker
-                                    },
-                                    contentDescription = bluetoothOutputName
-                                        ?: stringResource(R.string.player_audio_output_title),
-                                    tint = playerAccentColor
-                                )
+                                Row(
+                                    modifier = Modifier.padding(start = 9.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AnimatedContent(
+                                        targetState = outputIcon,
+                                        transitionSpec = {
+                                            (fadeIn(outputMotion.defaultEffectsSpec()) + scaleIn(outputMotion.fastSpatialSpec(), initialScale = 0.6f)) togetherWith
+                                                (fadeOut(outputMotion.fastEffectsSpec()) + scaleOut(outputMotion.fastSpatialSpec(), targetScale = 0.6f))
+                                        },
+                                        label = "outputButtonIcon"
+                                    ) { icon ->
+                                        val description = when {
+                                            sonosGroup != null -> stringResource(R.string.sonos_playing_on, sonosGroup.displayName)
+                                            bluetoothOutputName != null -> bluetoothOutputName
+                                            else -> stringResource(R.string.player_audio_output_title)
+                                        }
+                                        PlayerOutputGlyph(
+                                            icon = icon,
+                                            contentDescription = description,
+                                            tint = playerAccentColor,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    // The pill's own size animation moves the width, so this only fades.
+                                    AnimatedVisibility(
+                                        visible = sonosGroup != null,
+                                        enter = fadeIn(outputMotion.defaultEffectsSpec()),
+                                        exit = fadeOut(outputMotion.fastEffectsSpec())
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(start = 8.dp, end = 14.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = pillLabel,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = playerAccentColor,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false)
+                                            )
+                                            // Its own chip, so a long room name can never cut the count off.
+                                            if (extraRooms > 0) {
+                                                Text(
+                                                    text = "+$extraRooms",
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = playerAccentColor,
+                                                    maxLines = 1,
+                                                    modifier = Modifier
+                                                        .background(playerAccentColor.copy(alpha = 0.14f), CircleShape)
+                                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                            if (sonosConnecting) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(14.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = playerAccentColor
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             Box(
                                 modifier = Modifier

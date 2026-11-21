@@ -209,6 +209,26 @@ class MainActivity : ComponentActivity() {
     lateinit var themePreferencesRepository: ThemePreferencesRepository
     @Inject
     lateinit var syncManager: SyncManager
+    @Inject
+    lateinit var sonosController: com.lostf1sh.pixelplayeross.data.sonos.SonosController
+    private var sonosVolumeKeys = true
+
+    // Mod: while playing on Sonos the phone itself is muted, so the volume keys go to the speakers.
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val delta = when (event.keyCode) {
+            android.view.KeyEvent.KEYCODE_VOLUME_UP -> 2
+            android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> -2
+            else -> 0
+        }
+        if (delta != 0 && sonosVolumeKeys && sonosController.session.value != null) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                sonosController.adjustGroupVolume(delta)
+                sonosController.onInAppVolumeKey()
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     private val _pendingShuffleAll = kotlinx.coroutines.flow.MutableStateFlow(false)
     private val _pendingUpdatesNavigation = kotlinx.coroutines.flow.MutableStateFlow(false)
@@ -242,6 +262,11 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         super.onCreate(savedInstanceState)
+
+        // After super.onCreate: Hilt injects the fields there.
+        lifecycleScope.launch {
+            userPreferencesRepository.sonosVolumeKeysFlow.collect { sonosVolumeKeys = it }
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -798,11 +823,13 @@ class MainActivity : ComponentActivity() {
                 resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode, useNavigationRail)
             }
         }
+        // Mod: as long as the screen change it goes with (Settings in, back out), with Material's emphasized curve,
+        // so the bar glides away and back instead of dropping in 220 ms.
         val navBarVisibilityProgressState = animateFloatAsState(
             targetValue = if (shouldHideNavigationBar) 0f else 1f,
             animationSpec = tween(
-                durationMillis = 220,
-                easing = LinearOutSlowInEasing
+                durationMillis = com.lostf1sh.pixelplayeross.presentation.navigation.TRANSITION_DURATION,
+                easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
             ),
             label = "NavBarVisibilityProgress"
         )
