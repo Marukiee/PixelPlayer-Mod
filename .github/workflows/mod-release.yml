@@ -78,6 +78,9 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "PixelPlayer-Mod-$VERSION.apk"
           cp app/build/outputs/apk/release/app-arm64-v8a-release.apk PixelPlayer-Mod.apk
+          # The update card in the app checks the download against this sum (sha256sum format: sum, two spaces, name).
+          sha256sum PixelPlayer-Mod.apk > PixelPlayer-Mod.apk.sha256
+          cat PixelPlayer-Mod.apk.sha256
 
       # Only the newest block of MOD_CHANGELOG.md (up to the first blank line): the release page shows what changed in
       # this version, not every version since mod.1.
@@ -96,6 +99,7 @@ jobs:
           files: |
             PixelPlayer-Mod-${{ steps.names.outputs.version }}.apk
             PixelPlayer-Mod.apk
+            PixelPlayer-Mod.apk.sha256
 
       - name: Upload APK artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
