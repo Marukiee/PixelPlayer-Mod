@@ -43,6 +43,49 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerSheetState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState
 
+/** Mod: the mini player with the output button (Sonos, Bluetooth or this phone) and the progress ring. */
+@Composable
+private fun MiniPlayerRow(
+    song: Song,
+    infrequentPlayerState: StablePlayerState,
+    isOutputConnecting: Boolean,
+    isPreparingPlayback: Boolean,
+    playerViewModel: PlayerViewModel,
+    currentPositionProvider: () -> Long,
+    canScroll: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val sonosViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.SonosViewModel =
+        androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+    val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
+    val isBluetoothEnabled by playerViewModel.isBluetoothEnabled.collectAsStateWithLifecycle()
+    val bluetoothName by playerViewModel.bluetoothName.collectAsStateWithLifecycle()
+    val miniPlayerStyle by playerViewModel.miniPlayerStyle.collectAsStateWithLifecycle()
+    val openConnectPanel = LocalOpenConnectPanel.current
+    val latestDuration = rememberUpdatedState(infrequentPlayerState.totalDuration)
+    val sonosGroup = sonosSession?.group
+    MiniPlayerContentInternal(
+        song = song,
+        isPlaying = infrequentPlayerState.isPlaying || infrequentPlayerState.playWhenReady,
+        isOutputConnecting = isOutputConnecting,
+        isPreparingPlayback = isPreparingPlayback,
+        output = PlayerOutputIcon.of(
+            sonosRooms = sonosGroup?.members?.size,
+            isBluetoothActive = isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && sonosGroup == null
+        ),
+        progressRing = miniPlayerStyle == com.lostf1sh.pixelplayeross.data.preferences.MiniPlayerStyle.RING,
+        progress = {
+            val duration = latestDuration.value
+            if (duration > 0L) currentPositionProvider().toFloat() / duration else 0f
+        },
+        onPlayPause = { playerViewModel.playPause() },
+        onOutputClick = { openConnectPanel?.invoke() },
+        onNext = { playerViewModel.nextSong() },
+        canScroll = canScroll,
+        modifier = modifier
+    )
+}
+
 @OptIn(UnstableApi::class)
 @Composable
 internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
@@ -123,14 +166,13 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                     val isMiniPlayerVisible by remember {
                         derivedStateOf { playerContentExpansionFraction.value < 0.01f }
                     }
-                    MiniPlayerContentInternal(
+                    MiniPlayerRow(
                         song = currentSongNonNull,
-                        isPlaying = infrequentPlayerState.isPlaying,
+                        infrequentPlayerState = infrequentPlayerState,
                         isOutputConnecting = isOutputConnecting,
                         isPreparingPlayback = isPreparingPlayback,
-                        onPlayPause = { playerViewModel.playPause() },
-                        onPrevious = { playerViewModel.previousSong() },
-                        onNext = { playerViewModel.nextSong() },
+                        playerViewModel = playerViewModel,
+                        currentPositionProvider = currentPositionProvider,
                         canScroll = isMiniPlayerVisible && infrequentPlayerState.isPlaying,
                         modifier = Modifier.fillMaxSize()
                     )

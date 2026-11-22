@@ -740,6 +740,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val miniPlayerStyle: StateFlow<String> = userPreferencesRepository.miniPlayerStyleFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lostf1sh.pixelplayeross.data.preferences.MiniPlayerStyle.RING)
+
+    fun setMiniPlayerStyle(style: String) {
+        viewModelScope.launch { userPreferencesRepository.setMiniPlayerStyle(style) }
+    }
+
     fun setCarouselStyle(style: String) {
         viewModelScope.launch {
             userPreferencesRepository.setCarouselStyle(style)

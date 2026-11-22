@@ -846,6 +846,18 @@ fun SettingsCategoryScreen(
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_view_carousel_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_appearance_carousel_style", highlightKey)
                                 )
+                                val miniPlayerStyle by settingsViewModel.miniPlayerStyle.collectAsStateWithLifecycle()
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_mini_player_style_title),
+                                    description = stringResource(R.string.settings_mini_player_style_subtitle),
+                                    options = mapOf(
+                                        com.lostf1sh.pixelplayeross.data.preferences.MiniPlayerStyle.RING to stringResource(R.string.settings_mini_player_style_ring),
+                                        com.lostf1sh.pixelplayeross.data.preferences.MiniPlayerStyle.FILLED to stringResource(R.string.settings_mini_player_style_filled)
+                                    ),
+                                    selectedKey = miniPlayerStyle,
+                                    onSelectionChanged = { settingsViewModel.setMiniPlayerStyle(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.PlayCircle, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
                             }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_home_collage)) {

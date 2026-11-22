@@ -40,6 +40,12 @@ import kotlinx.serialization.json.Json
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+/** Mod: the play button of the mini player, a ring that shows the progress or a filled button. */
+object MiniPlayerStyle {
+    const val RING = "ring"
+    const val FILLED = "filled"
+}
+
 object ThemePreference {
     const val DEFAULT = "default"
     const val DYNAMIC = "dynamic"
@@ -155,6 +161,7 @@ constructor(
         val NAV_BAR_STYLE = stringPreferencesKey("nav_bar_style")
         val NAV_BAR_COMPACT_MODE = booleanPreferencesKey("nav_bar_compact_mode")
         val CAROUSEL_STYLE = stringPreferencesKey("carousel_style")
+        val MINI_PLAYER_STYLE = stringPreferencesKey("mini_player_style")
         val LIBRARY_NAVIGATION_MODE = stringPreferencesKey("library_navigation_mode")
         val LAUNCH_TAB = stringPreferencesKey("launch_tab")
 
@@ -1663,6 +1670,13 @@ constructor(
 
     suspend fun setCarouselStyle(style: String) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.CAROUSEL_STYLE] = style }
+    }
+
+    val miniPlayerStyleFlow: Flow<String> =
+        dataStore.data.map { preferences -> preferences[PreferencesKeys.MINI_PLAYER_STYLE] ?: MiniPlayerStyle.RING }
+
+    suspend fun setMiniPlayerStyle(style: String) {
+        dataStore.edit { preferences -> preferences[PreferencesKeys.MINI_PLAYER_STYLE] = style }
     }
 
     val launchTabFlow: Flow<String> =

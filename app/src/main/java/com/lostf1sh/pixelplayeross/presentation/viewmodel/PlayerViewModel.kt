@@ -476,6 +476,9 @@ class PlayerViewModel @Inject constructor(
             initialValue = LibraryNavigationMode.TAB_ROW
         )
 
+    val miniPlayerStyle: StateFlow<String> = userPreferencesRepository.miniPlayerStyleFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, com.lostf1sh.pixelplayeross.data.preferences.MiniPlayerStyle.RING)
+
     val carouselStyle: StateFlow<String> = userPreferencesRepository.carouselStyleFlow
         .stateIn(
             scope = viewModelScope,
