@@ -2,6 +2,8 @@
 
 package com.lostf1sh.pixelplayeross.presentation.screens
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.material.icons.rounded.Shuffle
 import com.lostf1sh.pixelplayeross.ui.theme.withInterfaceFont
 
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
@@ -403,6 +405,8 @@ fun LibraryScreen(
     // The pager's tab, available in this frame. currentTabId only catches up after
     // onLibraryTabSelected runs, so header actions, selection and back read this one instead.
     val visibleCurrentTabId = resolveVisibleLibraryTabId(tabTitles, currentTabIndex, fallback = currentTabId)
+    // Mod: the header design under review (A or C), see LibraryHeaderStyles.kt.
+    val headerStyle = rememberLibraryHeaderStyle()
     val isSortSheetVisible by playerViewModel.isSortingSheetVisible.collectAsStateWithLifecycle()
     val canNavigateBackInFolders by remember(playerViewModel) {
         playerViewModel.playerUiState
@@ -914,7 +918,54 @@ fun LibraryScreen(
                         scrolledContainerColor = Color.Transparent
                     )
                 )
-                if (!isCompactNavigation) {
+                if (!isCompactNavigation && headerStyle != LibraryHeaderStyle.TABS) {
+                    val headerTabs = remember(tabTitles) { tabTitles.map { it.toLibraryTabIdOrNull() ?: LibraryTabId.SONGS } }
+                    val selectHeaderTab: (Int) -> Unit = { index ->
+                        scope.launch {
+                            pagerState.animateScrollToPage(
+                                targetPageForTabIndex(
+                                    currentPage = pagerState.currentPage,
+                                    targetTabIndex = index,
+                                    tabCount = tabTitles.size,
+                                    compactMode = isCompactNavigation
+                                )
+                            )
+                        }
+                    }
+                    if (headerStyle == LibraryHeaderStyle.GROUP) {
+                        LibraryGroupTabs(
+                            tabs = headerTabs,
+                            selectedIndex = currentTabIndex,
+                            onSelect = selectHeaderTab,
+                            onEditTabs = { showReorderTabsSheet = true },
+                            titleOf = { it.displayTitle() },
+                            iconOf = { it.iconRes() },
+                            modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
+                        )
+                    } else {
+                        val songCount by playerViewModel.songCountFlow.collectAsStateWithLifecycle()
+                        val albumsForCount by playerViewModel.albumsFlow.collectAsStateWithLifecycle()
+                        val artistsForCount by playerViewModel.artistsFlow.collectAsStateWithLifecycle()
+                        val likedForCount by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
+                        val summary = when (visibleCurrentTabId) {
+                            LibraryTabId.SONGS -> pluralStringResource(R.plurals.library_header_songs, songCount, songCount)
+                            LibraryTabId.LIKED -> pluralStringResource(R.plurals.library_header_liked, likedForCount.size, likedForCount.size)
+                            LibraryTabId.ALBUMS -> pluralStringResource(R.plurals.library_header_albums, albumsForCount.size, albumsForCount.size)
+                            LibraryTabId.ARTISTS -> pluralStringResource(R.plurals.library_header_artists, artistsForCount.size, artistsForCount.size)
+                            else -> null
+                        }
+                        LibraryExpandingTabs(
+                            tabs = headerTabs,
+                            selectedIndex = currentTabIndex,
+                            onSelect = selectHeaderTab,
+                            onEditTabs = { showReorderTabsSheet = true },
+                            titleOf = { it.displayTitle() },
+                            iconOf = { it.iconRes() },
+                            summary = summary,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
+                        )
+                    }
+                } else if (!isCompactNavigation) {
                     val showTabIndicator = false
                     PrimaryScrollableTabRow(
                         selectedTabIndex = currentTabIndex,
@@ -1255,6 +1306,7 @@ fun LibraryScreen(
                                     showLocateButton = showLocateButton,
                                     onSortClick = { playerViewModel.showSortingSheet() },
                                     sortMenuOpen = isSortSheetVisible,
+                                    showMainAction = headerStyle != LibraryHeaderStyle.EXPAND || visibleCurrentTabId == LibraryTabId.PLAYLISTS,
                                     onLocateClick = { locateAction?.invoke() },
                                     isPlaylistTab = visibleCurrentTabId == LibraryTabId.PLAYLISTS,
                                     isFoldersTab = visibleCurrentTabId == LibraryTabId.FOLDERS && (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null),
@@ -1544,6 +1596,9 @@ fun LibraryScreen(
                                 selectedSongForInfo?.id?.takeIf { showSongInfoBottomSheet }
                         ) {
                         Box(modifier = Modifier.fillMaxSize()) {
+                            // Mod, design C: Shuffle floats above the mini player instead of sitting in the toolbar.
+                            val floatingShuffle = headerStyle == LibraryHeaderStyle.EXPAND &&
+                                visibleCurrentTabId != LibraryTabId.PLAYLISTS && visibleCurrentTabId != LibraryTabId.FOLDERS
                             HorizontalPager(
                                 state = pagerState,
                                 modifier = Modifier
@@ -1795,7 +1850,29 @@ fun LibraryScreen(
                                     .align(Alignment.TopCenter)
                                     .zIndex(1f)
                             )
-                        }
+                                                    if (floatingShuffle) {
+                                androidx.compose.material3.ExtendedFloatingActionButton(
+                                    onClick = {
+                                        when (visibleCurrentTabId) {
+                                            LibraryTabId.LIKED -> playerViewModel.shuffleFavoriteSongs()
+                                            LibraryTabId.ALBUMS -> playerViewModel.playRandomAlbum()
+                                            LibraryTabId.ARTISTS -> playerViewModel.shuffleRandomArtist()
+                                            LibraryTabId.GENRES -> playerViewModel.shuffleRandomGenre()
+                                            else -> playerViewModel.shuffleAllSongs()
+                                        }
+                                    },
+                                    icon = { Icon(Icons.Rounded.Shuffle, contentDescription = null) },
+                                    text = { Text(stringResource(R.string.shortcut_shuffle_short)) },
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    // Tonal, no shadow, as the rest of the mod's floating controls.
+                                    elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(end = 16.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 20.dp)
+                                )
+                            }
+}
                         }
                     }
                 }

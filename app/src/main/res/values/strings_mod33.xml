@@ -52,4 +52,8 @@
     <string name="settings_sonos_missing_no_title_help">The file has no title tag, so it cannot be found on the server.</string>
     <string name="settings_sonos_missing_untitled">No title</string>
     <string name="settings_sonos_missing_artist_vs_server">Here: %1$s. On the server: %2$s</string>
+    <plurals name="library_header_songs"><item quantity="one">%d song</item><item quantity="other">%d songs</item></plurals>
+    <plurals name="library_header_liked"><item quantity="one">%d liked</item><item quantity="other">%d liked</item></plurals>
+    <plurals name="library_header_albums"><item quantity="one">%d album</item><item quantity="other">%d albums</item></plurals>
+    <plurals name="library_header_artists"><item quantity="one">%d artist</item><item quantity="other">%d artists</item></plurals>
 </resources>

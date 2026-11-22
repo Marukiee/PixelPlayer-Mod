@@ -144,7 +144,9 @@ fun LibraryActionRow(
     currentStorageFilter: StorageFilter = StorageFilter.ALL,
     onStorageFilterClick: () -> Unit = {},
     /** Mod: the sort sheet is open, so the sort button stays round and coloured until it closes. */
-    sortMenuOpen: Boolean = false
+    sortMenuOpen: Boolean = false,
+    /** Mod: design C puts Shuffle on a floating button, so the toolbar leaves it out. */
+    showMainAction: Boolean = true
 ) {
     // Animate complete arrangements so departing controls keep their tab's labels and width.
     AnimatedContent(
@@ -182,7 +184,8 @@ fun LibraryActionRow(
             onFolderClick = onFolderClick,
             onNavigateBack = onNavigateBack,
             onStorageFilterClick = onStorageFilterClick,
-            sortMenuOpen = sortMenuOpen
+            sortMenuOpen = sortMenuOpen,
+            showMainAction = showMainAction
         )
     }
 }
@@ -198,7 +201,8 @@ private fun LibraryActionRowContent(
     onFolderClick: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onStorageFilterClick: () -> Unit,
-    sortMenuOpen: Boolean = false
+    sortMenuOpen: Boolean = false,
+    showMainAction: Boolean = true
 ) {
     val isPlaylistTab = content.isPlaylistTab
     val showSortButton = content.showSortButton
@@ -242,7 +246,7 @@ private fun LibraryActionRowContent(
                     val buttonContainerColor = MaterialTheme.colorScheme.tertiaryContainer
                     val buttonContentColor = MaterialTheme.colorScheme.onTertiaryContainer
                     
-                    FilledTonalButton(
+                    if (showMainAction) FilledTonalButton(
                         onClick = onMainActionClick,
                         shape = RoundedCornerShape(
                             topStart = 26.dp, bottomStart = 26.dp,

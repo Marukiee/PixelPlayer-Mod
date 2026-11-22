@@ -27,4 +27,8 @@
     <string name="settings_sonos_missing_no_title_help">Het bestand heeft geen titel, dus de app kan het niet op de server vinden.</string>
     <string name="settings_sonos_missing_untitled">Geen titel</string>
     <string name="settings_sonos_missing_artist_vs_server">Hier: %1$s. Op de server: %2$s</string>
+    <plurals name="library_header_songs"><item quantity="one">%d nummer</item><item quantity="other">%d nummers</item></plurals>
+    <plurals name="library_header_liked"><item quantity="one">%d geliket</item><item quantity="other">%d geliket</item></plurals>
+    <plurals name="library_header_albums"><item quantity="one">%d album</item><item quantity="other">%d albums</item></plurals>
+    <plurals name="library_header_artists"><item quantity="one">%d artiest</item><item quantity="other">%d artiesten</item></plurals>
 </resources>
