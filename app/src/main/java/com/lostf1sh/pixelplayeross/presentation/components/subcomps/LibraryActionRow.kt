@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.components.subcomps
 
+import androidx.compose.ui.unit.sp
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -146,7 +147,9 @@ fun LibraryActionRow(
     /** Mod: the sort sheet is open, so the sort button stays round and coloured until it closes. */
     sortMenuOpen: Boolean = false,
     /** Mod: design C puts Shuffle on a floating button, so the toolbar leaves it out. */
-    showMainAction: Boolean = true
+    showMainAction: Boolean = true,
+    /** Mod: design C shows the tab's count in that place, large. */
+    leadingLabel: String? = null
 ) {
     // Animate complete arrangements so departing controls keep their tab's labels and width.
     AnimatedContent(
@@ -185,7 +188,8 @@ fun LibraryActionRow(
             onNavigateBack = onNavigateBack,
             onStorageFilterClick = onStorageFilterClick,
             sortMenuOpen = sortMenuOpen,
-            showMainAction = showMainAction
+            showMainAction = showMainAction,
+            leadingLabel = leadingLabel
         )
     }
 }
@@ -202,7 +206,8 @@ private fun LibraryActionRowContent(
     onNavigateBack: () -> Unit,
     onStorageFilterClick: () -> Unit,
     sortMenuOpen: Boolean = false,
-    showMainAction: Boolean = true
+    showMainAction: Boolean = true,
+    leadingLabel: String? = null
 ) {
     val isPlaylistTab = content.isPlaylistTab
     val showSortButton = content.showSortButton
@@ -246,6 +251,18 @@ private fun LibraryActionRowContent(
                     val buttonContainerColor = MaterialTheme.colorScheme.tertiaryContainer
                     val buttonContentColor = MaterialTheme.colorScheme.onTertiaryContainer
                     
+                    if (!showMainAction && leadingLabel != null) {
+                        Text(
+                            text = leadingLabel,
+                            fontFamily = com.lostf1sh.pixelplayeross.ui.theme.RoundedSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 28.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
                     if (showMainAction) FilledTonalButton(
                         onClick = onMainActionClick,
                         shape = RoundedCornerShape(

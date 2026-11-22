@@ -407,6 +407,17 @@ fun LibraryScreen(
     val visibleCurrentTabId = resolveVisibleLibraryTabId(tabTitles, currentTabIndex, fallback = currentTabId)
     // Mod: the header design under review (A or C), see LibraryHeaderStyles.kt.
     val headerStyle = rememberLibraryHeaderStyle()
+    val headerSongCount by playerViewModel.songCountFlow.collectAsStateWithLifecycle()
+    val headerAlbums by playerViewModel.albumsFlow.collectAsStateWithLifecycle()
+    val headerArtists by playerViewModel.artistsFlow.collectAsStateWithLifecycle()
+    val headerLiked by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
+    val headerCount = when (visibleCurrentTabId) {
+        LibraryTabId.SONGS -> pluralStringResource(R.plurals.library_header_songs, headerSongCount, headerSongCount)
+        LibraryTabId.LIKED -> pluralStringResource(R.plurals.library_header_liked, headerLiked.size, headerLiked.size)
+        LibraryTabId.ALBUMS -> pluralStringResource(R.plurals.library_header_albums, headerAlbums.size, headerAlbums.size)
+        LibraryTabId.ARTISTS -> pluralStringResource(R.plurals.library_header_artists, headerArtists.size, headerArtists.size)
+        else -> null
+    }
     val isSortSheetVisible by playerViewModel.isSortingSheetVisible.collectAsStateWithLifecycle()
     val canNavigateBackInFolders by remember(playerViewModel) {
         playerViewModel.playerUiState
@@ -943,17 +954,6 @@ fun LibraryScreen(
                             modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
                         )
                     } else {
-                        val songCount by playerViewModel.songCountFlow.collectAsStateWithLifecycle()
-                        val albumsForCount by playerViewModel.albumsFlow.collectAsStateWithLifecycle()
-                        val artistsForCount by playerViewModel.artistsFlow.collectAsStateWithLifecycle()
-                        val likedForCount by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
-                        val summary = when (visibleCurrentTabId) {
-                            LibraryTabId.SONGS -> pluralStringResource(R.plurals.library_header_songs, songCount, songCount)
-                            LibraryTabId.LIKED -> pluralStringResource(R.plurals.library_header_liked, likedForCount.size, likedForCount.size)
-                            LibraryTabId.ALBUMS -> pluralStringResource(R.plurals.library_header_albums, albumsForCount.size, albumsForCount.size)
-                            LibraryTabId.ARTISTS -> pluralStringResource(R.plurals.library_header_artists, artistsForCount.size, artistsForCount.size)
-                            else -> null
-                        }
                         LibraryExpandingTabs(
                             tabs = headerTabs,
                             selectedIndex = currentTabIndex,
@@ -961,7 +961,7 @@ fun LibraryScreen(
                             onEditTabs = { showReorderTabsSheet = true },
                             titleOf = { it.displayTitle() },
                             iconOf = { it.iconRes() },
-                            summary = summary,
+                            summary = null,
                             modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
                         )
                     }
@@ -1307,6 +1307,7 @@ fun LibraryScreen(
                                     onSortClick = { playerViewModel.showSortingSheet() },
                                     sortMenuOpen = isSortSheetVisible,
                                     showMainAction = headerStyle != LibraryHeaderStyle.EXPAND || visibleCurrentTabId == LibraryTabId.PLAYLISTS,
+                                    leadingLabel = headerCount.takeIf { headerStyle == LibraryHeaderStyle.EXPAND },
                                     onLocateClick = { locateAction?.invoke() },
                                     isPlaylistTab = visibleCurrentTabId == LibraryTabId.PLAYLISTS,
                                     isFoldersTab = visibleCurrentTabId == LibraryTabId.FOLDERS && (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null),
