@@ -21,6 +21,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.CarouselStyle
 import com.lostf1sh.pixelplayeross.data.preferences.LibraryNavigationMode
 import com.lostf1sh.pixelplayeross.data.preferences.PreviousButtonBehavior
 import com.lostf1sh.pixelplayeross.data.preferences.SwipeToQueueAction
+import com.lostf1sh.pixelplayeross.data.preferences.QueueSwipeAction
 import com.lostf1sh.pixelplayeross.data.preferences.DEFAULT_LYRICS_DUET_LAYOUT_ENABLED
 import com.lostf1sh.pixelplayeross.data.preferences.DEFAULT_LYRICS_FONT_SIZE_SP
 import com.lostf1sh.pixelplayeross.data.preferences.DEFAULT_SHOW_LYRICS_BACKGROUND_VOCALS
@@ -1155,6 +1156,21 @@ class SettingsViewModel @Inject constructor(
 
     fun setSwipeBackAction(action: SwipeToQueueAction) {
         viewModelScope.launch { userPreferencesRepository.setSwipeBackAction(action) }
+    }
+
+    /** Mod: what a swipe on a song in the queue does, per direction. */
+    val queueSwipeLeftAction: StateFlow<QueueSwipeAction> = userPreferencesRepository.queueSwipeLeftActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), QueueSwipeAction.DEFAULT_LEFT)
+
+    val queueSwipeRightAction: StateFlow<QueueSwipeAction> = userPreferencesRepository.queueSwipeRightActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), QueueSwipeAction.DEFAULT_RIGHT)
+
+    fun setQueueSwipeLeftAction(action: QueueSwipeAction) {
+        viewModelScope.launch { userPreferencesRepository.setQueueSwipeLeftAction(action) }
+    }
+
+    fun setQueueSwipeRightAction(action: QueueSwipeAction) {
+        viewModelScope.launch { userPreferencesRepository.setQueueSwipeRightAction(action) }
     }
 
     fun setSwipeToQueueAction(action: SwipeToQueueAction) {

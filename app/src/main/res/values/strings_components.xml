@@ -42,7 +42,7 @@
     <string name="equalizer_rename_preset_title">Rename preset</string>
     <string name="error_name_empty">Name cannot be empty</string>
     <string name="action_save">Save</string>
-    <string name="equalizer_action_save_new">Save New</string>
+    <string name="equalizer_action_save_new">Save new</string>
     <string name="action_rename">Rename</string>
 
     <string name="song_field_title">Title</string>
@@ -135,9 +135,9 @@
     <string name="cd_remove_from_favorites">Remove from favorites</string>
     <string name="cd_add_to_favorites">Add to favorites</string>
     <string name="song_info_tab_options">Options</string>
-    <string name="song_info_tab_options_badge">OPTIONS</string>
+    <string name="song_info_tab_options_badge">Options</string>
     <string name="song_info_tab_details">Details</string>
-    <string name="song_info_tab_info_badge">INFO</string>
+    <string name="song_info_tab_info_badge">Info</string>
     <string name="cd_details_tab">Details</string>
 
     <string name="multi_selection_songs_count_upper">%1$d SONGS</string>

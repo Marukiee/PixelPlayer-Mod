@@ -63,6 +63,9 @@ import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtQuality
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreference
 import com.lostf1sh.pixelplayeross.data.preferences.restartsAtPosition
 import com.lostf1sh.pixelplayeross.data.preferences.SwipeToQueueAction
+import com.lostf1sh.pixelplayeross.data.preferences.QueueSwipeAction
+import com.lostf1sh.pixelplayeross.utils.KEY_USER_QUEUE_ITEM
+import com.lostf1sh.pixelplayeross.utils.isUserQueueItem
 import com.lostf1sh.pixelplayeross.data.repository.LyricsSearchResult
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
 import com.lostf1sh.pixelplayeross.data.service.MusicNotificationProvider
@@ -88,6 +91,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.channels.BufferOverflow
@@ -470,6 +475,13 @@ class PlayerViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = SwipeToQueueAction.OFF
         )
+
+    /** Mod: what a swipe on a song in the queue does, per direction. */
+    val queueSwipeLeftAction: StateFlow<QueueSwipeAction> = userPreferencesRepository.queueSwipeLeftActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), QueueSwipeAction.DEFAULT_LEFT)
+
+    val queueSwipeRightAction: StateFlow<QueueSwipeAction> = userPreferencesRepository.queueSwipeRightActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), QueueSwipeAction.DEFAULT_RIGHT)
 
     val navBarCompactMode: StateFlow<Boolean> = userPreferencesRepository.navBarCompactModeFlow
         .stateIn(
@@ -2421,7 +2433,7 @@ class PlayerViewModel @Inject constructor(
                 )
                 if (lastQueueSignature != emptySignature) {
                     lastQueueSignature = emptySignature
-                    _playerUiState.update { it.copy(currentPlaybackQueue = persistentListOf()) }
+                    _playerUiState.update { it.copy(currentPlaybackQueue = persistentListOf(), userQueueSongIds = persistentSetOf()) }
                 }
                 return@launch
             }
@@ -2435,7 +2447,7 @@ class PlayerViewModel @Inject constructor(
                 val mediaId = mediaItem.mediaId
                 if (i == 0) firstMediaId = mediaId
                 if (i == count - 1) lastMediaId = mediaId
-                orderHash = (orderHash * 31) + mediaId.hashCode()
+                orderHash = (orderHash * 31) + mediaId.hashCode() + if (mediaItem.isUserQueueItem()) 7 else 0
                 if (i % 500 == 0) yield()
             }
 
@@ -2459,7 +2471,14 @@ class PlayerViewModel @Inject constructor(
             if (requestId != lastQueueUpdateRequestId) return@launch
 
             lastQueueSignature = signature
-            _playerUiState.update { it.copy(currentPlaybackQueue = queue.toPlaybackQueue()) }
+            val userQueueIds = mediaItems.asSequence()
+                .filter { it.isUserQueueItem() }
+                .map { it.mediaId }
+                .toSet()
+                .toImmutableSet()
+            _playerUiState.update {
+                it.copy(currentPlaybackQueue = queue.toPlaybackQueue(), userQueueSongIds = userQueueIds)
+            }
             if (queue.isNotEmpty()) {
                 _isSheetVisible.value = true
             }
@@ -3210,13 +3229,17 @@ class PlayerViewModel @Inject constructor(
         val playSongsAction = {
             dualPlayerEngine.cancelNext()
             val enginePlayer = dualPlayerEngine.masterPlayer
+            // Mod, as in the old mod: songs you queued yourself stay up next when a new list starts.
+            val keptUserQueue = captureUpcomingUserQueueItems(enginePlayer, excludeSongId = effectiveStartSong.id)
 
             enginePlayer.setMediaItem(startMediaItem, 0L)
             enginePlayer.prepare()
             enginePlayer.play()
             _playerUiState.update { it.copy(isLoadingInitialSongs = false) }
 
-            if (songsToPlay.size > 1) {
+            if (songsToPlay.size <= 1) {
+                reinsertUserQueue(enginePlayer, keptUserQueue, effectiveStartSong.id)
+            } else {
                 pendingQueueSegmentsJob?.cancel()
                 pendingQueueSegmentsJob = viewModelScope.launch {
                     val preparedSegments = preparePlaybackQueueSegments(
@@ -3230,6 +3253,7 @@ class PlayerViewModel @Inject constructor(
                             startSongId = effectiveStartSong.id,
                             preparedSegments = preparedSegments
                         )
+                        reinsertUserQueue(dualPlayerEngine.masterPlayer, keptUserQueue, effectiveStartSong.id)
                     }
                 }
             }
@@ -3417,16 +3441,22 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Mod, as in the old mod: songs you queue yourself go in a block right after the playing song, in the order you
+     * added them, so they play before the rest of the list. A copy that was already coming up is taken out first.
+     */
     fun addSongToQueue(song: Song) {
         mediaController?.let { controller ->
-            val mediaItem = buildPlaybackMediaItem(song)
-            controller.addMediaItem(mediaItem)
+            removeUpcomingOccurrences(controller, song.id)
+            controller.addMediaItem(userQueueBlockEndIndex(controller), buildPlaybackMediaItem(song, isUserQueueItem = true))
         }
     }
 
+    /** Mod: in front of the songs you queued yourself, right after the playing song. */
     fun addSongNextToQueue(song: Song) {
         mediaController?.let { controller ->
-            val mediaItem = buildPlaybackMediaItem(song)
+            removeUpcomingOccurrences(controller, song.id)
+            val mediaItem = buildPlaybackMediaItem(song, isUserQueueItem = true)
 
             val insertionIndex = if (controller.currentMediaItemIndex != C.INDEX_UNSET) {
                 (controller.currentMediaItemIndex + 1).coerceAtMost(controller.mediaItemCount)
@@ -3438,8 +3468,57 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun buildPlaybackMediaItem(song: Song, playlistId: String? = null): MediaItem =
-        MediaItemBuilder.withPlaylistId(MediaItemBuilder.build(song), playlistId)
+    /** Mod: a swipe on a song in the queue that queues it moves it to the end of the songs you queued yourself. */
+    fun queueSongFromQueueSwipe(song: Song) {
+        addSongToQueue(song)
+        sendToast(context.getString(R.string.toast_added_to_queue))
+    }
+
+    /** The songs you queued yourself that come after the playing one, without [excludeSongId]. */
+    private fun captureUpcomingUserQueueItems(player: Player, excludeSongId: String?): List<MediaItem> {
+        val current = player.currentMediaItemIndex
+        if (current == C.INDEX_UNSET) return emptyList()
+        return (current + 1 until player.mediaItemCount)
+            .map { player.getMediaItemAt(it) }
+            .filter { it.isUserQueueItem() && it.mediaId != excludeSongId }
+    }
+
+    /** Puts [items] back right after the playing song, each once, if [startSongId] is still the one playing. */
+    private fun reinsertUserQueue(player: Player, items: List<MediaItem>, startSongId: String) {
+        if (items.isEmpty() || player.currentMediaItem?.mediaId != startSongId) return
+        items.forEach { removeUpcomingOccurrences(player, it.mediaId) }
+        player.addMediaItems((player.currentMediaItemIndex + 1).coerceAtMost(player.mediaItemCount), items)
+    }
+
+    /** Index just past the songs you queued yourself that follow the playing song. */
+    private fun userQueueBlockEndIndex(controller: Player): Int {
+        val current = controller.currentMediaItemIndex
+        val count = controller.mediaItemCount
+        if (current == C.INDEX_UNSET) return count
+        var index = current + 1
+        while (index < count && controller.getMediaItemAt(index).isUserQueueItem()) index++
+        return index
+    }
+
+    /** Removes every copy of [songId] after the playing song; what already played stays. */
+    private fun removeUpcomingOccurrences(controller: Player, songId: String) {
+        val current = controller.currentMediaItemIndex
+        val start = if (current == C.INDEX_UNSET) 0 else current + 1
+        for (i in controller.mediaItemCount - 1 downTo start) {
+            if (controller.getMediaItemAt(i).mediaId == songId) controller.removeMediaItem(i)
+        }
+    }
+
+    private fun buildPlaybackMediaItem(song: Song, playlistId: String? = null, isUserQueueItem: Boolean = false): MediaItem {
+        val item = MediaItemBuilder.withPlaylistId(MediaItemBuilder.build(song), playlistId)
+        if (!isUserQueueItem) return item
+        val extras = android.os.Bundle(item.mediaMetadata.extras ?: android.os.Bundle()).apply {
+            putBoolean(KEY_USER_QUEUE_ITEM, true)
+        }
+        return item.buildUpon()
+            .setMediaMetadata(item.mediaMetadata.buildUpon().setExtras(extras).build())
+            .build()
+    }
 
     /**
      * Plays all selected songs, preserving their selection order.
@@ -4358,12 +4437,9 @@ class PlayerViewModel @Inject constructor(
             showAndPlaySong(song, listOf(song), queueName)
             return
         }
-        val start = controller.currentMediaItemIndex + 1
-        for (i in controller.mediaItemCount - 1 downTo start) {
-            if (controller.getMediaItemAt(i).mediaId == song.id) controller.removeMediaItem(i)
-        }
-        val insertionIndex = start.coerceAtMost(controller.mediaItemCount)
-        controller.addMediaItem(insertionIndex, buildPlaybackMediaItem(song))
+        removeUpcomingOccurrences(controller, song.id)
+        val insertionIndex = (controller.currentMediaItemIndex + 1).coerceAtMost(controller.mediaItemCount)
+        controller.addMediaItem(insertionIndex, buildPlaybackMediaItem(song, isUserQueueItem = true))
         controller.seekTo(insertionIndex, 0L)
         controller.play()
     }

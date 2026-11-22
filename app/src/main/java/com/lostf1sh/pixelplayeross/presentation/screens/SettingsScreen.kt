@@ -294,11 +294,11 @@ fun SettingsScreen(
             }
 
             item {
-                val colorScheme = MaterialTheme.colorScheme
+                val dark = MaterialTheme.colorScheme.isDarkScheme()
                 ExpressiveSettingsGroup {
                     mainSettingsEntries.forEachIndexed { index, entry ->
                         val shape = settingsGroupItemShape(index, mainSettingsEntries.size)
-                        val colors = colorScheme.settingsIconColors(entry.iconTone)
+                        val colors = entry.iconColors(dark)
 
                         when (entry) {
                             is MainSettingsEntry.Category -> ExpressiveCategoryItem(

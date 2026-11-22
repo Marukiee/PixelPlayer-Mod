@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Density
 import androidx.core.view.HapticFeedbackConstantsCompat
+import com.lostf1sh.pixelplayeross.data.preferences.QueueSwipeAction
 import com.lostf1sh.pixelplayeross.presentation.utils.AppHapticsConfig
 import com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +37,9 @@ private enum class QueueDismissDragPhase { IDLE, TENSION, SNAPPING, FREE_DRAG }
  * 4. On release, if the accumulated drag exceeds 40% of the item width the item is dismissed;
  *    otherwise it bounces back.
  *
- * Only end-to-start (negative / left) swipes are honoured.
+ * Mod: each direction does what its setting says (as in the old mod). [QueueSwipeAction.REMOVE] slides the item out and
+ * calls [onDismiss]; [QueueSwipeAction.ADD_TO_QUEUE_END] calls [onAddToQueue] and springs the item back;
+ * [QueueSwipeAction.NONE] keeps the item still in that direction.
  */
 internal class QueueItemDismissGestureHandler(
     private val scope: CoroutineScope,
@@ -45,8 +48,19 @@ internal class QueueItemDismissGestureHandler(
     private val appHapticsConfig: AppHapticsConfig,
     private val offsetAnimatable: Animatable<Float, AnimationVector1D>,
     private val itemWidthPx: Float,
+    private val leftAction: QueueSwipeAction = QueueSwipeAction.REMOVE,
+    private val rightAction: QueueSwipeAction = QueueSwipeAction.NONE,
+    private val onAddToQueue: () -> Unit = {},
     private val onDismiss: () -> Unit
 ) {
+    /** The action of the direction the item is being dragged in. */
+    val activeAction: QueueSwipeAction
+        get() = if (swipingRight) rightAction else leftAction
+
+    /** True while the item is dragged to the right. */
+    var swipingRight: Boolean by mutableStateOf(false)
+        private set
+
     private var dragPhase: QueueDismissDragPhase = QueueDismissDragPhase.IDLE
     private var accumulatedDragX: Float = 0f
 
@@ -69,11 +83,15 @@ internal class QueueItemDismissGestureHandler(
     fun onHorizontalDrag(dragAmount: Float) {
         if (isDismissing) return
         accumulatedDragX += dragAmount
-        if (accumulatedDragX > 0f) {
+        if (accumulatedDragX != 0f) swipingRight = accumulatedDragX > 0f
+        if ((accumulatedDragX > 0f && rightAction == QueueSwipeAction.NONE) ||
+            (accumulatedDragX < 0f && leftAction == QueueSwipeAction.NONE)
+        ) {
             accumulatedDragX = 0f
             scope.launch { offsetAnimatable.snapTo(0f) }
             return
         }
+        val direction = if (accumulatedDragX > 0f) 1f else -1f
 
         when (dragPhase) {
             QueueDismissDragPhase.TENSION -> {
@@ -83,7 +101,7 @@ internal class QueueItemDismissGestureHandler(
                     val dragFraction = (abs(accumulatedDragX) / tensionThresholdPx).coerceIn(0f, 1f)
                     val tensionOffset = maxTensionOffsetPx * dragFraction
                     scope.launch {
-                        offsetAnimatable.snapTo(-tensionOffset)
+                        offsetAnimatable.snapTo(direction * tensionOffset)
                     }
                 } else {
                     dragPhase = QueueDismissDragPhase.SNAPPING
@@ -140,16 +158,35 @@ internal class QueueItemDismissGestureHandler(
         dragPhase = QueueDismissDragPhase.IDLE
         val dismissThreshold = itemWidthPx * 0.40f
 
-        if (abs(accumulatedDragX) > dismissThreshold) {
+        val action = if (accumulatedDragX > 0f) rightAction else leftAction
+        if (abs(accumulatedDragX) > dismissThreshold && action == QueueSwipeAction.ADD_TO_QUEUE_END) {
+            performAppCompatHapticFeedback(
+                hapticView,
+                appHapticsConfig,
+                HapticFeedbackConstantsCompat.GESTURE_END
+            )
+            isInDismissZone = false
+            onAddToQueue()
+            scope.launch {
+                offsetAnimatable.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
+            }
+        } else if (abs(accumulatedDragX) > dismissThreshold && action == QueueSwipeAction.REMOVE) {
             isDismissing = true
             performAppCompatHapticFeedback(
                 hapticView,
                 appHapticsConfig,
                 HapticFeedbackConstantsCompat.GESTURE_END
             )
+            val outside = if (accumulatedDragX > 0f) itemWidthPx else -itemWidthPx
             scope.launch {
                 offsetAnimatable.animateTo(
-                    targetValue = -itemWidthPx,
+                    targetValue = outside,
                     animationSpec = tween(
                         durationMillis = 180,
                         easing = FastOutSlowInEasing

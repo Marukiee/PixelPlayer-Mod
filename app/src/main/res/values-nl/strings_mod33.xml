@@ -46,4 +46,8 @@
     <string name="settings_app_palette_mint">Mint</string>
     <string name="settings_app_palette_blue">Blauw</string>
     <string name="settings_app_palette_coral">Koraal</string>
+    <string name="settings_queue_swipe_section">Wachtrij</string>
+    <string name="settings_queue_swipe_remove">Verwijderen</string>
+    <string name="settings_queue_swipe_right_description">Veeg een nummer in de wachtrij naar rechts.</string>
+    <string name="settings_queue_swipe_left_description">Veeg een nummer in de wachtrij naar links.</string>
 </resources>

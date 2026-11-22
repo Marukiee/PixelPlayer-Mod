@@ -9,62 +9,69 @@ import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.model.SettingsCategory
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 
-/**
- * The accent family a settings row is tinted with. Rows name a role of the active [ColorScheme]
- * instead of a fixed colour, so they follow the now-playing, wallpaper, preset and AMOLED schemes.
- */
-internal enum class SettingsIconTone { PRIMARY, SECONDARY, TERTIARY }
-
-/** Icon circle background paired with the icon tint for a row of the given [tone]. */
-internal fun ColorScheme.settingsIconColors(tone: SettingsIconTone): Pair<Color, Color> = when (tone) {
-    SettingsIconTone.PRIMARY -> primaryContainer to onPrimaryContainer
-    SettingsIconTone.SECONDARY -> secondaryContainer to onSecondaryContainer
-    SettingsIconTone.TERTIARY -> tertiaryContainer to onTertiaryContainer
-}
+/** Mod: true when the active scheme is dark, whichever way the theme was picked. */
+internal fun ColorScheme.isDarkScheme(): Boolean = surface.luminance() < 0.5f
 
 /**
- * Accent for thin markers such as the settings search result bars. Container colours sit too
- * close to the card surface to read at that width, so markers use the accent role itself.
+ * Mod: every settings row has its own colour again, as in the old mod. The three theme roles
+ * looked alike with a strong palette, so the list lost its colours. Pairs are icon circle
+ * background to icon tint.
  */
-internal fun ColorScheme.settingsAccentColor(tone: SettingsIconTone): Color = when (tone) {
-    SettingsIconTone.PRIMARY -> primary
-    SettingsIconTone.SECONDARY -> secondary
-    SettingsIconTone.TERTIARY -> tertiary
-}
-
-/** Fixed per category, so a category keeps its tone in the main list and in search results. */
-internal val SettingsCategory.iconTone: SettingsIconTone
-    get() = when (this) {
-        SettingsCategory.SOURCES -> SettingsIconTone.TERTIARY
-        SettingsCategory.NAVIDROME -> SettingsIconTone.PRIMARY
-        SettingsCategory.SONOS -> SettingsIconTone.SECONDARY
-        SettingsCategory.SPOTIFY -> SettingsIconTone.TERTIARY
-        SettingsCategory.LIBRARY -> SettingsIconTone.PRIMARY
-        SettingsCategory.APPEARANCE -> SettingsIconTone.TERTIARY
-        SettingsCategory.PLAYBACK -> SettingsIconTone.SECONDARY
-        SettingsCategory.BEHAVIOR -> SettingsIconTone.PRIMARY
-        SettingsCategory.BACKUP_RESTORE -> SettingsIconTone.TERTIARY
-        SettingsCategory.DEVELOPER -> SettingsIconTone.SECONDARY
-        SettingsCategory.EQUALIZER -> SettingsIconTone.TERTIARY
-        SettingsCategory.DEVICE_CAPABILITIES -> SettingsIconTone.SECONDARY
-        SettingsCategory.ABOUT -> SettingsIconTone.SECONDARY
+internal fun SettingsCategory.iconColors(dark: Boolean): Pair<Color, Color> = if (dark) {
+    when (this) {
+        SettingsCategory.SOURCES -> Color(0xFF00497D) to Color(0xFFCFE5FF)
+        SettingsCategory.LIBRARY -> Color(0xFF004A77) to Color(0xFFC2E7FF)
+        SettingsCategory.APPEARANCE -> Color(0xFF7D5260) to Color(0xFFFFD8E4)
+        SettingsCategory.PLAYBACK -> Color(0xFF633B48) to Color(0xFFFFD8EC)
+        SettingsCategory.SONOS -> Color(0xFF4A3F2A) to Color(0xFFF5E1BF)
+        SettingsCategory.SPOTIFY -> Color(0xFF1E4D2B) to Color(0xFFB8F0C4)
+        SettingsCategory.NAVIDROME -> Color(0xFF1F4A5C) to Color(0xFFBFE9FB)
+        SettingsCategory.BEHAVIOR -> Color(0xFF3E4C63) to Color(0xFFD7E3FF)
+        SettingsCategory.BACKUP_RESTORE -> Color(0xFF3B4869) to Color(0xFFD9E2FF)
+        SettingsCategory.DEVELOPER -> Color(0xFF324F34) to Color(0xFFCBEFD0)
+        SettingsCategory.EQUALIZER -> Color(0xFF6E4E13) to Color(0xFFFFDEAC)
+        SettingsCategory.DEVICE_CAPABILITIES -> Color(0xFF004D61) to Color(0xFFACEFEE)
+        SettingsCategory.ABOUT -> Color(0xFF3F474D) to Color(0xFFDEE3EB)
     }
+} else {
+    when (this) {
+        SettingsCategory.SOURCES -> Color(0xFFCFE5FF) to Color(0xFF001D33)
+        SettingsCategory.LIBRARY -> Color(0xFFD7E3FF) to Color(0xFF005AC1)
+        SettingsCategory.APPEARANCE -> Color(0xFFFFD8E4) to Color(0xFF631835)
+        SettingsCategory.PLAYBACK -> Color(0xFFFFD8EC) to Color(0xFF631B4B)
+        SettingsCategory.SONOS -> Color(0xFFF5E1BF) to Color(0xFF3D2E12)
+        SettingsCategory.SPOTIFY -> Color(0xFFC8F5D2) to Color(0xFF0F3A1C)
+        SettingsCategory.NAVIDROME -> Color(0xFFBFE9FB) to Color(0xFF0F3442)
+        SettingsCategory.BEHAVIOR -> Color(0xFFD7E3FF) to Color(0xFF253347)
+        SettingsCategory.BACKUP_RESTORE -> Color(0xFFD9E2FF) to Color(0xFF27304E)
+        SettingsCategory.DEVELOPER -> Color(0xFFCBEFD0) to Color(0xFF042106)
+        SettingsCategory.EQUALIZER -> Color(0xFFFFDEAC) to Color(0xFF281900)
+        SettingsCategory.DEVICE_CAPABILITIES -> Color(0xFFACEFEE) to Color(0xFF002022)
+        SettingsCategory.ABOUT -> Color(0xFFEFF1F7) to Color(0xFF44474F)
+    }
+}
+
+/**
+ * Accent for thin markers such as the settings search result bars: the row's icon tint, which
+ * reads against the card surface in both light and dark.
+ */
+internal fun SettingsCategory.accentColor(dark: Boolean): Color = iconColors(dark).second
 
 /** A row of the main Settings list. */
 internal sealed interface MainSettingsEntry {
-    val iconTone: SettingsIconTone
+    fun iconColors(dark: Boolean): Pair<Color, Color>
     val route: String
 
     /** A row drawn from the category's own title, subtitle and icon. */
     data class Category(val category: SettingsCategory) : MainSettingsEntry {
-        override val iconTone: SettingsIconTone
-            get() = category.iconTone
+        override fun iconColors(dark: Boolean): Pair<Color, Color> = category.iconColors(dark)
 
         override val route: String
             get() = when (category) {
@@ -80,31 +87,37 @@ internal sealed interface MainSettingsEntry {
         @StringRes val titleRes: Int,
         @StringRes val subtitleRes: Int,
         val icon: ImageVector,
-        override val iconTone: SettingsIconTone,
+        private val darkColors: Pair<Color, Color>,
+        private val lightColors: Pair<Color, Color>,
         override val route: String
     ) : MainSettingsEntry {
-        // Settings search groups the lyrics options under Playback, so the row shares its tone.
         LYRICS(
             titleRes = R.string.setcat_lyrics_title,
             subtitleRes = R.string.setcat_lyrics_subtitle,
             icon = Icons.Rounded.Lyrics,
-            iconTone = SettingsIconTone.SECONDARY,
+            darkColors = Color(0xFF4F378B) to Color(0xFFEADDFF),
+            lightColors = Color(0xFFEADDFF) to Color(0xFF21005D),
             route = Screen.LyricsSettings.createRoute()
         ),
         DOWNLOADS(
             titleRes = R.string.cloud_downloads_title,
             subtitleRes = R.string.cloud_downloads_settings_subtitle,
             icon = Icons.Rounded.CloudDownload,
-            iconTone = SettingsIconTone.PRIMARY,
+            darkColors = Color(0xFF73342A) to Color(0xFFFFDAD4),
+            lightColors = Color(0xFFFFDAD4) to Color(0xFF410001),
             route = Screen.CloudDownloads.route
         ),
         ACCOUNTS(
             titleRes = R.string.settings_accounts_row_title,
             subtitleRes = R.string.settings_accounts_row_subtitle,
             icon = Icons.Rounded.AccountCircle,
-            iconTone = SettingsIconTone.TERTIARY,
+            // The old mod's accounts colours.
+            darkColors = Color(0xFF37474F) to Color(0xFFBBD9E8),
+            lightColors = Color(0xFFD6EAF5) to Color(0xFF103548),
             route = Screen.Accounts.createRoute()
-        )
+        );
+
+        override fun iconColors(dark: Boolean): Pair<Color, Color> = if (dark) darkColors else lightColors
     }
 }
 

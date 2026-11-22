@@ -45,8 +45,8 @@ import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.model.SettingsCategory
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 import com.lostf1sh.pixelplayeross.presentation.screens.ExpressiveSettingsGroup
-import com.lostf1sh.pixelplayeross.presentation.screens.iconTone
-import com.lostf1sh.pixelplayeross.presentation.screens.settingsAccentColor
+import com.lostf1sh.pixelplayeross.presentation.screens.accentColor
+import com.lostf1sh.pixelplayeross.presentation.screens.isDarkScheme
 import com.lostf1sh.pixelplayeross.presentation.screens.settingsGroupItemShape
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsUiState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsViewModel
@@ -123,7 +123,7 @@ fun SettingsSearchResultsContent(
                 ExpressiveSettingsGroup {
                     items.forEachIndexed { index, resultItem ->
                         val spec = resultItem.spec
-                        val accentColor = colorScheme.settingsAccentColor(spec.category.iconTone)
+                        val accentColor = spec.category.accentColor(colorScheme.isDarkScheme())
                         val total = items.size
                         val shape = settingsGroupItemShape(index, total)
 

@@ -12,10 +12,14 @@ import com.lostf1sh.pixelplayeross.data.model.SearchFilterType
 import com.lostf1sh.pixelplayeross.data.model.SearchHistoryItem
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
 
 @Immutable
 data class PlayerUiState(
     val currentPlaybackQueue: ImmutableList<Song> = persistentListOf(),
+    /** Mod: ids of the songs in the queue that you queued yourself, which play before the rest of the list. */
+    val userQueueSongIds: ImmutableSet<String> = persistentSetOf(),
     val currentQueueSourceName: String = "All Songs",
     val searchResults: ImmutableList<SearchResultItem> = persistentListOf(),
     val musicFolders: ImmutableList<MusicFolder> = persistentListOf(),

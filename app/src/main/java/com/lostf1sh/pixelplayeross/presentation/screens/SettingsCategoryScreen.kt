@@ -177,6 +177,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.LibraryNavigationMode
 import com.lostf1sh.pixelplayeross.data.preferences.NavBarStyle
 import com.lostf1sh.pixelplayeross.data.preferences.PreviousButtonBehavior
 import com.lostf1sh.pixelplayeross.data.preferences.SwipeToQueueAction
+import com.lostf1sh.pixelplayeross.data.preferences.QueueSwipeAction
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreference
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import com.lostf1sh.pixelplayeross.data.preferences.InterfaceAppearance
@@ -1306,6 +1307,42 @@ fun SettingsCategoryScreen(
                                     selectedKey = swipeBackAction.storageKey,
                                     onSelectionChanged = { key ->
                                         settingsViewModel.setSwipeBackAction(SwipeToQueueAction.fromStorageKey(key))
+                                    },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_queue_music_24), null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                            }
+                            // Mod: what a swipe on a song in the queue does, per direction, as in the old mod.
+                            SettingsSubsection(
+                                title = stringResource(R.string.settings_queue_swipe_section)
+                            ) {
+                                val queueSwipeLeft by settingsViewModel.queueSwipeLeftAction.collectAsStateWithLifecycle()
+                                val queueSwipeRight by settingsViewModel.queueSwipeRightAction.collectAsStateWithLifecycle()
+                                val queueSwipeOptions = linkedMapOf(
+                                    QueueSwipeAction.REMOVE.storageKey to stringResource(R.string.settings_queue_swipe_remove),
+                                    QueueSwipeAction.ADD_TO_QUEUE_END.storageKey to stringResource(R.string.setcat_swipe_to_queue_add),
+                                    QueueSwipeAction.NONE.storageKey to stringResource(R.string.setcat_swipe_to_queue_off)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_swipe_right_title),
+                                    description = stringResource(R.string.settings_queue_swipe_right_description),
+                                    options = queueSwipeOptions,
+                                    selectedKey = queueSwipeRight.storageKey,
+                                    onSelectionChanged = { key ->
+                                        settingsViewModel.setQueueSwipeRightAction(
+                                            QueueSwipeAction.fromStorageKey(key, QueueSwipeAction.DEFAULT_RIGHT)
+                                        )
+                                    },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_queue_music_24), null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_swipe_left_title),
+                                    description = stringResource(R.string.settings_queue_swipe_left_description),
+                                    options = queueSwipeOptions,
+                                    selectedKey = queueSwipeLeft.storageKey,
+                                    onSelectionChanged = { key ->
+                                        settingsViewModel.setQueueSwipeLeftAction(
+                                            QueueSwipeAction.fromStorageKey(key, QueueSwipeAction.DEFAULT_LEFT)
+                                        )
                                     },
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_queue_music_24), null, tint = MaterialTheme.colorScheme.secondary) }
                                 )

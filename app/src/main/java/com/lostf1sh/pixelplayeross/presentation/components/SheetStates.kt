@@ -46,6 +46,9 @@ private val SheetScrollFirstDistance = 32.dp
  * sheet. It only counts when the sheet itself followed the finger, so a slider or a list that took the drag never
  * closes it. A list scrolled first counts from where the sheet took over; pulling back up before letting go keeps
  * the sheet open, and a mostly sideways swipe never counts.
+ *
+ * This modifier sits outside Material's offset, so it also covers the dimmed area above a tall sheet and keeps the
+ * scrim from seeing taps there. A tap above the sheet's top edge therefore closes the sheet here, as the scrim would.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 fun Modifier.closeOnShortPull(sheetState: SheetState, onClosed: () -> Unit): Modifier = composed {
@@ -58,6 +61,9 @@ fun Modifier.closeOnShortPull(sheetState: SheetState, onClosed: () -> Unit): Mod
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             val rest = runCatching { sheetState.requireOffset() }.getOrNull() ?: return@awaitEachGesture
+            val tappedAbove = down.position.y < rest
+            var moved = 0f
+            var released = false
             var start = down.position.y
             var followed = false
             var travel = 0f
@@ -67,6 +73,8 @@ fun Modifier.closeOnShortPull(sheetState: SheetState, onClosed: () -> Unit): Mod
                 val event = awaitPointerEvent(PointerEventPass.Initial)
                 val finger = event.changes.firstOrNull { it.id == down.id } ?: break
                 sideways = maxOf(sideways, abs(finger.position.x - down.position.x))
+                moved = maxOf(moved, (finger.position - down.position).getDistance())
+                if (!finger.pressed) released = true
                 val pulled = (runCatching { sheetState.requireOffset() }.getOrNull() ?: rest) - rest
                 // The content moves along with the sheet, so the sheet's own move is added to the finger's.
                 val y = finger.position.y + pulled
@@ -77,6 +85,19 @@ fun Modifier.closeOnShortPull(sheetState: SheetState, onClosed: () -> Unit): Mod
                 travel = y - start
                 deepest = maxOf(deepest, travel)
             } while (event.changes.any { it.pressed })
+            if (tappedAbove && released && moved < viewConfiguration.touchSlop) {
+                scope.launch {
+                    if (sheetState.isVisible) {
+                        try {
+                            sheetState.hide()
+                        } catch (interrupted: CancellationException) {
+                            ensureActive()
+                        }
+                    }
+                    latestOnClosed()
+                }
+                return@awaitEachGesture
+            }
             if (travel >= closeDistance && deepest - travel < pullBack && sideways < travel) {
                 scope.launch {
                     // The drag reaches the sheet a frame or two after the finger. Still at rest means something else took it.

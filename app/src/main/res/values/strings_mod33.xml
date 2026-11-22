@@ -71,4 +71,8 @@
     <string name="settings_app_palette_mint">Mint</string>
     <string name="settings_app_palette_blue">Blue</string>
     <string name="settings_app_palette_coral">Coral</string>
+    <string name="settings_queue_swipe_section">Queue</string>
+    <string name="settings_queue_swipe_remove">Remove</string>
+    <string name="settings_queue_swipe_right_description">Swipe a song in the queue to the right.</string>
+    <string name="settings_queue_swipe_left_description">Swipe a song in the queue to the left.</string>
 </resources>

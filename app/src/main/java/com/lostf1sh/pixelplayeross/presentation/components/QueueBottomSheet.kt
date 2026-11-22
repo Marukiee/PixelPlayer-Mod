@@ -191,7 +191,14 @@ import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
 import com.lostf1sh.pixelplayeross.presentation.components.scoped.QueueItemDismissGestureHandler
+import com.lostf1sh.pixelplayeross.data.preferences.QueueSwipeAction
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import coil.size.Size
@@ -303,6 +310,14 @@ fun QueueBottomSheet(
 
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val showQueueHistory = settingsState.showQueueHistory
+    // Mod: the queue swipe settings and the songs you queued yourself.
+    var swipedCardBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var scrollbarOriginInRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    val queueSwipeLeft by viewModel.queueSwipeLeftAction.collectAsStateWithLifecycle()
+    val queueSwipeRight by viewModel.queueSwipeRightAction.collectAsStateWithLifecycle()
+    val userQueueSongIds by remember(viewModel) {
+        viewModel.playerUiState.map { it.userQueueSongIds }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = kotlinx.collections.immutable.persistentSetOf())
     // Kept as State and read only where it is shown, so a speed change does not recompose
     // the whole sheet.
     val playbackSpeed = settingsViewModel.playbackSpeed.collectAsStateWithLifecycle()
@@ -862,6 +877,11 @@ fun QueueBottomSheet(
                                         enableSwipeToDismiss = canReorder,
                                         swipeStateIdentity = itemStableKey,
                                         onDismissSong = { onRemoveSong(song.id) },
+                                        swipeLeftAction = queueSwipeLeft,
+                                        swipeRightAction = queueSwipeRight,
+                                        onAddToQueueSong = { viewModel.queueSongFromQueueSwipe(song) },
+                                        isUserQueued = canReorder && song.id in userQueueSongIds,
+                                        onSwipedCardBounds = { swipedCardBounds = it },
                                         isFromPlaylist = true,
                                         onMoreOptionsClick = { onSongInfoClick(song) },
                                         dragHandle = {
@@ -904,6 +924,28 @@ fun QueueBottomSheet(
                         ExpressiveScrollBar(
                             listState = listState,
                             modifier = Modifier
+                                .onGloballyPositioned { scrollbarOriginInRoot = it.positionInRoot() }
+                                .drawWithContent {
+                                    // Mod: a card swiped over the scrollbar covers it, as if the bar lies behind the rows.
+                                    val card = swipedCardBounds
+                                    if (card == null) {
+                                        drawContent()
+                                    } else {
+                                        val local = card.translate(-scrollbarOriginInRoot)
+                                        val corner = 22.dp.toPx()
+                                        val hole = androidx.compose.ui.graphics.Path().apply {
+                                            addRoundRect(
+                                                androidx.compose.ui.geometry.RoundRect(
+                                                    local,
+                                                    androidx.compose.ui.geometry.CornerRadius(corner, corner)
+                                                )
+                                            )
+                                        }
+                                        clipPath(hole, androidx.compose.ui.graphics.ClipOp.Difference) {
+                                            this@drawWithContent.drawContent()
+                                        }
+                                    }
+                                }
                                 .align(Alignment.CenterEnd)
                                 .padding(
                                     top = 24.dp,
@@ -1931,7 +1973,14 @@ fun QueuePlaylistSongItem(
     swipeStateIdentity: Long = 0L,
     onDismissSong: () -> Unit = {},
     isFromPlaylist: Boolean,
-    selectionChecked: Boolean? = null
+    selectionChecked: Boolean? = null,
+    // Mod: per-direction swipe actions and the mark for a song you queued yourself, as in the old mod.
+    swipeLeftAction: QueueSwipeAction = QueueSwipeAction.REMOVE,
+    swipeRightAction: QueueSwipeAction = QueueSwipeAction.NONE,
+    onAddToQueueSong: () -> Unit = {},
+    isUserQueued: Boolean = false,
+    // Mod: where the swiped card is on screen (null when it rests), so the scrollbar can leave that spot open.
+    onSwipedCardBounds: (androidx.compose.ui.geometry.Rect?) -> Unit = {}
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -1966,7 +2015,8 @@ fun QueuePlaylistSongItem(
     val dismissOffsetAnimatable = remember(swipeStateIdentity) { Animatable(0f) }
     var itemWidthPx by remember { mutableStateOf(0f) }
 
-    val dismissHandler = remember(swipeStateIdentity, dismissEnabled, itemWidthPx) {
+    val latestOnAddToQueueSong by rememberUpdatedState(onAddToQueueSong)
+    val dismissHandler = remember(swipeStateIdentity, dismissEnabled, itemWidthPx, swipeLeftAction, swipeRightAction) {
         if (dismissEnabled && itemWidthPx > 0f) {
             QueueItemDismissGestureHandler(
                 scope = dismissScope,
@@ -1975,6 +2025,9 @@ fun QueuePlaylistSongItem(
                 appHapticsConfig = appHapticsConfig,
                 offsetAnimatable = dismissOffsetAnimatable,
                 itemWidthPx = itemWidthPx,
+                leftAction = swipeLeftAction,
+                rightAction = swipeRightAction,
+                onAddToQueue = { latestOnAddToQueueSong() },
                 onDismiss = onDismissSong
             )
         } else null
@@ -1982,13 +2035,17 @@ fun QueuePlaylistSongItem(
 
     val isSwipeTargeted = dismissHandler?.isInDismissZone == true
     val currentOffsetPx = dismissOffsetAnimatable.value
-    val revealWidthPx = (-currentOffsetPx).coerceAtLeast(0f)
+    val revealWidthPx = kotlin.math.abs(currentOffsetPx)
+    val revealOnStart = currentOffsetPx > 0f
+    val revealQueues = (if (revealOnStart) swipeRightAction else swipeLeftAction) == QueueSwipeAction.ADD_TO_QUEUE_END
+    val revealContainer = if (revealQueues) colors.primaryContainer else colors.errorContainer
+    val revealContent = if (revealQueues) colors.onPrimaryContainer else colors.onErrorContainer
     val revealProgress = if (density.density > 0f) {
         (revealWidthPx / (56.dp.value * density.density)).coerceIn(0f, 1f)
     } else 0f
 
     val dismissBackgroundColor by animateColorAsState(
-        targetValue = if (isSwipeTargeted) colors.errorContainer else colors.errorContainer.copy(alpha = 0.82f),
+        targetValue = if (isSwipeTargeted) revealContainer else revealContainer.copy(alpha = 0.82f),
         animationSpec = tween(durationMillis = 150),
         label = "dismissBackgroundColor"
     )
@@ -2004,6 +2061,30 @@ fun QueuePlaylistSongItem(
     )
 
     var surfaceHeightPx by remember { mutableStateOf(0f) }
+    var rowBoundsInRoot by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var reportsSwipedCard by remember { mutableStateOf(false) }
+    val latestOnSwipedCardBounds by rememberUpdatedState(onSwipedCardBounds)
+    val cardInsetPx = with(density) { 12.dp.toPx() }
+    SideEffect {
+        val row = rowBoundsInRoot
+        if (currentOffsetPx != 0f && row != null) {
+            reportsSwipedCard = true
+            latestOnSwipedCardBounds(
+                androidx.compose.ui.geometry.Rect(
+                    left = row.left + cardInsetPx + currentOffsetPx,
+                    top = row.top,
+                    right = row.right - cardInsetPx + currentOffsetPx,
+                    bottom = row.bottom
+                )
+            )
+        } else if (reportsSwipedCard) {
+            reportsSwipedCard = false
+            latestOnSwipedCardBounds(null)
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { if (reportsSwipedCard) latestOnSwipedCardBounds(null) }
+    }
 
     Box(
         modifier = modifier
@@ -2011,6 +2092,7 @@ fun QueuePlaylistSongItem(
             .onGloballyPositioned { coordinates ->
                 val measuredWidth = coordinates.size.width.toFloat()
                 if (measuredWidth != itemWidthPx) itemWidthPx = measuredWidth
+                rowBoundsInRoot = coordinates.boundsInRoot()
             }
     ) {
         if (revealWidthPx > 0f && surfaceHeightPx > 0f) {
@@ -2018,25 +2100,27 @@ fun QueuePlaylistSongItem(
             val surfaceHeightDp = with(density) { surfaceHeightPx.toDp() }
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 12.dp)
+                    .align(if (revealOnStart) Alignment.CenterStart else Alignment.CenterEnd)
+                    .padding(start = if (revealOnStart) 12.dp else 0.dp, end = if (revealOnStart) 0.dp else 12.dp)
                     .height(surfaceHeightDp)
                     .width(revealWidthDp)
                     .clip(CircleShape)
                     .background(dismissBackgroundColor),
-                contentAlignment = Alignment.CenterEnd
+                contentAlignment = if (revealOnStart) Alignment.CenterStart else Alignment.CenterEnd
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.rounded_close_24),
-                    contentDescription = stringResource(R.string.presentation_batch_e_cd_dismiss_song),
+                    painter = painterResource(if (revealQueues) R.drawable.rounded_queue_music_24 else R.drawable.rounded_close_24),
+                    contentDescription = stringResource(
+                        if (revealQueues) R.string.song_info_action_add_to_queue else R.string.presentation_batch_e_cd_dismiss_song
+                    ),
                     modifier = Modifier
-                        .padding(end = 16.dp)
+                        .padding(start = if (revealOnStart) 16.dp else 0.dp, end = if (revealOnStart) 0.dp else 16.dp)
                         .graphicsLayer {
                             alpha = dismissIconAlpha
                             scaleX = dismissIconScale
                             scaleY = dismissIconScale
                         },
-                    tint = colors.onErrorContainer
+                    tint = revealContent
                 )
             }
         }
@@ -2132,6 +2216,18 @@ fun QueuePlaylistSongItem(
                             song.displayArtist, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (isCurrentSong) colors.primary.copy(alpha = 0.8f) else colors.onSurfaceVariant
+                        )
+                    }
+
+                    // Mod: a song you queued yourself, which plays before the rest of the list (as in the old mod).
+                    if (isUserQueued && !isCurrentSong) {
+                        Icon(
+                            painter = painterResource(R.drawable.rounded_queue_music_24),
+                            contentDescription = stringResource(R.string.song_info_action_add_to_queue),
+                            tint = colors.primary,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .size(18.dp)
                         )
                     }
 

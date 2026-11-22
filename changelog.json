@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.8.0-mod.35",
+    "en": {
+      "new": [
+        "Songs you queue play first, with an icon",
+        "Swipe right in the queue, tap above a panel to close it"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Nummers die je zelf in de wachtrij zet spelen eerst, met een icoontje",
+        "Naar rechts vegen in de wachtrij, tik boven een paneel om het te sluiten"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.34",
     "en": {
       "new": [

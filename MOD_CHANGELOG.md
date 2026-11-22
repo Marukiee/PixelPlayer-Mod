@@ -1,3 +1,10 @@
+- Wachtrij: naar rechts vegen zet een nummer bij je eigen wachtrij; instellen onder Instellingen › Gedrag › Wachtrij
+- Nummers die je zelf toevoegt spelen eerst, krijgen een icoontje en blijven staan als je iets anders start
+- Tik boven een paneel om het te sluiten
+- De icoontjes in Instellingen hebben weer hun eigen kleuren
+- Equalizer en Opties/Info zonder hoofdletters
+- De scrollbalk in de wachtrij valt achter een nummer dat je veegt
+
 - Bibliotheek opnieuw ingedeeld: geen grote titel meer, tabbladen in woorden, sortering en bron in tekst, tandwiel naar Instellingen
 - Frissere kleuren, standaard blauw; kiezen kan onder Instellingen › Uiterlijk › Kleuren
 - Alle panelen openen en sluiten zoals het verbinden-paneel, en gaan dicht met een korte veeg omlaag

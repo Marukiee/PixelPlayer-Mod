@@ -21,67 +21,67 @@ data class EqualizerPreset(
         
         val FLAT = EqualizerPreset(
             name = "flat",
-            displayName = "FLAT",
+            displayName = "Flat",
             bandLevels = listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         )
         
         val ROCK = EqualizerPreset(
             name = "rock",
-            displayName = "ROCK",
+            displayName = "Rock",
             bandLevels = listOf(5, 4, 3, 1, -1, -1, 1, 3, 4, 5)
         )
         
         val POP = EqualizerPreset(
             name = "pop",
-            displayName = "POP",
+            displayName = "Pop",
             bandLevels = listOf(-1, 2, 4, 5, 5, 4, 2, 1, 2, 2)
         )
         
         val HIP_HOP = EqualizerPreset(
             name = "hip_hop",
-            displayName = "HIP HOP",
+            displayName = "Hip hop",
             bandLevels = listOf(6, 8, 4, 1, -1, -1, 1, 1, 3, 4)
         )
         
         val JAZZ = EqualizerPreset(
             name = "jazz",
-            displayName = "JAZZ",
+            displayName = "Jazz",
             bandLevels = listOf(3, 2, 1, 2, -1, -1, 0, 2, 3, 4)
         )
         
         val CLASSICAL = EqualizerPreset(
             name = "classical",
-            displayName = "CLASSICAL",
+            displayName = "Classical",
             bandLevels = listOf(4, 3, 2, 1, -1, -1, 0, 2, 4, 4)
         )
         
         val ELECTRONIC = EqualizerPreset(
             name = "electronic",
-            displayName = "ELECTRONIC",
+            displayName = "Electronic",
             bandLevels = listOf(5, 6, 2, 0, -1, 1, 0, 2, 6, 7)
         )
         
         val BASS_BOOST = EqualizerPreset(
             name = "bass_boost",
-            displayName = "BASS BOOST",
+            displayName = "Bass boost",
             bandLevels = listOf(7, 9, 6, 3, 0, 0, 0, 0, 0, 0)
         )
         
         val TREBLE_BOOST = EqualizerPreset(
             name = "treble_boost",
-            displayName = "TREBLE BOOST",
+            displayName = "Treble boost",
             bandLevels = listOf(0, 0, 0, 0, 0, 1, 3, 6, 8, 9)
         )
         
         val VOCAL = EqualizerPreset(
             name = "vocal",
-            displayName = "VOCAL",
+            displayName = "Vocal",
             bandLevels = listOf(-3, -2, -1, 2, 5, 6, 5, 3, 1, 0)
         )
         
         fun custom(bandLevels: List<Int>) = EqualizerPreset(
             name = "custom",
-            displayName = "CUSTOM",
+            displayName = "Custom",
             bandLevels = bandLevels,
             isCustom = true
         )

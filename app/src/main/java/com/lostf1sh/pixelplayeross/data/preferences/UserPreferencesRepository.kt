@@ -271,6 +271,8 @@ constructor(
         // Mod: the keys of the old mod, so its swipe choices carry over. Right is the OSS swipe towards the end edge.
         val SWIPE_LEFT_ACTION = stringPreferencesKey("swipe_left_action")
         val SWIPE_RIGHT_ACTION = stringPreferencesKey("swipe_right_action")
+        val QUEUE_SWIPE_LEFT_ACTION = stringPreferencesKey("queue_swipe_left_action")
+        val QUEUE_SWIPE_RIGHT_ACTION = stringPreferencesKey("queue_swipe_right_action")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
         val ADVANCED_PERFORMANCE_DIAGNOSTICS_ENABLED =
             booleanPreferencesKey("advanced_performance_diagnostics_enabled")
@@ -2221,6 +2223,30 @@ constructor(
     suspend fun setSwipeBackAction(action: SwipeToQueueAction) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.SWIPE_LEFT_ACTION] = action.storageKey
+        }
+    }
+
+    /** Mod: what swiping a song in the queue to the left does. */
+    val queueSwipeLeftActionFlow: Flow<QueueSwipeAction> =
+        dataStore.data.map { preferences ->
+            QueueSwipeAction.fromStorageKey(preferences[PreferencesKeys.QUEUE_SWIPE_LEFT_ACTION], QueueSwipeAction.DEFAULT_LEFT)
+        }.distinctUntilChanged()
+
+    /** Mod: what swiping a song in the queue to the right does. */
+    val queueSwipeRightActionFlow: Flow<QueueSwipeAction> =
+        dataStore.data.map { preferences ->
+            QueueSwipeAction.fromStorageKey(preferences[PreferencesKeys.QUEUE_SWIPE_RIGHT_ACTION], QueueSwipeAction.DEFAULT_RIGHT)
+        }.distinctUntilChanged()
+
+    suspend fun setQueueSwipeLeftAction(action: QueueSwipeAction) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.QUEUE_SWIPE_LEFT_ACTION] = action.storageKey
+        }
+    }
+
+    suspend fun setQueueSwipeRightAction(action: QueueSwipeAction) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.QUEUE_SWIPE_RIGHT_ACTION] = action.storageKey
         }
     }
 

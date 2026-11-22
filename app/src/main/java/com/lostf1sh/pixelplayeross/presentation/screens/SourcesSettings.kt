@@ -867,7 +867,7 @@ internal fun SourcesHubBlock(navController: NavController) {
             }
             ExpressiveCategoryItem(
                 category = category,
-                customColors = MaterialTheme.colorScheme.settingsIconColors(category.iconTone),
+                customColors = category.iconColors(MaterialTheme.colorScheme.isDarkScheme()),
                 subtitle = sourceStatus(category, status),
                 // On top of this page, so Back comes here: all setting pages share one route, and single top would
                 // swap this page for the next one.
