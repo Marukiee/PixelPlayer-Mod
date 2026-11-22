@@ -142,7 +142,9 @@ fun LibraryActionRow(
     isShuffleEnabled: Boolean = false,
     showStorageFilterButton: Boolean = false,
     currentStorageFilter: StorageFilter = StorageFilter.ALL,
-    onStorageFilterClick: () -> Unit = {}
+    onStorageFilterClick: () -> Unit = {},
+    /** Mod: the sort sheet is open, so the sort button stays round and coloured until it closes. */
+    sortMenuOpen: Boolean = false
 ) {
     // Animate complete arrangements so departing controls keep their tab's labels and width.
     AnimatedContent(
@@ -179,7 +181,8 @@ fun LibraryActionRow(
             onImportM3uClick = onImportM3uClick,
             onFolderClick = onFolderClick,
             onNavigateBack = onNavigateBack,
-            onStorageFilterClick = onStorageFilterClick
+            onStorageFilterClick = onStorageFilterClick,
+            sortMenuOpen = sortMenuOpen
         )
     }
 }
@@ -194,7 +197,8 @@ private fun LibraryActionRowContent(
     onImportM3uClick: () -> Unit,
     onFolderClick: (String) -> Unit,
     onNavigateBack: () -> Unit,
-    onStorageFilterClick: () -> Unit
+    onStorageFilterClick: () -> Unit,
+    sortMenuOpen: Boolean = false
 ) {
     val isPlaylistTab = content.isPlaylistTab
     val showSortButton = content.showSortButton
@@ -385,15 +389,10 @@ private fun LibraryActionRowContent(
                     enter = slideInHorizontally(initialOffsetX = { it / 2 }) + fadeIn(),
                     exit = slideOutHorizontally(targetOffsetX = { it / 2 }) + fadeOut()
                 ) {
-                    FilledTonalIconButton(
+                    ReactiveToolbarButton(
                         onClick = onLocateClick,
-                        shape = RoundedCornerShape(
-                            topStart = outerCorner,
-                            bottomStart = outerCorner,
-                            topEnd = locateEndCorner,
-                            bottomEnd = locateEndCorner
-                        ),
-                        modifier = Modifier.size(genHeight)
+                        startCorner = outerCorner,
+                        endCorner = locateEndCorner
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.MyLocation,
@@ -508,15 +507,11 @@ private fun LibraryActionRowContent(
 
                 Spacer(modifier = Modifier.width(gapBetweenFilterAndSort))
 
-                FilledTonalIconButton(
+                ReactiveToolbarButton(
                     onClick = onSortClick,
-                    shape = RoundedCornerShape(
-                        topStart = sortStartCorner,
-                        bottomStart = sortStartCorner,
-                        topEnd = outerCorner,
-                        bottomEnd = outerCorner
-                    ),
-                    modifier = Modifier.size(genHeight)
+                    startCorner = sortStartCorner,
+                    endCorner = outerCorner,
+                    active = sortMenuOpen
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.Sort,
@@ -649,4 +644,49 @@ fun Breadcrumbs(
             item { Spacer(modifier = Modifier.width(12.dp)) }
         }
     }
+}
+
+/**
+ * Mod: a toolbar button that answers the finger, as in MarkMySteps: it rounds out and dips while pressed, and while
+ * [active] (its menu is open) it stays round in the primary colour.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ReactiveToolbarButton(
+    onClick: () -> Unit,
+    startCorner: androidx.compose.ui.unit.Dp,
+    endCorner: androidx.compose.ui.unit.Dp,
+    active: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    val motion = MaterialTheme.motionScheme
+    val colors = MaterialTheme.colorScheme
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val round = genHeight / 2
+    val start by animateDpAsState(if (pressed || active) round else startCorner, motion.fastSpatialSpec(), label = "ToolbarStart")
+    val end by animateDpAsState(if (pressed || active) round else endCorner, motion.fastSpatialSpec(), label = "ToolbarEnd")
+    val scale by animateFloatAsState(if (pressed) 0.9f else 1f, motion.fastSpatialSpec(), label = "ToolbarScale")
+    val container by animateColorAsState(
+        if (active) colors.primary else colors.secondaryContainer, motion.defaultEffectsSpec(), label = "ToolbarContainer"
+    )
+    val contentColor by animateColorAsState(
+        if (active) colors.onPrimary else colors.onSecondaryContainer, motion.defaultEffectsSpec(), label = "ToolbarContent"
+    )
+    FilledTonalIconButton(
+        onClick = {
+            haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+            onClick()
+        },
+        shape = RoundedCornerShape(topStart = start, bottomStart = start, topEnd = end, bottomEnd = end),
+        colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = container, contentColor = contentColor),
+        interactionSource = interaction,
+        modifier = Modifier
+            .size(genHeight)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+    ) { content() }
 }

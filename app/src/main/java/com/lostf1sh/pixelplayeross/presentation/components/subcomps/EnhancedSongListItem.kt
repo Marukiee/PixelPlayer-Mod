@@ -1,5 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.components.subcomps
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -67,6 +69,9 @@ import androidx.compose.ui.res.stringResource
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.SwipeToQueueBox
+
+/** Mod: the song whose options sheet is open, so its three dots can stay coloured. */
+val LocalOpenSongMenuId = androidx.compose.runtime.compositionLocalOf<String?> { null }
 
 @Immutable
 private data class EnhancedSongAnimationTarget(
@@ -462,15 +467,35 @@ fun EnhancedSongListItem(
                 }
 
                 if (showTrailingAction) {
+                    // Mod: the button answers the finger and stays in the primary colour while this song's options
+                    // are open, as the menu buttons in MarkMySteps do.
+                    val moreInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    val morePressed by moreInteraction.collectIsPressedAsState()
+                    val moreActive = LocalOpenSongMenuId.current == song.id
+                    val moreMotion = MaterialTheme.motionScheme
+                    val moreScale by androidx.compose.animation.core.animateFloatAsState(
+                        if (morePressed) 0.86f else 1f, moreMotion.fastSpatialSpec(), label = "moreScale"
+                    )
+                    val moreContainer by androidx.compose.animation.animateColorAsState(
+                        if (moreActive || morePressed) colors.primary else mvContentColor, moreMotion.defaultEffectsSpec(), label = "moreContainer"
+                    )
+                    val moreContent by androidx.compose.animation.animateColorAsState(
+                        if (moreActive || morePressed) colors.onPrimary else mvContainerColor, moreMotion.defaultEffectsSpec(), label = "moreContent"
+                    )
                     FilledIconButton(
                         onClick = { onMoreOptionsClick(song) },
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = mvContentColor,
-                            contentColor = mvContainerColor
+                            containerColor = moreContainer,
+                            contentColor = moreContent
                         ),
+                        interactionSource = moreInteraction,
                         modifier = Modifier
                             .size(36.dp)
                             .padding(end = 4.dp)
+                            .graphicsLayer {
+                                scaleX = moreScale
+                                scaleY = moreScale
+                            }
                     ) {
                         Icon(
                             imageVector = trailingIcon,

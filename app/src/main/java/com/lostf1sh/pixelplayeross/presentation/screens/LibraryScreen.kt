@@ -1254,6 +1254,7 @@ fun LibraryScreen(
                                     showSortButton = sanitizedSortOptions.isNotEmpty(),
                                     showLocateButton = showLocateButton,
                                     onSortClick = { playerViewModel.showSortingSheet() },
+                                    sortMenuOpen = isSortSheetVisible,
                                     onLocateClick = { locateAction?.invoke() },
                                     isPlaylistTab = visibleCurrentTabId == LibraryTabId.PLAYLISTS,
                                     isFoldersTab = visibleCurrentTabId == LibraryTabId.FOLDERS && (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null),
@@ -1537,6 +1538,11 @@ fun LibraryScreen(
                             )
                         }
 
+                        // Mod: the three dots of the song whose options are open stay coloured, as a menu button does.
+                        androidx.compose.runtime.CompositionLocalProvider(
+                            com.lostf1sh.pixelplayeross.presentation.components.subcomps.LocalOpenSongMenuId provides
+                                selectedSongForInfo?.id?.takeIf { showSongInfoBottomSheet }
+                        ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             HorizontalPager(
                                 state = pagerState,
@@ -1789,6 +1795,7 @@ fun LibraryScreen(
                                     .align(Alignment.TopCenter)
                                     .zIndex(1f)
                             )
+                        }
                         }
                     }
                 }
