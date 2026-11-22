@@ -28,6 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.roundToInt
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 
 @Composable
 fun TabAnimation(
@@ -41,6 +45,11 @@ fun TabAnimation(
     selectedIndex: Int,
     onClick: () -> Unit,
     transformOrigin: TransformOrigin = TransformOrigin.Center,
+    /**
+     * Mod: the corner of an unselected tab in percent of its height, so it looks like the toolbar buttons; the
+     * selected one rounds out to a pill. Null keeps every tab a pill.
+     */
+    unselectedCornerPercent: Int? = null,
     content: @Composable () -> Unit
 ) {
     val hapticFeedback = LocalHapticFeedback.current
@@ -96,6 +105,13 @@ fun TabAnimation(
         }
     }
 
+    val cornerPercent by animateFloatAsState(
+        targetValue = if (unselectedCornerPercent == null || isSelected) 50f else unselectedCornerPercent.toFloat(),
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
+        label = "Tab Corner"
+    )
+    val tabShape = RoundedCornerShape(cornerPercent.roundToInt().coerceIn(0, 50))
+
     Tab(
         modifier = modifier
             .padding(all = 5.dp)
@@ -104,10 +120,10 @@ fun TabAnimation(
                 translationX = offsetX.value
                 this.transformOrigin = transformOrigin
             }
-            .clip(CircleShape)
+            .clip(tabShape)
             .background(
                 color = backgroundColor,
-                shape = RoundedCornerShape(50)
+                shape = tabShape
             ),
         selected = isSelected,
         text = content,

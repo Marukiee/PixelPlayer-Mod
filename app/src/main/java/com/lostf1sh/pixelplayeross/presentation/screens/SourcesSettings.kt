@@ -1,6 +1,9 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
 
 // Mod: the pages under "Play from" (Navidrome, Sonos, Spotify) and the hub that lists them, from the Google-based mod.
+import com.lostf1sh.pixelplayeross.data.sonos.SonosMissReason
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Link
@@ -393,6 +396,10 @@ internal fun SonosSettingsBlock() {
     LaunchedEffect(Unit) { sonosViewModel.loadSourceInfo() }
 
     val info = sourceInfo
+    var showMissingSongs by remember { mutableStateOf(false) }
+    if (showMissingSongs) {
+        SonosMissingSongsSheet(sonosViewModel = sonosViewModel, onDismiss = { showMissingSongs = false })
+    }
     Surface(
         color = MaterialTheme.colorScheme.tertiaryContainer,
         shape = RoundedCornerShape(24.dp),
@@ -455,6 +462,20 @@ internal fun SonosSettingsBlock() {
                     trackColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.15f),
                     drawStopIndicator = {}
                 )
+            }
+            // Mod: which songs cannot play on a Sonos and why.
+            if (info != null && info.problem == null && info.total > info.playable) {
+                val missing = info.total - info.playable
+                FilledTonalButton(
+                    onClick = { showMissingSongs = true },
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.12f),
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    ),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(pluralStringResource(R.plurals.settings_sonos_missing_button, missing, missing))
+                }
             }
             info?.sonosAddress?.let { address ->
                 val reach = when (info.reachable) {
@@ -1003,4 +1024,102 @@ private fun SonosAddressDialog(
             }
         }
     )
+}
+
+
+/** Mod: the songs on the phone that cannot play on a Sonos, grouped by the reason, each with what to do about it. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SonosMissingSongsSheet(sonosViewModel: SonosViewModel, onDismiss: () -> Unit) {
+    LaunchedEffect(Unit) { sonosViewModel.loadMissingSongs() }
+    val songs by sonosViewModel.missingSongs.collectAsStateWithLifecycle()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Text(
+            text = stringResource(R.string.settings_sonos_missing_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        )
+        Text(
+            text = stringResource(R.string.settings_sonos_missing_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 6.dp, bottom = 12.dp)
+        )
+        val list = songs
+        if (list == null) {
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            val groups = remember(list) { list.groupBy { it.reason } }
+            LazyColumn(
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                groups.forEach { (reason, items) ->
+                    item(key = "header_${reason.name}") {
+                        Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 6.dp)) {
+                            Text(
+                                text = when (reason) {
+                                    SonosMissReason.NOT_ON_SERVER -> pluralStringResource(R.plurals.settings_sonos_missing_not_on_server, items.size, items.size)
+                                    SonosMissReason.OTHER_ARTIST -> pluralStringResource(R.plurals.settings_sonos_missing_other_artist, items.size, items.size)
+                                    SonosMissReason.NO_TITLE -> pluralStringResource(R.plurals.settings_sonos_missing_no_title, items.size, items.size)
+                                },
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = stringResource(
+                                    when (reason) {
+                                        SonosMissReason.NOT_ON_SERVER -> R.string.settings_sonos_missing_not_on_server_help
+                                        SonosMissReason.OTHER_ARTIST -> R.string.settings_sonos_missing_other_artist_help
+                                        SonosMissReason.NO_TITLE -> R.string.settings_sonos_missing_no_title_help
+                                    }
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    itemsIndexed(items, key = { _, song -> "missing_${song.id}" }) { index, song ->
+                        val shape = when {
+                            items.size == 1 -> RoundedCornerShape(20.dp)
+                            index == 0 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 6.dp)
+                            index == items.lastIndex -> RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 20.dp, bottomEnd = 20.dp)
+                            else -> RoundedCornerShape(6.dp)
+                        }
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = shape, modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                                Text(
+                                    text = song.title.ifBlank { stringResource(R.string.settings_sonos_missing_untitled) },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                val detail = if (reason == SonosMissReason.OTHER_ARTIST && song.serverArtists.isNotEmpty()) {
+                                    stringResource(R.string.settings_sonos_missing_artist_vs_server, song.artist, song.serverArtists.joinToString(", "))
+                                } else {
+                                    listOf(song.artist, song.album).filter { it.isNotBlank() }.joinToString(" • ")
+                                }
+                                if (detail.isNotBlank()) {
+                                    Text(
+                                        text = detail,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

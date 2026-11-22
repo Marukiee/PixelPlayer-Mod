@@ -71,6 +71,17 @@ class SonosViewModel @Inject constructor(
         OkHttpClient.Builder().connectTimeout(3, TimeUnit.SECONDS).readTimeout(3, TimeUnit.SECONDS).build()
     }
 
+    private val _missingSongs = MutableStateFlow<List<com.lostf1sh.pixelplayeross.data.sonos.SonosMissingSong>?>(null)
+    /** The songs that cannot play on a Sonos, with the reason; null while loading. */
+    val missingSongs: StateFlow<List<com.lostf1sh.pixelplayeross.data.sonos.SonosMissingSong>?> = _missingSongs.asStateFlow()
+
+    fun loadMissingSongs() {
+        _missingSongs.value = null
+        viewModelScope.launch {
+            _missingSongs.value = withContext(Dispatchers.IO) { resolver.missingSongs() }
+        }
+    }
+
     fun loadSourceInfo() {
         sourceJob?.cancel()
         sourceJob = viewModelScope.launch {

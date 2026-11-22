@@ -52,6 +52,10 @@ internal fun LibraryPlaybackAwareSongItem(
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = LibrarySongPlaybackUiState())
 
+    // Mod: the Songs and Liked tabs swipe like every other song list; a caller with its own swipe keeps it.
+    val librarySwipe = com.lostf1sh.pixelplayeross.presentation.components.rememberSwipeToQueue(playerViewModel)
+    val effectiveSwipe = onSwipeToQueue ?: librarySwipe?.let { queueSong -> { queueSong(song) } }
+
     EnhancedSongListItem(
         modifier = modifier,
         song = song,
@@ -65,7 +69,7 @@ internal fun LibraryPlaybackAwareSongItem(
         selectionIndex = selectionIndex,
         isSelectionMode = isSelectionMode,
         onLongPress = onLongPress,
-        onSwipeToQueue = onSwipeToQueue,
+        onSwipeToQueue = effectiveSwipe,
         onMoreOptionsClick = onMoreOptionsClick,
         onClick = onClick
     )

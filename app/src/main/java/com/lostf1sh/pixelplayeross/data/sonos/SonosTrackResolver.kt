@@ -27,6 +27,26 @@ enum class SonosSourceProblem { NOT_LOGGED_IN, TAILSCALE_ADDRESS, NO_SONGS }
  * Maps songs in the local queue to their copy on Navidrome, so the speakers can fetch the
  * music themselves. Uses the cached Navidrome library (`navidrome_songs`), filled once if empty.
  */
+/** Why a song on the phone cannot play on a Sonos (the speakers play it from Navidrome). */
+enum class SonosMissReason {
+    /** The file has no title, so nothing can be looked up. */
+    NO_TITLE,
+    /** Navidrome has no song with this title. */
+    NOT_ON_SERVER,
+    /** Navidrome has this title more than once, but none by this artist. */
+    OTHER_ARTIST
+}
+
+data class SonosMissingSong(
+    val id: Long,
+    val title: String,
+    val artist: String,
+    val album: String,
+    val reason: SonosMissReason,
+    /** For [SonosMissReason.OTHER_ARTIST]: the artists the server has this title from. */
+    val serverArtists: List<String> = emptyList()
+)
+
 @Singleton
 class SonosTrackResolver @Inject constructor(
     private val navidromeDao: NavidromeDao,
@@ -114,6 +134,36 @@ class SonosTrackResolver @Inject constructor(
         val rows = musicDao.getLocalSongMatchRows()
         val playable = rows.count { findNavidromeSong(it) != null }
         return playable to rows.size
+    }
+
+    /** The local songs that cannot play on a Sonos and why; empty when Sonos cannot play from Navidrome at all. */
+    suspend fun missingSongs(): List<SonosMissingSong> {
+        if (prepare() != null) return emptyList()
+        return musicDao.getLocalSongMatchRows()
+            .filter { findNavidromeSong(it) == null }
+            .map(::explainMiss)
+            .sortedWith(compareBy({ it.reason.ordinal }, { it.artist.lowercase() }, { it.title.lowercase() }))
+    }
+
+    /** The step of [matchSong] where [row] fell out. */
+    private fun explainMiss(row: SongMatchRow): SonosMissingSong {
+        val wantTitle = NavidromeSongMatcher.normalize(row.title)
+        val candidates = if (wantTitle.isBlank()) emptyList() else byTitle[wantTitle] ?: byTitle.entries
+            .filter { NavidromeSongMatcher.titleMatches(it.key, wantTitle) }
+            .flatMap { it.value }
+        val reason = when {
+            wantTitle.isBlank() -> SonosMissReason.NO_TITLE
+            candidates.isEmpty() -> SonosMissReason.NOT_ON_SERVER
+            else -> SonosMissReason.OTHER_ARTIST
+        }
+        return SonosMissingSong(
+            id = row.id,
+            title = row.title,
+            artist = row.artistName,
+            album = row.albumName,
+            reason = reason,
+            serverArtists = candidates.map { it.artist }.filter { it.isNotBlank() }.distinct().take(3)
+        )
     }
 
     private fun trackFor(mediaId: String, row: SongMatchRow): SonosTrack? {

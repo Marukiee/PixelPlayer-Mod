@@ -29,4 +29,27 @@
         <item quantity="one">%1$d song • %2$s</item>
         <item quantity="other">%1$d songs • %2$s</item>
     </plurals>
+    <plurals name="settings_sonos_missing_button">
+        <item quantity="one">See the song that cannot play</item>
+        <item quantity="other">See the %d songs that cannot play</item>
+    </plurals>
+    <string name="settings_sonos_missing_title">Not playable on Sonos</string>
+    <string name="settings_sonos_missing_intro">The speakers play your music from Navidrome. A song plays there when the server has the same title by the same artist.</string>
+    <plurals name="settings_sonos_missing_not_on_server">
+        <item quantity="one">%d song not on your server</item>
+        <item quantity="other">%d songs not on your server</item>
+    </plurals>
+    <string name="settings_sonos_missing_not_on_server_help">Navidrome has no song with this title. Put the file on your server too.</string>
+    <plurals name="settings_sonos_missing_other_artist">
+        <item quantity="one">%d song by another artist on your server</item>
+        <item quantity="other">%d songs by another artist on your server</item>
+    </plurals>
+    <string name="settings_sonos_missing_other_artist_help">The server has this title, but only by another artist. Make the artist tag the same on both.</string>
+    <plurals name="settings_sonos_missing_no_title">
+        <item quantity="one">%d song without a title</item>
+        <item quantity="other">%d songs without a title</item>
+    </plurals>
+    <string name="settings_sonos_missing_no_title_help">The file has no title tag, so it cannot be found on the server.</string>
+    <string name="settings_sonos_missing_untitled">No title</string>
+    <string name="settings_sonos_missing_artist_vs_server">Here: %1$s. On the server: %2$s</string>
 </resources>

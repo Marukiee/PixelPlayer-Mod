@@ -98,7 +98,12 @@ fun AppNavigation(
     startDestination?.let { initialRoute ->
         NavHost(
             navController = navController,
-            startDestination = initialRoute
+            startDestination = initialRoute,
+            // Mod: the old mod's transitions; going back is quick (250 ms) instead of 450 ms.
+            enterTransition = { aospSharedAxisEnter() },
+            exitTransition = { aospSharedAxisExit() },
+            popEnterTransition = { aospSharedAxisPopEnter() },
+            popExitTransition = { aospSharedAxisPopExit() }
         ) {
             composable(
                 Screen.Home.route,
@@ -217,10 +222,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.Settings.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     SettingsScreen(
@@ -235,10 +240,10 @@ fun AppNavigation(
             composable(
                 route = Screen.Accounts.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     AccountsScreen(
@@ -258,10 +263,10 @@ fun AppNavigation(
                     navArgument("categoryId") { type = NavType.StringType },
                     navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }
                 ),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) { backStackEntry ->
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     val categoryId = backStackEntry.arguments?.getString("categoryId")
@@ -282,10 +287,10 @@ fun AppNavigation(
             composable(
                 route = Screen.PaletteStyle.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     PaletteStyleSettingsScreen(
@@ -297,10 +302,10 @@ fun AppNavigation(
             composable(
                 route = Screen.Experimental.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     ExperimentalSettingsScreen(
@@ -313,10 +318,10 @@ fun AppNavigation(
             composable(
                 route = Screen.LyricsSettings.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) { backStackEntry ->
                 val highlightKey = backStackEntry.arguments?.getString("highlightKey")
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
@@ -331,10 +336,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.DailyMixScreen.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     DailyMixScreen(
@@ -345,10 +350,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.YourMix.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     com.lostf1sh.pixelplayeross.presentation.screens.YourMixScreen(
@@ -359,10 +364,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.RecentlyPlayed.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     RecentlyPlayedScreen(
@@ -373,10 +378,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.Stats.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     StatsScreen(
@@ -388,10 +393,10 @@ fun AppNavigation(
             composable(
                 route = Screen.Recap.route,
                 arguments = listOf(navArgument(RecapViewModel.YEAR_ARG) { type = NavType.IntType }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     RecapScreen(
@@ -403,10 +408,10 @@ fun AppNavigation(
             composable(
                 route = Screen.Duplicates.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     DuplicateSongsScreen(
@@ -418,10 +423,10 @@ fun AppNavigation(
             composable(
                 route = Screen.PlaylistDetail.route,
                 arguments = listOf(navArgument("playlistId") { type = NavType.StringType }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) { backStackEntry ->
                 val playlistId = backStackEntry.arguments?.getString("playlistId")
                 val playlistViewModel: PlaylistViewModel = hiltViewModel()
@@ -441,10 +446,10 @@ fun AppNavigation(
 
             composable(
                 Screen.DJSpace.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     MashupScreen()
@@ -453,10 +458,10 @@ fun AppNavigation(
             composable(
                 route = Screen.GenreDetail.route,
                 arguments = listOf(navArgument("genreId") { type = NavType.StringType }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) { backStackEntry ->
                 val genreId = backStackEntry.arguments?.getString("genreId")
                 if (genreId != null) {
@@ -474,10 +479,10 @@ fun AppNavigation(
             composable(
                 route = Screen.AlbumDetail.route,
                 arguments = listOf(navArgument("albumId") { type = NavType.StringType }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) { backStackEntry ->
                 val albumId = backStackEntry.arguments?.getString("albumId")
                 if (albumId != null) {
@@ -493,10 +498,10 @@ fun AppNavigation(
             composable(
                 route = Screen.ArtistDetail.route,
                 arguments = listOf(navArgument("artistId") { type = NavType.StringType }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) { backStackEntry ->
                 val artistId = backStackEntry.arguments?.getString("artistId")
                 if (artistId != null) {
@@ -512,10 +517,10 @@ fun AppNavigation(
             composable(
                 route = Screen.NavBarCrRad.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     NavBarCornerRadiusScreen(navController)
@@ -527,10 +532,10 @@ fun AppNavigation(
                     type = NavType.StringType
                     nullable = true
                 }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     EditTransitionScreen(navController = navController)
@@ -538,10 +543,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.About.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     AboutScreen(
@@ -553,10 +558,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.Licenses.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     LicensesScreen(
@@ -566,10 +571,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.EasterEgg.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     EasterEggScreen(
@@ -581,10 +586,10 @@ fun AppNavigation(
             composable(
                 route = Screen.ArtistSettings.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) { backStackEntry ->
                 val highlightKey = backStackEntry.arguments?.getString("highlightKey")
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
@@ -598,10 +603,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.DelimiterConfig.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     DelimiterConfigScreen(navController = navController)
@@ -609,10 +614,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.WordDelimiterConfig.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     WordDelimiterConfigScreen(navController = navController)
@@ -620,10 +625,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.ExcludedDirectories.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 val initialMiniplayerVisible = remember(playerViewModel) {
                     playerViewModel.stablePlayerState.value.currentSong != null
@@ -645,10 +650,10 @@ fun AppNavigation(
             composable(
                 route = Screen.Equalizer.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     EqualizerScreen(
@@ -660,10 +665,10 @@ fun AppNavigation(
             composable(
                 route = Screen.DeviceCapabilities.route,
                 arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     com.lostf1sh.pixelplayeross.presentation.screens.DeviceCapabilitiesScreen(
@@ -674,10 +679,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.NavidromeDashboard.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     com.lostf1sh.pixelplayeross.presentation.navidrome.dashboard.NavidromeDashboardScreen(
@@ -687,10 +692,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.JellyfinDashboard.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     com.lostf1sh.pixelplayeross.presentation.jellyfin.dashboard.JellyfinDashboardScreen(
@@ -700,10 +705,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.CloudDownloads.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     CloudDownloadsScreen(onBack = { navController.popBackStack() })
@@ -711,10 +716,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.Updates.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     UpdatesScreen(
@@ -732,10 +737,10 @@ fun AppNavigation(
             }
             composable(
                 Screen.AudioBookmarks.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) {
                 AudioBookmarksScreen(
                     navController = navController,
@@ -746,10 +751,10 @@ fun AppNavigation(
             composable(
                 Screen.AudioBookmarkFolder.route,
                 arguments = listOf(navArgument("songId") { type = NavType.StringType }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
+                enterTransition = { aospSharedAxisEnter() },
+                exitTransition = { aospSharedAxisExit() },
+                popEnterTransition = { aospSharedAxisPopEnter() },
+                popExitTransition = { aospSharedAxisPopExit() },
             ) { backStackEntry ->
                 AudioBookmarkFolderScreen(
                     songId = backStackEntry.arguments?.getString("songId").orEmpty(),

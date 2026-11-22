@@ -285,6 +285,9 @@ private const val ENABLE_FOLDERS_SOURCE_TOGGLE = true
 private const val ENABLE_FOLDERS_STORAGE_FILTER = false
 
 /** Tabs whose header shows the quick source filter (all / cloud / on-device). */
+/** Mod: 8 dp on the toolbar buttons of 42 dp, the same look in percent for a tab. */
+private const val LibraryTabSquareCornerPercent = 19
+
 private fun LibraryTabId.hasStorageFilterButton(): Boolean = when (this) {
     LibraryTabId.SONGS, LibraryTabId.ALBUMS, LibraryTabId.ARTISTS, LibraryTabId.LIKED -> true
     LibraryTabId.FOLDERS -> ENABLE_FOLDERS_STORAGE_FILTER
@@ -930,10 +933,14 @@ fun LibraryScreen(
                     ) {
                         tabTitles.forEachIndexed { index, rawId ->
                             val tabId = rawId.toLibraryTabIdOrNull() ?: LibraryTabId.SONGS
+                            // Mod: tabs shaped like the toolbar buttons below, the selected one a pill.
                             TabAnimation(
                                 index = index,
                                 title = tabId.storageKey,
                                 selectedIndex = currentTabIndex,
+                                unselectedColor = MaterialTheme.colorScheme.secondaryContainer,
+                                onUnselectedColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                unselectedCornerPercent = LibraryTabSquareCornerPercent,
                                 onClick = {
                                     scope.launch {
                                         pagerState.animateScrollToPage(
@@ -948,7 +955,7 @@ fun LibraryScreen(
                                 }
                             ) {
                                 Text(
-                                    text = stringResource(tabId.titleRes).uppercase(LocalLocale.current.platformLocale),
+                                    text = stringResource(tabId.titleRes),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = if (currentTabIndex == index) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -958,6 +965,9 @@ fun LibraryScreen(
                             index = -1,
                             title = stringResource(R.string.presentation_batch_d_edit_library_tabs_cd),
                             selectedIndex = currentTabIndex,
+                            unselectedColor = MaterialTheme.colorScheme.secondaryContainer,
+                            onUnselectedColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            unselectedCornerPercent = LibraryTabSquareCornerPercent,
                             onClick = { showReorderTabsSheet = true }
                         ) {
                             Icon(

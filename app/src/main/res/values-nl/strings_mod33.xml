@@ -4,4 +4,27 @@
     <string name="settings_swipe_left_title">Naar links vegen</string>
     <string name="settings_swipe_right_description">Veeg een nummer in een lijst naar rechts.</string>
     <string name="settings_swipe_left_description">Veeg een nummer in een lijst naar links.</string>
+    <plurals name="settings_sonos_missing_button">
+        <item quantity="one">Bekijk het nummer dat niet kan</item>
+        <item quantity="other">Bekijk de %d nummers die niet kunnen</item>
+    </plurals>
+    <string name="settings_sonos_missing_title">Niet af te spelen op Sonos</string>
+    <string name="settings_sonos_missing_intro">De speakers spelen je muziek vanaf Navidrome. Een nummer speelt daar als de server dezelfde titel van dezelfde artiest heeft.</string>
+    <plurals name="settings_sonos_missing_not_on_server">
+        <item quantity="one">%d nummer staat niet op je server</item>
+        <item quantity="other">%d nummers staan niet op je server</item>
+    </plurals>
+    <string name="settings_sonos_missing_not_on_server_help">Navidrome heeft geen nummer met deze titel. Zet het bestand ook op je server.</string>
+    <plurals name="settings_sonos_missing_other_artist">
+        <item quantity="one">%d nummer staat er met een andere artiest</item>
+        <item quantity="other">%d nummers staan er met een andere artiest</item>
+    </plurals>
+    <string name="settings_sonos_missing_other_artist_help">De server heeft deze titel wel, maar alleen van een andere artiest. Maak de artiest op beide gelijk.</string>
+    <plurals name="settings_sonos_missing_no_title">
+        <item quantity="one">%d nummer zonder titel</item>
+        <item quantity="other">%d nummers zonder titel</item>
+    </plurals>
+    <string name="settings_sonos_missing_no_title_help">Het bestand heeft geen titel, dus de app kan het niet op de server vinden.</string>
+    <string name="settings_sonos_missing_untitled">Geen titel</string>
+    <string name="settings_sonos_missing_artist_vs_server">Hier: %1$s. Op de server: %2$s</string>
 </resources>
