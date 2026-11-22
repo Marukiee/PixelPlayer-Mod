@@ -16,4 +16,17 @@
     <string name="recently_played_play_day">Play this day</string>
     <string name="recently_played_queue_name">Recently Played</string>
     <string name="recently_played_title">Recently Played</string>
+    <string name="common_shuffle">Shuffle</string>
+    <string name="daily_mix_action_play_it">Play it</string>
+    <string name="genre_sort_album_option">Album</string>
+    <string name="genre_sort_artist_option">Artist</string>
+    <string name="genre_sort_title_option">Title</string>
+    <string name="library_toast_added_to_queue">Added to queue</string>
+    <string name="library_toast_playing_next">Playing next</string>
+    <string name="daily_mix_cd_ai_playlist_generator">AI Playlist Generator</string>
+    <string name="daily_mix_title">Daily Mix</string>
+    <plurals name="daily_mix_songs_dot_duration">
+        <item quantity="one">%1$d song • %2$s</item>
+        <item quantity="other">%1$d songs • %2$s</item>
+    </plurals>
 </resources>

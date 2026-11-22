@@ -1,8 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
 
-import com.lostf1sh.pixelplayeross.ui.theme.withInterfaceFont
-
-import com.lostf1sh.pixelplayeross.presentation.components.rememberSwipeToQueue
+import coil.size.Size
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 
 import androidx.compose.foundation.background
@@ -17,10 +15,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -37,7 +38,9 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeExtendedFloatingActionButton
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.toShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,24 +52,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import com.lostf1sh.pixelplayeross.utils.traceSection
+import android.os.Trace // Import Trace
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
-import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -78,28 +85,23 @@ import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.SongInfoBottomSheet
-import com.lostf1sh.pixelplayeross.presentation.components.threeShapeSwitch
 import com.lostf1sh.pixelplayeross.presentation.components.resolveNavBarOccupiedHeight
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.window.core.layout.WindowSizeClass
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.MainViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
-import com.lostf1sh.pixelplayeross.presentation.viewmodel.SmartMixTarget
-import com.lostf1sh.pixelplayeross.presentation.viewmodel.SmartMixViewModel
-import com.lostf1sh.pixelplayeross.utils.formatDuration
+import com.lostf1sh.pixelplayeross.utils.formatTotalDuration
 import com.lostf1sh.pixelplayeross.utils.shapes.RoundedStarShape
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.EnhancedSongListItem
-import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedItemShape
+import com.lostf1sh.pixelplayeross.presentation.components.subcomps.PlayShuffleButtons
+import com.lostf1sh.pixelplayeross.presentation.components.subcomps.TightWrapText
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import kotlinx.collections.immutable.persistentListOf
 
-/** The mix page shows the Daily Mix, or Your Mix from the card on Home (mod). */
+/** The Daily Mix screen also shows Your Mix, opened from the Your Mix card on Home. */
 enum class MixScreenKind { DAILY_MIX, YOUR_MIX }
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -115,22 +117,19 @@ fun DailyMixScreen(
     playlistViewModel: PlaylistViewModel = hiltViewModel(),
     playerViewModel: PlayerViewModel,
     navController: NavController,
-    smartMixViewModel: SmartMixViewModel = hiltViewModel(),
     kind: MixScreenKind = MixScreenKind.DAILY_MIX,
-) = traceSection("DailyMixScreen.Composition") {
+    smartMixViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.SmartMixViewModel = hiltViewModel(),
+) {
+    Trace.beginSection("DailyMixScreen.Composition")
     val isYourMix = kind == MixScreenKind.YOUR_MIX
-    val dailyMixTitle = if (isYourMix) {
-        stringResource(R.string.home_your_mix_title).replace('\n', ' ')
-    } else {
-        stringResource(R.string.presentation_batch_b_daily_mix_title)
-    }
-    val playItLabel = stringResource(R.string.presentation_batch_b_play_it)
-    val shuffleLabel = stringResource(R.string.shortcut_shuffle_short)
+    val dailyMixTitle = stringResource(if (isYourMix) R.string.home_your_mix_title else R.string.daily_mix_title)
+    val playItLabel = stringResource(R.string.daily_mix_action_play_it)
+    val shuffleLabel = stringResource(R.string.common_shuffle)
     val dailyMixSource: ImmutableList<Song> by playerViewModel.dailyMixSongs.collectAsStateWithLifecycle()
     val yourMixSource: ImmutableList<Song> by playerViewModel.yourMixSongs.collectAsStateWithLifecycle()
     val homeMixPreview: ImmutableList<Song> by playerViewModel.homeMixPreviewSongs.collectAsStateWithLifecycle()
     // Your Mix falls back the same way as on Home: curated mix, then Daily Mix, then the library preview.
-    val dailyMixSongs: ImmutableList<Song> = remember(isYourMix, dailyMixSource, yourMixSource, homeMixPreview) {
+    val dailyMixSongs: List<Song> = remember(isYourMix, dailyMixSource, yourMixSource, homeMixPreview) {
         when {
             !isYourMix -> dailyMixSource
             yourMixSource.isNotEmpty() -> yourMixSource
@@ -142,13 +141,12 @@ fun DailyMixScreen(
     val isPlaying by remember { playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged() }.collectAsStateWithLifecycle(initialValue = false)
     val isShuffleEnabled by remember { playerViewModel.stablePlayerState.map { it.isShuffleEnabled }.distinctUntilChanged() }.collectAsStateWithLifecycle(initialValue = false)
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
-    val swipeToQueue = rememberSwipeToQueue(playerViewModel)
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val useNavigationRail = currentWindowAdaptiveInfo().windowSizeClass
-        .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
-    val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode, useNavigationRail)
+    val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode)
     var showPlaylistBottomSheet by remember { mutableStateOf(false) }
+    val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val favoriteSongIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
+    val swipeToQueue = com.lostf1sh.pixelplayeross.presentation.components.rememberSwipeToQueue(playerViewModel)
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
@@ -184,21 +182,19 @@ fun DailyMixScreen(
             onDismiss = { showSongInfoSheet = false },
             onPlaySong = {
                 playerViewModel.showAndPlaySong(song, dailyMixSongs, dailyMixTitle, isVoluntaryPlay = false)
-                showSongInfoSheet = false
             },
             onAddToQueue = {
                 playerViewModel.addSongToQueue(song)
-                showSongInfoSheet = false
             },
             onAddNextToQueue = {
                 playerViewModel.addSongNextToQueue(song)
-                showSongInfoSheet = false
             },
             onAddToPlayList = {
                 showPlaylistBottomSheet = true;
             },
             onDeleteFromDevice = playerViewModel::deleteFromDevice,
             onNavigateToAlbum = {
+                // Assuming Screen object has a method to create a route
                 navController.navigateSafely(Screen.AlbumDetail.createRoute(song.albumId))
                 showSongInfoSheet = false
             },
@@ -242,7 +238,7 @@ fun DailyMixScreen(
 
             PlaylistBottomSheet(
                 playlistUiState = playlistUiState,
-                songs = persistentListOf(song),
+                songs = kotlinx.collections.immutable.persistentListOf(song),
                 onDismiss = { showPlaylistBottomSheet = false },
                 bottomBarHeight = bottomBarHeightDp,
                 playerViewModel = playerViewModel,
@@ -268,93 +264,71 @@ fun DailyMixScreen(
                 state = lazyListState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item(key = "daily_mix_header") {
                     ExpressiveDailyMixHeader(
+                        title = dailyMixTitle,
                         songs = dailyMixSongs,
                         scrollState = lazyListState,
-                        title = dailyMixTitle,
-                        onTuneMix = if (isYourMix) null else {
-                            { smartMixViewModel.open(SmartMixTarget.DailyMix) }
+                        trailing = if (isYourMix) null else {
+                            {
+                                // OSS: tune today's Daily Mix (Smart Mix) in the place of the AI button of the old mod.
+                                LargeExtendedFloatingActionButton(
+                                    onClick = { smartMixViewModel.open(com.lostf1sh.pixelplayeross.presentation.viewmodel.SmartMixTarget.DailyMix) },
+                                    shape = RoundedStarShape(
+                                        sides = 8,
+                                        curve = 0.05,
+                                        rotation = 0f
+                                    )
+                                ) {
+                                    Icon(
+                                        modifier = Modifier.size(20.dp),
+                                        painter = painterResource(R.drawable.ic_smart_mix),
+                                        contentDescription = stringResource(R.string.mix_tune_today)
+                                    )
+                                }
+                            }
                         }
                     )
                 }
 
                 item(key = "play_shuffle_buttons") {
-                    Row(
+                    PlayShuffleButtons(
+                        playLabel = playItLabel,
+                        shuffleLabel = shuffleLabel,
+                        enabled = dailyMixSongs.isNotEmpty(),
+                        onPlay = {
+                            if (dailyMixSongs.isNotEmpty()) {
+                                playerViewModel.playSongs(dailyMixSongs, dailyMixSongs.first(), dailyMixTitle)
+                                if (isShuffleEnabled) playerViewModel.toggleShuffle() // Desactivar shuffle si estaba activo
+                            }
+                        },
+                        onShuffle = {
+                            if (dailyMixSongs.isNotEmpty()) {
+                                playerViewModel.playSongsShuffled(
+                                    songsToPlay = dailyMixSongs,
+                                    queueName = dailyMixTitle,
+                                    startAtZero = true,
+                                )
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(76.dp)
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                if (dailyMixSongs.isNotEmpty()) {
-                                    playerViewModel.playSongs(dailyMixSongs, dailyMixSongs.first(), dailyMixTitle)
-                                    if (isShuffleEnabled) playerViewModel.toggleShuffle()
-                                }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(76.dp),
-                            enabled = dailyMixSongs.isNotEmpty(),
-                            shape = RoundedCornerShape(
-                                topStart = 60.dp,
-                                topEnd = 14.dp,
-                                bottomStart = 60.dp,
-                                bottomEnd = 14.dp
-                            )
-                        ) {
-                            Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.cd_play), modifier = Modifier.size(
-                                ButtonDefaults.IconSize))
-                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            Text(playItLabel)
-                        }
-                        FilledTonalButton(
-                            onClick = {
-                                if (dailyMixSongs.isNotEmpty()) {
-                                    playerViewModel.playSongsShuffled(
-                                        songsToPlay = dailyMixSongs,
-                                        queueName = dailyMixTitle,
-                                        startAtZero = true,
-                                    )
-                                }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(76.dp),
-                            enabled = dailyMixSongs.isNotEmpty(),
-                            shape = RoundedCornerShape(
-                                topStart = 14.dp,
-                                topEnd = 60.dp,
-                                bottomStart = 14.dp,
-                                bottomEnd = 60.dp
-                            )
-                        ) {
-                            Icon(Icons.Rounded.Shuffle, contentDescription = shuffleLabel, modifier = Modifier.size(
-                                ButtonDefaults.IconSize))
-                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            Text(shuffleLabel)
-                        }
-                    }
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
                 }
 
-                itemsIndexed(
-                    items = dailyMixSongs,
-                    key = { _, song -> song.id },
-                    contentType = { _, _ -> "song" }
-                ) { index, song ->
+                items(dailyMixSongs, key = { it.id }) { song ->
                     EnhancedSongListItem(
                         modifier = Modifier
                             .padding(horizontal = 16.dp),
                         song = song,
-                        customShape = getSegmentedItemShape(index, dailyMixSongs.size),
-                        isCurrentSong = currentSongId == song.id,
+                        onSwipeToQueue = swipeToQueue?.let { queueSong -> { queueSong(song) } },
+                        isCurrentSong = stablePlayerState.currentSong?.id == song.id,
                         isPlaying = currentSongId == song.id && isPlaying,
                         onClick = { playerViewModel.showAndPlaySong(song, dailyMixSongs, dailyMixTitle, isVoluntaryPlay = false) },
-                        onSwipeToQueue = swipeToQueue?.let { { it(song) } },
                         onMoreOptionsClick = {
                             playerViewModel.selectSongForInfo(song)
                             showSongInfoSheet = true
@@ -377,10 +351,11 @@ fun DailyMixScreen(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = stringResource(R.string.auth_cd_back)
+                contentDescription = stringResource(R.string.common_back)
             )
         }
 
+        // Bottom Gradient
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -399,6 +374,7 @@ fun DailyMixScreen(
 
         }
 
+        //Top Gradient
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -416,20 +392,22 @@ fun DailyMixScreen(
 
         }
     }
+    Trace.endSection()
 }
 
 
+/** The covers, fully visible above the title. [trailing] sits next to the title, on the right. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ExpressiveDailyMixHeader(
-    songs: ImmutableList<Song>,
-    scrollState: LazyListState,
+internal fun ExpressiveDailyMixHeader(
     title: String,
-    onTuneMix: (() -> Unit)?
-) = traceSection("ExpressiveDailyMixHeader.Composition") {
+    songs: List<Song>,
+    scrollState: LazyListState,
+    trailing: (@Composable () -> Unit)? = null
+) {
     val dailyMixHeaderTitle = title
+    Trace.beginSection("ExpressiveDailyMixHeader.Composition")
     val albumArts = remember(songs) { songs.map { it.albumArtUriString }.distinct().take(3) }
-    val totalDuration = remember(songs) { songs.sumOf { it.duration } }
 
     val parallaxOffset by remember { derivedStateOf { if (scrollState.firstVisibleItemIndex == 0) scrollState.firstVisibleItemScrollOffset * 0.5f else 0f } }
 
@@ -441,98 +419,17 @@ private fun ExpressiveDailyMixHeader(
 
     val titleStyle = rememberDailyMixTitleStyle()
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(340.dp)
             .graphicsLayer {
                 translationY = parallaxOffset
                 alpha = headerAlpha
             }
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy((-80).dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                albumArts.forEachIndexed { index, artUrl ->
-                    val size = when (index) {
-                        0 -> 180.dp
-                        1 -> 220.dp
-                        2 -> 180.dp
-                        else -> 150.dp
-                    }
-                    val rotation = when (index) {
-                        0 -> -15f
-                        1 -> 0f
-                        2 -> 15f
-                        else -> 0f
-                    }
-                    val shape = threeShapeSwitch(index, thirdShapeCornerRadius = 30.dp)
-
-                    if (index == 2) {
-                        Box(
-                            modifier = Modifier.layout { measurable, constraints ->
-                                val placeable = measurable.measure(
-                                    Constraints.fixed(width = size.roundToPx(), height = size.roundToPx())
-                                )
-                                layout(constraints.maxWidth, placeable.height) {
-                                    val xOffset = (constraints.maxWidth - placeable.width) / 2
-                                    placeable.placeRelative(xOffset, 0)
-                                }
-                            }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .graphicsLayer { rotationZ = rotation }
-                                    .clip(shape)
-                            ) {
-                                SmartImage(
-                                    model = artUrl ?: R.drawable.rounded_album_24,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(size)
-                                .graphicsLayer { rotationZ = rotation }
-                                .clip(shape)
-                        ) {
-                            SmartImage(
-                                model = artUrl ?: R.drawable.rounded_album_24,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
-                            Color.Transparent,
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                            MaterialTheme.colorScheme.surface
-                        ),
-                        startY = 0f,
-                        endY = 900f
-                    )
-                )
-        )
+        DailyMixHeaderCovers(albumArts)
         Row(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 22.dp),
             horizontalArrangement = Arrangement.Absolute.SpaceBetween,
@@ -540,46 +437,109 @@ private fun ExpressiveDailyMixHeader(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(start = 6.dp)
-                    .weight(1f, fill = false),
+                    .weight(1f)
+                    .padding(start = 6.dp),
                 verticalArrangement = Arrangement.Bottom,
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
                     text = dailyMixHeaderTitle,
+//                    style = MaterialTheme.typography.headlineLarge,
                     style = titleStyle,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     modifier = Modifier.padding(start = 3.dp),
                     text = pluralStringResource(
-                        R.plurals.presentation_batch_b_songs_dot_duration,
+                        R.plurals.daily_mix_songs_dot_duration,
                         songs.size,
                         songs.size,
-                        formatDuration(totalDuration)
+                        formatTotalDuration(songs)
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                 )
             }
-            if (onTuneMix != null) LargeExtendedFloatingActionButton(
-                onClick = onTuneMix,
-                shape = RoundedStarShape(
-                    sides = 8,
-                    curve = 0.05,
-                    rotation = 0f
-                )
-            ) {
-                Icon(
-                    modifier = Modifier.size(20.dp),
-                    painter = painterResource(R.drawable.ic_smart_mix),
-                    contentDescription = stringResource(R.string.mix_tune_today)
-                )
-            }
+            trailing?.invoke()
         }
     }
+    Trace.endSection()
+}
+
+/** One big cover with up to two small ones lying on its edge. Scales with the screen, and starts just under the status bar. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun DailyMixHeaderCovers(albumArts: List<String?>) {
+    val width = LocalConfiguration.current.screenWidthDp.dp
+    val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val bigSize = width * 0.64f
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(topInset + bigSize + 12.dp)
+    ) {
+        if (albumArts.isNotEmpty()) {
+            DailyMixHeaderCover(
+                art = albumArts[0],
+                shape = MaterialShapes.Cookie9Sided.toShape(),
+                size = bigSize,
+                elevation = 0.dp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = topInset + 4.dp)
+                    .offset(x = width * 0.02f)
+            )
+        }
+        if (albumArts.size > 1) {
+            DailyMixHeaderCover(
+                art = albumArts[1],
+                shape = CircleShape,
+                size = width * 0.25f,
+                elevation = 4.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = width * 0.03f, bottom = 8.dp)
+            )
+        }
+        if (albumArts.size > 2) {
+            DailyMixHeaderCover(
+                art = albumArts[2],
+                shape = RoundedCornerShape(width * 0.05f),
+                size = width * 0.2f,
+                elevation = 4.dp,
+                rotation = 12f,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = topInset + 14.dp, end = width * 0.04f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DailyMixHeaderCover(
+    art: String?,
+    shape: Shape,
+    size: Dp,
+    elevation: Dp,
+    modifier: Modifier = Modifier,
+    rotation: Float = 0f
+) {
+    val pixels = with(LocalDensity.current) { size.roundToPx() }
+    SmartImage(
+        model = art ?: R.drawable.rounded_album_24,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        targetSize = Size(pixels, pixels),
+        modifier = modifier
+            .size(size)
+            .graphicsLayer { rotationZ = rotation }
+            .shadow(elevation, shape, clip = true)
+    )
 }
 
 @OptIn(ExperimentalTextApi::class)
@@ -593,6 +553,7 @@ private fun rememberDailyMixTitleStyle(): TextStyle {
                     variationSettings = FontVariation.Settings(
                         FontVariation.weight(436),
                         FontVariation.width(102f),
+                        //FontVariation.grade(40),
                         FontVariation.Setting("ROND", 100f),
                         FontVariation.Setting("XTRA", 520f),
                         FontVariation.Setting("YOPQ", 90f),
@@ -602,6 +563,8 @@ private fun rememberDailyMixTitleStyle(): TextStyle {
             ),
             fontWeight = FontWeight(760),
             fontSize = 44.sp,
+            //lineHeight = 62.sp,
+//            letterSpacing = (-0.4).sp
         )
-    }.withInterfaceFont()
+    }
 }
