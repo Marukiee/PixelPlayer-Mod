@@ -146,7 +146,10 @@ object AppPalette {
 
     val all = listOf(WALLPAPER, WALLPAPER_VIBRANT, MINT, BLUE, CORAL)
 
-    fun sanitize(value: String?): String = value?.takeIf { it in all } ?: WALLPAPER
+    /** Mark picked the fresh blue (2026-11-22), so that is what a phone without a choice gets. */
+    const val DEFAULT = BLUE
+
+    fun sanitize(value: String?): String = value?.takeIf { it in all } ?: DEFAULT
 
     /** The seed of a fixed palette, or null when the colour comes from the wallpaper. */
     fun seedOf(palette: String): Long? = when (palette) {

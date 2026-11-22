@@ -1,3 +1,11 @@
+- Bibliotheek opnieuw ingedeeld: geen grote titel meer, tabbladen in woorden, sortering en bron in tekst, tandwiel naar Instellingen
+- Frissere kleuren, standaard blauw; kiezen kan onder Instellingen › Uiterlijk › Kleuren
+- Alle panelen openen en sluiten zoals het verbinden-paneel, en gaan dicht met een korte veeg omlaag
+- Vegen in lijsten werkt zoals in de wachtrij, naar links en naar rechts
+- Drie puntjes in de speler openen meteen Nummeropties, met de bladwijzer naast Set as sound
+- Instellingen › Sonos laat zien welke nummers niet op Sonos kunnen en waarom
+- Terug gaat sneller en soepeler, ook vanaf de songteksten; tabbladen ordenen staat nu in Instellingen › Uiterlijk
+
 - Speler: vorige of volgende vasthouden om terug of vooruit te spoelen
 - Recently Played, de genrepagina's, Daily Mix en Your Mix weer zoals in de mod
 - Nummers in lijsten naar links en naar rechts vegen, elk met een eigen actie

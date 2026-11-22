@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.8.0-mod.34",
+    "en": {
+      "new": [
+        "Fresh colours and a cleaner library",
+        "Panels and swipes feel like the queue"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Frisse kleuren en een rustigere bibliotheek",
+        "Panelen en vegen voelen als de wachtrij"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.33",
     "en": {
       "new": [

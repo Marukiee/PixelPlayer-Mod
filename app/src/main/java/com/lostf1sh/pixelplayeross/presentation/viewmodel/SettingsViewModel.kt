@@ -652,7 +652,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val appPalette: StateFlow<String> = themePreferencesRepository.appPaletteFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lostf1sh.pixelplayeross.data.preferences.AppPalette.WALLPAPER)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lostf1sh.pixelplayeross.data.preferences.AppPalette.DEFAULT)
 
     fun setAppPalette(palette: String) {
         viewModelScope.launch { themePreferencesRepository.setAppPalette(palette) }
