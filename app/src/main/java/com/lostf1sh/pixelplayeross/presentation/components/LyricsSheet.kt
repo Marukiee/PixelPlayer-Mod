@@ -666,11 +666,15 @@ fun LyricsSheet(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
-                val p = backProgressProvider.value
+                val raw = backProgressProvider.value
+                val p = raw.coerceAtMost(1f)
+                // Mod: past the gesture the page keeps going down and fades, in the same motion.
+                val leave = com.lostf1sh.pixelplayeross.presentation.components.scoped.lyricsBackLeave(raw)
                 val scale = lerp(1f, 0.92f, p)
                 scaleX = scale
                 scaleY = scale
-                translationY = lerp(0f, size.height * 0.08f, p)
+                translationY = lerp(0f, size.height * 0.08f, p) + size.height * 0.1f * leave
+                alpha = 1f - leave
                 // The 32dp radius belongs to the shrunken predictive-back card. Applying it
                 // at rest rounded the corners of a surface that fills the screen, so the
                 // layer behind showed through. Grow it with the gesture and stay square
@@ -1076,7 +1080,7 @@ fun LyricsSheet(
                     onBackgroundColor = onBackgroundColor,
                     accentColor = accentColor,
                     onAccentColor = onAccentColor,
-                    backProgressProvider = { backProgressProvider.value },
+                    backProgressProvider = { backProgressProvider.value.coerceAtMost(1f) },
                 )
              }
             }
