@@ -870,12 +870,21 @@ class MainActivity : ComponentActivity() {
 
         val showScrollbar by userPreferencesRepository.showScrollbarFlow.collectAsStateWithLifecycle(initialValue = true)
         val showSongQualityBadge by userPreferencesRepository.showSongQualityBadgeFlow.collectAsStateWithLifecycle(initialValue = false)
+        val swipeEndAction by playerViewModel.swipeToQueueAction.collectAsStateWithLifecycle()
+        val swipeStartAction by playerViewModel.swipeBackAction.collectAsStateWithLifecycle()
+        val songSwipeDirections = remember(swipeEndAction, swipeStartAction) {
+            com.lostf1sh.pixelplayeross.presentation.components.SongSwipeDirections(
+                towardsEnd = swipeEndAction != com.lostf1sh.pixelplayeross.data.preferences.SwipeToQueueAction.OFF,
+                towardsStart = swipeStartAction != com.lostf1sh.pixelplayeross.data.preferences.SwipeToQueueAction.OFF
+            )
+        }
 
         CompositionLocalProvider(
             LocalAppHapticsConfig provides appHapticsConfig,
             LocalHapticFeedback provides scopedHapticFeedback,
             LocalShowScrollbar provides showScrollbar,
-            com.lostf1sh.pixelplayeross.ui.theme.LocalShowSongQualityBadge provides showSongQualityBadge
+            com.lostf1sh.pixelplayeross.ui.theme.LocalShowSongQualityBadge provides showSongQualityBadge,
+            com.lostf1sh.pixelplayeross.presentation.components.LocalSongSwipeDirections provides songSwipeDirections
         ) {
             val sidebarShortcuts by userPreferencesRepository.sidebarShortcutsFlow
                 .collectAsStateWithLifecycle(initialValue = SidebarShortcutKeys.DEFAULT)

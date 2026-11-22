@@ -2,4 +2,8 @@
 <resources>
     <string name="settings_show_song_quality_badge_subtitle">Show LQ / HQ / SQ / HR badges before the artist name in song lists</string>
     <string name="settings_show_song_quality_badge_title">Show quality badges</string>
+    <string name="settings_swipe_right_title">Swipe right</string>
+    <string name="settings_swipe_left_title">Swipe left</string>
+    <string name="settings_swipe_right_description">Swipe a song row to the right in lists.</string>
+    <string name="settings_swipe_left_description">Swipe a song row to the left in lists.</string>
 </resources>

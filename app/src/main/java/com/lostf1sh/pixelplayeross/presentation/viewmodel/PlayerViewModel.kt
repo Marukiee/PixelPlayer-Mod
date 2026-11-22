@@ -463,6 +463,13 @@ class PlayerViewModel @Inject constructor(
             initialValue = SwipeToQueueAction.OFF
         )
 
+    val swipeBackAction: StateFlow<SwipeToQueueAction> = userPreferencesRepository.swipeBackActionFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SwipeToQueueAction.OFF
+        )
+
     val navBarCompactMode: StateFlow<Boolean> = userPreferencesRepository.navBarCompactModeFlow
         .stateIn(
             scope = viewModelScope,
@@ -3384,9 +3391,12 @@ class PlayerViewModel @Inject constructor(
         return uri.takeIf { it.scheme == "file" }?.path?.takeIf { it.isNotBlank() }
     }
 
-    /** Queues [song] the way the swipe-to-queue setting says, and confirms it with a toast. */
-    fun queueSongFromSwipe(song: Song) {
-        when (swipeToQueueAction.value) {
+    /**
+     * Queues [song] the way the swipe setting of that direction says, and confirms it with a toast. Mod: [back] is a
+     * swipe towards the start edge, which has its own setting.
+     */
+    fun queueSongFromSwipe(song: Song, back: Boolean = false) {
+        when (if (back) swipeBackAction.value else swipeToQueueAction.value) {
             SwipeToQueueAction.OFF -> return
             SwipeToQueueAction.ADD_TO_QUEUE -> {
                 addSongToQueue(song)

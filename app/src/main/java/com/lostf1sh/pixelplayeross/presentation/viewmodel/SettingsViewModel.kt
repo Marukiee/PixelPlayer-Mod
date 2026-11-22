@@ -1143,6 +1143,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val swipeBackAction: StateFlow<SwipeToQueueAction> = userPreferencesRepository.swipeBackActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SwipeToQueueAction.DEFAULT)
+
+    fun setSwipeBackAction(action: SwipeToQueueAction) {
+        viewModelScope.launch { userPreferencesRepository.setSwipeBackAction(action) }
+    }
+
     fun setSwipeToQueueAction(action: SwipeToQueueAction) {
         viewModelScope.launch {
             userPreferencesRepository.setSwipeToQueueAction(action)

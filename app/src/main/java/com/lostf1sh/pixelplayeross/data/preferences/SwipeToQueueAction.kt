@@ -15,5 +15,8 @@ enum class SwipeToQueueAction(val storageKey: String) {
 
         fun fromStorageKey(value: String?): SwipeToQueueAction =
             entries.firstOrNull { it.storageKey == value } ?: DEFAULT
+
+        /** Mod: the old mod stored "none" for off; the other values are the same. Null stays null. */
+        fun fromModKey(value: String?): String? = if (value == "none") OFF.storageKey else value
     }
 }

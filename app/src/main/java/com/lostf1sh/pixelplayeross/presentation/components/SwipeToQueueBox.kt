@@ -32,19 +32,39 @@ import kotlinx.coroutines.launch
 
 private val SwipeToQueueThreshold = 72.dp
 
-/** The swipe-to-queue action for song rows, or null while the setting turns the swipe off. */
+/** Mod: which directions a song row may be swiped, from the two swipe settings. */
+@androidx.compose.runtime.Immutable
+data class SongSwipeDirections(val towardsEnd: Boolean = true, val towardsStart: Boolean = false)
+
+val LocalSongSwipeDirections = androidx.compose.runtime.staticCompositionLocalOf { SongSwipeDirections() }
+
+/**
+ * Mod: which way the swipe that just finished went. [SwipeToQueueBox] sets it on the main thread right before it calls
+ * its callback, so the action from [rememberSwipeToQueue] can pick the setting of that direction without every list
+ * passing a second callback.
+ */
+private object LastSwipe {
+    var towardsStart: Boolean = false
+}
+
+/** The swipe action for song rows, or null while both swipe settings are off. */
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun rememberSwipeToQueue(playerViewModel: PlayerViewModel): ((Song) -> Unit)? {
     val action by playerViewModel.swipeToQueueAction.collectAsStateWithLifecycle()
-    return remember(action, playerViewModel) {
-        if (action == SwipeToQueueAction.OFF) null else playerViewModel::queueSongFromSwipe
+    val backAction by playerViewModel.swipeBackAction.collectAsStateWithLifecycle()
+    return remember(action, backAction, playerViewModel) {
+        if (action == SwipeToQueueAction.OFF && backAction == SwipeToQueueAction.OFF) {
+            null
+        } else {
+            { song: Song -> playerViewModel.queueSongFromSwipe(song, back = LastSwipe.towardsStart) }
+        }
     }
 }
 
 /**
- * Lets a song row slide towards the end edge; letting go past the threshold calls [onSwipe].
- * With a null [onSwipe], [content] gets [modifier] as is and no gesture is added.
+ * Lets a song row slide towards the end edge, and with the mod's second setting towards the start edge too; letting go
+ * past the threshold calls [onSwipe]. With a null [onSwipe], [content] gets [modifier] as is and no gesture is added.
  */
 @Composable
 fun SwipeToQueueBox(
@@ -58,12 +78,15 @@ fun SwipeToQueueBox(
     }
 
     val currentOnSwipe by rememberUpdatedState(onSwipe)
+    val directions = LocalSongSwipeDirections.current
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val offset = remember { Animatable(0f) }
     val thresholdPx = with(LocalDensity.current) { SwipeToQueueThreshold.toPx() }
     // Offsets are kept towards the end edge, which is left in right-to-left layouts.
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
+    val minOffset = if (directions.towardsStart) -thresholdPx * 1.5f else 0f
+    val maxOffset = if (directions.towardsEnd) thresholdPx * 1.5f else 0f
 
     Box(modifier) {
         Icon(
@@ -80,10 +103,26 @@ fun SwipeToQueueBox(
                     scaleY = scaleX
                 }
         )
+        if (directions.towardsStart) {
+            Icon(
+                painter = painterResource(R.drawable.rounded_queue_music_24),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 20.dp)
+                    .graphicsLayer {
+                        val progress = (-offset.value / thresholdPx).coerceIn(0f, 1f)
+                        alpha = progress
+                        scaleX = 0.6f + 0.4f * progress
+                        scaleY = scaleX
+                    }
+            )
+        }
         content(
             Modifier
                 .graphicsLayer { translationX = offset.value * direction }
-                .pointerInput(direction, thresholdPx) {
+                .pointerInput(direction, thresholdPx, minOffset, maxOffset) {
                     var dragged = 0f
                     fun settle() {
                         dragged = 0f
@@ -92,15 +131,24 @@ fun SwipeToQueueBox(
                     detectHorizontalDragGestures(
                         onDragStart = { dragged = 0f },
                         onDragEnd = {
-                            if (dragged >= thresholdPx) currentOnSwipe()
+                            when {
+                                dragged >= thresholdPx -> {
+                                    LastSwipe.towardsStart = false
+                                    currentOnSwipe()
+                                }
+                                dragged <= -thresholdPx -> {
+                                    LastSwipe.towardsStart = true
+                                    currentOnSwipe()
+                                }
+                            }
                             settle()
                         },
                         onDragCancel = { settle() }
                     ) { change, dragAmount ->
                         change.consume()
-                        val wasArmed = dragged >= thresholdPx
-                        dragged = (dragged + dragAmount * direction).coerceIn(0f, thresholdPx * 1.5f)
-                        if (!wasArmed && dragged >= thresholdPx) {
+                        val wasArmed = kotlin.math.abs(dragged) >= thresholdPx
+                        dragged = (dragged + dragAmount * direction).coerceIn(minOffset, maxOffset)
+                        if (!wasArmed && kotlin.math.abs(dragged) >= thresholdPx) {
                             haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
                         }
                         val target = dragged

@@ -1228,8 +1228,8 @@ fun SettingsCategoryScreen(
                                 title = stringResource(R.string.setcat_song_lists)
                             ) {
                                 ThemeSelectorItem(
-                                    label = stringResource(R.string.setcat_swipe_to_queue_title),
-                                    description = stringResource(R.string.setcat_swipe_to_queue_description),
+                                    label = stringResource(R.string.settings_swipe_right_title),
+                                    description = stringResource(R.string.settings_swipe_right_description),
                                     options = linkedMapOf(
                                         SwipeToQueueAction.ADD_TO_QUEUE.storageKey to
                                             stringResource(R.string.setcat_swipe_to_queue_add),
@@ -1254,6 +1254,25 @@ fun SettingsCategoryScreen(
                                     },
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_queue_music_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_behavior_swipe_to_queue", highlightKey)
+                                )
+                                // Mod: swiping to the left has its own action, as in the old mod.
+                                val swipeBackAction by settingsViewModel.swipeBackAction.collectAsStateWithLifecycle()
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_swipe_left_title),
+                                    description = stringResource(R.string.settings_swipe_left_description),
+                                    options = linkedMapOf(
+                                        SwipeToQueueAction.ADD_TO_QUEUE.storageKey to
+                                            stringResource(R.string.setcat_swipe_to_queue_add),
+                                        SwipeToQueueAction.PLAY_NEXT.storageKey to
+                                            stringResource(R.string.setcat_swipe_to_queue_next),
+                                        SwipeToQueueAction.OFF.storageKey to
+                                            stringResource(R.string.setcat_swipe_to_queue_off)
+                                    ),
+                                    selectedKey = swipeBackAction.storageKey,
+                                    onSelectionChanged = { key ->
+                                        settingsViewModel.setSwipeBackAction(SwipeToQueueAction.fromStorageKey(key))
+                                    },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_queue_music_24), null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
                             }
                             SettingsSubsection(

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_swipe_right_title">Naar rechts vegen</string>
+    <string name="settings_swipe_left_title">Naar links vegen</string>
+    <string name="settings_swipe_right_description">Veeg een nummer in een lijst naar rechts.</string>
+    <string name="settings_swipe_left_description">Veeg een nummer in een lijst naar links.</string>
+</resources>

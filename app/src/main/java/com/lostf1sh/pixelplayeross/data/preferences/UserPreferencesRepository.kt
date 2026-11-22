@@ -268,6 +268,9 @@ constructor(
         val AUTOPLAY_ON_SKIP = booleanPreferencesKey("autoplay_on_skip")
         val PREVIOUS_BUTTON_BEHAVIOR = stringPreferencesKey("previous_button_behavior")
         val SWIPE_TO_QUEUE_ACTION = stringPreferencesKey("swipe_to_queue_action")
+        // Mod: the keys of the old mod, so its swipe choices carry over. Right is the OSS swipe towards the end edge.
+        val SWIPE_LEFT_ACTION = stringPreferencesKey("swipe_left_action")
+        val SWIPE_RIGHT_ACTION = stringPreferencesKey("swipe_right_action")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
         val ADVANCED_PERFORMANCE_DIAGNOSTICS_ENABLED =
             booleanPreferencesKey("advanced_performance_diagnostics_enabled")
@@ -2197,12 +2200,27 @@ constructor(
 
     val swipeToQueueActionFlow: Flow<SwipeToQueueAction> =
         dataStore.data.map { preferences ->
-            SwipeToQueueAction.fromStorageKey(preferences[PreferencesKeys.SWIPE_TO_QUEUE_ACTION])
+            SwipeToQueueAction.fromStorageKey(
+                preferences[PreferencesKeys.SWIPE_TO_QUEUE_ACTION]
+                    ?: SwipeToQueueAction.fromModKey(preferences[PreferencesKeys.SWIPE_RIGHT_ACTION])
+            )
         }.distinctUntilChanged()
 
     suspend fun setSwipeToQueueAction(action: SwipeToQueueAction) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.SWIPE_TO_QUEUE_ACTION] = action.storageKey
+        }
+    }
+
+    /** Mod: what swiping a song row towards the start edge (left) does; the old mod's choice carries over. */
+    val swipeBackActionFlow: Flow<SwipeToQueueAction> =
+        dataStore.data.map { preferences ->
+            SwipeToQueueAction.fromStorageKey(SwipeToQueueAction.fromModKey(preferences[PreferencesKeys.SWIPE_LEFT_ACTION]))
+        }.distinctUntilChanged()
+
+    suspend fun setSwipeBackAction(action: SwipeToQueueAction) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SWIPE_LEFT_ACTION] = action.storageKey
         }
     }
 
