@@ -2,6 +2,9 @@
 
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.layout
 import androidx.compose.material.icons.rounded.Bookmark
 import android.app.Activity
 import android.content.ActivityNotFoundException
@@ -425,6 +428,9 @@ fun SongInfoBottomSheet(
                     } else {
                         androidx.compose.animation.core.snap()
                     }
+                    // Mod: like the connect panel, the height follows the swipe between Options and Info, so the
+                    // page and the sheet move in one go instead of the page first and the height after.
+                    val pageHeights = remember { androidx.compose.runtime.mutableStateListOf(0, 0) }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -433,14 +439,33 @@ fun SongInfoBottomSheet(
                                 animationSpec = sizeAnimationSpec,
                                 alignment = Alignment.TopCenter
                             )
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                val swipe = (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f)
+                                val height = if (pageHeights[0] == 0 || pageHeights[1] == 0) {
+                                    placeable.height
+                                } else {
+                                    androidx.compose.ui.util.lerp(pageHeights[0], pageHeights[1], swipe)
+                                }
+                                layout(placeable.width, height.coerceIn(constraints.minHeight, constraints.maxHeight)) {
+                                    placeable.place(0, 0)
+                                }
+                            }
+                            .clipToBounds()
                     ) {
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier
                                 .wrapContentHeight()
                                 .fillMaxWidth(),
+                            beyondViewportPageCount = 1,
+                            flingBehavior = androidx.compose.foundation.pager.PagerDefaults.flingBehavior(
+                                state = pagerState,
+                                snapAnimationSpec = SongInfoTabSwitchSpec
+                            ),
                             verticalAlignment = Alignment.Top
                         ) { page ->
+                            Box(modifier = Modifier.onSizeChanged { pageHeights[page] = it.height }) {
                             when (page) {
                                 0 -> {
                                     LazyColumn(
@@ -815,6 +840,7 @@ fun SongInfoBottomSheet(
                                     }
                                 }
                             }
+                            }
                         }
                     }
                 }
@@ -839,7 +865,7 @@ fun SongInfoBottomSheet(
                         selectedIndex = pagerState.currentPage,
                         onClick = {
                             scope.launch {
-                                pagerState.animateScrollToPage(0)
+                                pagerState.animateScrollToPage(0, animationSpec = SongInfoTabSwitchSpec)
                             }
                         },
                         transformOrigin = TransformOrigin(0f, 0.5f)
@@ -865,7 +891,7 @@ fun SongInfoBottomSheet(
                         selectedIndex = pagerState.currentPage,
                         onClick = {
                             scope.launch {
-                                pagerState.animateScrollToPage(1)
+                                pagerState.animateScrollToPage(1, animationSpec = SongInfoTabSwitchSpec)
                             }
                         },
                         transformOrigin = TransformOrigin(1f, 0.5f)
@@ -1370,3 +1396,9 @@ private fun SongInfoSegmentedListItem(
         )
     }
 }
+
+/** Mod: the same switch as the connect panel's Controls and Devices. */
+private val SongInfoTabSwitchSpec = androidx.compose.animation.core.tween<Float>(
+    durationMillis = 450,
+    easing = androidx.compose.animation.core.FastOutSlowInEasing
+)
