@@ -63,4 +63,5 @@
     <string name="library_filter_all">All</string>
     <string name="library_filter_phone">Phone</string>
     <string name="library_filter_server">Server</string>
+    <string name="settings_library_tabs_order_subtitle">The order of the tabs in your library</string>
 </resources>

@@ -941,8 +941,6 @@ fun LibraryScreen(
                                 )
                             }
                         },
-                        onBookmarks = { navController.navigateSafely(Screen.AudioBookmarks.route) },
-                        onReorderTabs = { showReorderTabsSheet = true },
                         onSettings = { navController.navigateSafely(Screen.Settings.route) },
                         titleOf = { it.displayTitle() },
                         modifier = Modifier

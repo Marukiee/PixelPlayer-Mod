@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
 
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.onSizeChanged
@@ -8,7 +9,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,12 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bookmark
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -56,8 +50,8 @@ import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 /**
  * Mod: the top of the library without the big title, which only took room. The tabs are words, not icons: rounded
  * blocks in a row that scrolls, the chosen one a pill in the primary colour, changing shape like the Material 3
- * Expressive buttons (as on the trip page of MarkMySteps). Bookmarks, ordering the tabs and the settings sit behind
- * the button on the right, which stays round and coloured while its menu is open.
+ * Expressive buttons (as on the trip page of MarkMySteps). The button on the right opens the settings, where the tabs
+ * are ordered too.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -65,8 +59,6 @@ internal fun LibraryTextTabsHeader(
     tabs: List<LibraryTabId>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
-    onBookmarks: () -> Unit,
-    onReorderTabs: () -> Unit,
     onSettings: () -> Unit,
     titleOf: @Composable (LibraryTabId) -> String,
     modifier: Modifier = Modifier,
@@ -152,61 +144,34 @@ internal fun LibraryTextTabsHeader(
                 }
             }
         }
-        var menuOpen by remember { mutableStateOf(false) }
+        // Mod: straight to the settings (ordering the tabs lives there now).
         val interaction = remember { MutableInteractionSource() }
         val pressed by interaction.collectIsPressedAsState()
         val scale by androidx.compose.animation.core.animateFloatAsState(
-            if (pressed) 0.88f else 1f, motion.fastSpatialSpec(), label = "menuScale"
+            if (pressed) 0.88f else 1f, motion.fastSpatialSpec(), label = "settingsScale"
         )
         val container by androidx.compose.animation.animateColorAsState(
-            if (menuOpen || pressed) colors.primary else colors.surfaceContainerHigh, motion.defaultEffectsSpec(), label = "menuContainer"
+            if (pressed) colors.primary else colors.surfaceContainerHigh, motion.defaultEffectsSpec(), label = "settingsContainer"
         )
         val content by androidx.compose.animation.animateColorAsState(
-            if (menuOpen || pressed) colors.onPrimary else colors.onSurface, motion.defaultEffectsSpec(), label = "menuContent"
+            if (pressed) colors.onPrimary else colors.onSurface, motion.defaultEffectsSpec(), label = "settingsContent"
         )
-        Box(modifier = Modifier.padding(end = 12.dp)) {
-            FilledIconButton(
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    menuOpen = true
+        FilledIconButton(
+            onClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onSettings()
+            },
+            colors = IconButtonDefaults.filledIconButtonColors(containerColor = container, contentColor = content),
+            interactionSource = interaction,
+            modifier = Modifier
+                .padding(end = 12.dp)
+                .size(40.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
                 },
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = container, contentColor = content),
-                interactionSource = interaction,
-                modifier = Modifier
-                    .size(40.dp)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                    },
-            ) {
-                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.library_menu_more))
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }, shape = RoundedCornerShape(20.dp)) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.library_menu_bookmarks)) },
-                    leadingIcon = { Icon(Icons.Rounded.Bookmark, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onBookmarks()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.library_menu_reorder_tabs)) },
-                    leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onReorderTabs()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.library_menu_settings)) },
-                    leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onSettings()
-                    },
-                )
-            }
+        ) {
+            Icon(painterResource(R.drawable.rounded_settings_24), contentDescription = stringResource(R.string.library_menu_settings))
         }
     }
     // The chosen tab slides to the middle when it changes, also by swiping the pages, so it is never cut off.

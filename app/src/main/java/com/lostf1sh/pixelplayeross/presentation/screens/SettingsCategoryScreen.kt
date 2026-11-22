@@ -2,6 +2,7 @@
 
 package com.lostf1sh.pixelplayeross.presentation.screens
 
+import androidx.compose.material.icons.rounded.Edit
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 import com.lostf1sh.pixelplayeross.presentation.components.BackupModuleSelectionDialog
 import java.text.SimpleDateFormat
@@ -989,6 +990,24 @@ fun SettingsCategoryScreen(
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_library_music_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_appearance_library_navigation", highlightKey)
                                 )
+                                // Mod: the order of the library tabs, moved here from a button in the library.
+                                var showReorderLibraryTabs by remember { mutableStateOf(false) }
+                                SettingsItem(
+                                    title = stringResource(R.string.library_menu_reorder_tabs),
+                                    subtitle = stringResource(R.string.settings_library_tabs_order_subtitle),
+                                    leadingIcon = { Icon(Icons.Rounded.Edit, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    onClick = { showReorderLibraryTabs = true }
+                                )
+                                if (showReorderLibraryTabs) {
+                                    val libraryTabs by playerViewModel.libraryTabsFlow.collectAsStateWithLifecycle()
+                                    com.lostf1sh.pixelplayeross.presentation.components.ReorderTabsSheet(
+                                        tabs = libraryTabs,
+                                        onReorder = { newOrder -> playerViewModel.saveLibraryTabsOrder(newOrder) },
+                                        onReset = { playerViewModel.resetLibraryTabsOrder() },
+                                        onDismiss = { showReorderLibraryTabs = false }
+                                    )
+                                }
                             }
                         }
                         SettingsCategory.PLAYBACK -> {
