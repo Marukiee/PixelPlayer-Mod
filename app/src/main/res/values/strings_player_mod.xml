@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_cd_more_options">More options</string>
+    <string name="player_menu_song_options">Song options</string>
+    <string name="player_menu_bookmark">Save bookmark</string>
+    <string name="player_menu_queue">Queue</string>
+</resources>

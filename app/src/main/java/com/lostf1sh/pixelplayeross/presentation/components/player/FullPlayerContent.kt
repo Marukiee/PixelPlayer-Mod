@@ -122,6 +122,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Speaker
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -828,10 +832,12 @@ fun FullPlayerContent(
                             }
                             val extraRooms = if (sonosConnecting) 0 else (sonosGroup?.members?.size ?: 1) - 1
                             val outputMotion = MaterialTheme.motionScheme
+                            // Mod: one half of a segmented pair with the options button next to it, like the top bar in
+                            // Android's own players.
                             Box(
                                 modifier = Modifier
                                     .height(42.dp)
-                                    .clip(CircleShape)
+                                    .clip(RoundedCornerShape(topStart = 50.dp, topEnd = 6.dp, bottomStart = 50.dp, bottomEnd = 6.dp))
                                     .background(playerOnAccentColor.copy(alpha = 0.7f))
                                     .clickable {
                                         val open = openConnectPanel
@@ -839,11 +845,11 @@ fun FullPlayerContent(
                                     }
                                     // Outside the clip's content so the whole pill stretches and settles, not just what is in it.
                                     .animateContentSize(outputMotion.defaultSpatialSpec())
-                                    .widthIn(min = 42.dp, max = if (sonosGroup != null) 210.dp else 42.dp),
+                                    .widthIn(min = 50.dp, max = if (sonosGroup != null) 210.dp else 58.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(start = 9.dp),
+                                    modifier = Modifier.padding(start = 14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     AnimatedContent(
@@ -909,54 +915,73 @@ fun FullPlayerContent(
                                     }
                                 }
                             }
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(playerOnAccentColor.copy(alpha = 0.7f))
-                                    .clickable { showSaveBookmarkDialog = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Bookmark,
-                                    contentDescription = stringResource(R.string.audio_bookmarks_cd_add),
-                                    tint = playerAccentColor
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (isFoldableTwoPane && foldableRightPane == FoldableRightPane.QUEUE) {
-                                            playerAccentColor.copy(alpha = 0.9f)
+                            // Mod: the options of the song behind three dots, with the bookmark of OSS and the queue
+                            // (also reached by swiping up).
+                            var showPlayerMenu by remember { mutableStateOf(false) }
+                            Box {
+                                Box(
+                                    modifier = Modifier
+                                        .size(height = 42.dp, width = 50.dp)
+                                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 50.dp, bottomStart = 6.dp, bottomEnd = 50.dp))
+                                        .background(
+                                            if (isFoldableTwoPane && foldableRightPane == FoldableRightPane.QUEUE) {
+                                                playerAccentColor.copy(alpha = 0.9f)
+                                            } else {
+                                                playerOnAccentColor.copy(alpha = 0.7f)
+                                            }
+                                        )
+                                        .clickable { showPlayerMenu = true },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.MoreVert,
+                                        contentDescription = stringResource(R.string.player_cd_more_options),
+                                        tint = if (isFoldableTwoPane && foldableRightPane == FoldableRightPane.QUEUE) {
+                                            playerOnAccentColor
                                         } else {
-                                            playerOnAccentColor.copy(alpha = 0.7f)
+                                            playerAccentColor
                                         }
                                     )
-                                    .clickable {
-                                        if (isFoldableTwoPane) {
-                                            foldableRightPane = if (foldableRightPane == FoldableRightPane.QUEUE) {
-                                                null
-                                            } else {
-                                                FoldableRightPane.QUEUE
-                                            }
-                                        } else {
-                                            showSongInfoBottomSheet = true
-                                            onShowQueueClicked()
+                                }
+                                DropdownMenu(
+                                    expanded = showPlayerMenu,
+                                    onDismissRequest = { showPlayerMenu = false },
+                                    shape = RoundedCornerShape(20.dp)
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.player_menu_song_options)) },
+                                        leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
+                                        onClick = {
+                                            showPlayerMenu = false
+                                            onSongInfoClick(song)
                                         }
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.rounded_queue_music_24),
-                                    contentDescription = stringResource(R.string.presentation_batch_g_player_cd_queue),
-                                    tint = if (isFoldableTwoPane && foldableRightPane == FoldableRightPane.QUEUE) {
-                                        playerOnAccentColor
-                                    } else {
-                                        playerAccentColor
-                                    }
-                                )
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.player_menu_bookmark)) },
+                                        leadingIcon = { Icon(Icons.Rounded.Bookmark, contentDescription = null) },
+                                        onClick = {
+                                            showPlayerMenu = false
+                                            showSaveBookmarkDialog = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.player_menu_queue)) },
+                                        leadingIcon = { Icon(painterResource(R.drawable.rounded_queue_music_24), contentDescription = null) },
+                                        onClick = {
+                                            showPlayerMenu = false
+                                            if (isFoldableTwoPane) {
+                                                foldableRightPane = if (foldableRightPane == FoldableRightPane.QUEUE) {
+                                                    null
+                                                } else {
+                                                    FoldableRightPane.QUEUE
+                                                }
+                                            } else {
+                                                showSongInfoBottomSheet = true
+                                                onShowQueueClicked()
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
