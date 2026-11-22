@@ -56,4 +56,11 @@
     <plurals name="library_header_liked"><item quantity="one">%d liked</item><item quantity="other">%d liked</item></plurals>
     <plurals name="library_header_albums"><item quantity="one">%d album</item><item quantity="other">%d albums</item></plurals>
     <plurals name="library_header_artists"><item quantity="one">%d artist</item><item quantity="other">%d artists</item></plurals>
+    <string name="library_menu_more">More</string>
+    <string name="library_menu_bookmarks">Bookmarks</string>
+    <string name="library_menu_reorder_tabs">Order tabs</string>
+    <string name="library_menu_settings">Settings</string>
+    <string name="library_filter_all">All</string>
+    <string name="library_filter_phone">Phone</string>
+    <string name="library_filter_server">Server</string>
 </resources>

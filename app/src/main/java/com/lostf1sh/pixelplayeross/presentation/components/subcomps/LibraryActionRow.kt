@@ -1,5 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.components.subcomps
 
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -149,7 +151,10 @@ fun LibraryActionRow(
     /** Mod: design C puts Shuffle on a floating button, so the toolbar leaves it out. */
     showMainAction: Boolean = true,
     /** Mod: design C shows the tab's count in that place, large. */
-    leadingLabel: String? = null
+    leadingLabel: String? = null,
+    /** Mod: the current order in words for the sort button, and its direction. */
+    sortLabel: String? = null,
+    sortDirection: com.lostf1sh.pixelplayeross.data.model.SortDirection? = null
 ) {
     // Animate complete arrangements so departing controls keep their tab's labels and width.
     AnimatedContent(
@@ -189,7 +194,9 @@ fun LibraryActionRow(
             onStorageFilterClick = onStorageFilterClick,
             sortMenuOpen = sortMenuOpen,
             showMainAction = showMainAction,
-            leadingLabel = leadingLabel
+            leadingLabel = leadingLabel,
+            sortLabel = sortLabel,
+            sortDirection = sortDirection
         )
     }
 }
@@ -207,7 +214,9 @@ private fun LibraryActionRowContent(
     onStorageFilterClick: () -> Unit,
     sortMenuOpen: Boolean = false,
     showMainAction: Boolean = true,
-    leadingLabel: String? = null
+    leadingLabel: String? = null,
+    sortLabel: String? = null,
+    sortDirection: com.lostf1sh.pixelplayeross.data.model.SortDirection? = null
 ) {
     val isPlaylistTab = content.isPlaylistTab
     val showSortButton = content.showSortButton
@@ -273,7 +282,8 @@ private fun LibraryActionRowContent(
                             containerColor = buttonContainerColor,
                             contentColor = buttonContentColor
                         ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 6.dp),
+                        // Mod: tonal, no shadow, like the buttons beside it.
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                         modifier = Modifier.height(genHeight)
                     ) {
@@ -429,106 +439,38 @@ private fun LibraryActionRowContent(
                     enter = slideInHorizontally(initialOffsetX = { it / 2 }) + fadeIn(),
                     exit = slideOutHorizontally(targetOffsetX = { it / 2 }) + fadeOut()
                 ) {
-                     val finalIcon = when(currentStorageFilter) {
-                         StorageFilter.ALL -> Icons.Rounded.Dataset
-                         StorageFilter.ONLINE -> Icons.Rounded.Cloud
-                         StorageFilter.OFFLINE -> Icons.Rounded.PhoneAndroid
-                     }
-                     val tooltipText = when(currentStorageFilter) {
-                         StorageFilter.ALL -> stringResource(R.string.library_storage_filter_all_songs)
-                         StorageFilter.ONLINE -> stringResource(R.string.library_storage_filter_online)
-                         StorageFilter.OFFLINE -> stringResource(R.string.library_storage_filter_offline)
-                     }
-                     val tooltipState = rememberTooltipState()
-
-                    TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                        tooltip = {
-                            PlainTooltip {
-                                Text(tooltipText)
-                            }
-                        },
-                        state = tooltipState
-                    ) {
-                        // The button squishes and rounds out while held, the icon spins in when
-                        // the source changes, and a source other than All keeps a tertiary tint.
-                        val filterMotion = remember { MotionScheme.expressive() }
-                        val filterInteraction = remember { MutableInteractionSource() }
-                        val filterPressed by filterInteraction.collectIsPressedAsState()
-                        val filterScale by animateFloatAsState(
-                            targetValue = if (filterPressed) 0.88f else 1f,
-                            animationSpec = filterMotion.fastSpatialSpec(),
-                            label = "StorageFilterScale"
-                        )
-                        val pressedCorner = genHeight / 2
-                        val filterStart by animateDpAsState(
-                            targetValue = if (filterPressed) pressedCorner else filterStartCorner,
-                            animationSpec = filterMotion.fastSpatialSpec(),
-                            label = "StorageFilterStartCorner"
-                        )
-                        val filterEnd by animateDpAsState(
-                            targetValue = if (filterPressed) pressedCorner else filterEndCorner,
-                            animationSpec = filterMotion.fastSpatialSpec(),
-                            label = "StorageFilterEndCorner"
-                        )
-                        val isFiltering = currentStorageFilter != StorageFilter.ALL
-                        val filterContainer by animateColorAsState(
-                            targetValue = if (isFiltering) MaterialTheme.colorScheme.tertiaryContainer
-                            else MaterialTheme.colorScheme.secondaryContainer,
-                            animationSpec = filterMotion.defaultEffectsSpec(),
-                            label = "StorageFilterContainer"
-                        )
-                        val filterContent by animateColorAsState(
-                            targetValue = if (isFiltering) MaterialTheme.colorScheme.onTertiaryContainer
-                            else MaterialTheme.colorScheme.onSecondaryContainer,
-                            animationSpec = filterMotion.defaultEffectsSpec(),
-                            label = "StorageFilterContent"
-                        )
-                        FilledTonalIconButton(
-                            onClick = onStorageFilterClick,
-                            shape = RoundedCornerShape(
-                                topStart = filterStart,
-                                bottomStart = filterStart,
-                                topEnd = filterEnd,
-                                bottomEnd = filterEnd
-                            ),
-                            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = filterContainer,
-                                contentColor = filterContent
-                            ),
-                            interactionSource = filterInteraction,
-                            modifier = Modifier
-                                .size(genHeight)
-                                .graphicsLayer {
-                                    scaleX = filterScale
-                                    scaleY = filterScale
-                                }
-                        ) {
-                            AnimatedContent(
-                                targetState = finalIcon,
-                                transitionSpec = {
-                                    (scaleIn(filterMotion.fastSpatialSpec(), initialScale = 0.4f) +
-                                        fadeIn(filterMotion.fastEffectsSpec())) togetherWith
-                                        (scaleOut(filterMotion.fastSpatialSpec(), targetScale = 0.4f) +
-                                            fadeOut(filterMotion.fastEffectsSpec()))
-                                },
-                                label = "StorageFilterIcon"
-                            ) { icon ->
-                                val spin = remember { Animatable(-90f) }
-                                LaunchedEffect(Unit) { spin.animateTo(0f, filterMotion.defaultSpatialSpec()) }
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = tooltipText,
-                                    modifier = Modifier.graphicsLayer { rotationZ = spin.value }
-                                )
-                            }
-                        }
+                    // Mod: the source in words (All, Phone, Server) instead of an icon nobody could read.
+                    val filterLabel = when (currentStorageFilter) {
+                        StorageFilter.ALL -> stringResource(R.string.library_filter_all)
+                        StorageFilter.ONLINE -> stringResource(R.string.library_filter_server)
+                        StorageFilter.OFFLINE -> stringResource(R.string.library_filter_phone)
                     }
+                    ReactiveToolbarTextButton(
+                        onClick = onStorageFilterClick,
+                        startCorner = filterStartCorner,
+                        endCorner = filterEndCorner,
+                        highlighted = currentStorageFilter != StorageFilter.ALL,
+                        label = filterLabel
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(gapBetweenFilterAndSort))
 
-                ReactiveToolbarButton(
+                if (sortLabel != null) {
+                    // Mod: the current order in words, with its direction, instead of a bare sort icon.
+                    ReactiveToolbarTextButton(
+                        onClick = onSortClick,
+                        startCorner = sortStartCorner,
+                        endCorner = outerCorner,
+                        active = sortMenuOpen,
+                        label = sortLabel,
+                        leadingIcon = when (sortDirection) {
+                            com.lostf1sh.pixelplayeross.data.model.SortDirection.Ascending -> Icons.Rounded.ArrowUpward
+                            com.lostf1sh.pixelplayeross.data.model.SortDirection.Descending -> Icons.Rounded.ArrowDownward
+                            null -> Icons.AutoMirrored.Rounded.Sort
+                        }
+                    )
+                } else ReactiveToolbarButton(
                     onClick = onSortClick,
                     startCorner = sortStartCorner,
                     endCorner = outerCorner,
@@ -710,4 +652,83 @@ private fun ReactiveToolbarButton(
                 scaleY = scale
             }
     ) { content() }
+}
+
+/**
+ * Mod: a toolbar button with words, answering the finger like [ReactiveToolbarButton]: it rounds out and dips while
+ * pressed, stays round in the primary colour while [active] (its sheet is open), and takes the tertiary colour while
+ * [highlighted] (a filter is on).
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ReactiveToolbarTextButton(
+    onClick: () -> Unit,
+    startCorner: androidx.compose.ui.unit.Dp,
+    endCorner: androidx.compose.ui.unit.Dp,
+    label: String,
+    active: Boolean = false,
+    highlighted: Boolean = false,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
+) {
+    val motion = MaterialTheme.motionScheme
+    val colors = MaterialTheme.colorScheme
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val round = genHeight / 2
+    val start by animateDpAsState(if (pressed || active) round else startCorner, motion.fastSpatialSpec(), label = "ToolbarTextStart")
+    val end by animateDpAsState(if (pressed || active) round else endCorner, motion.fastSpatialSpec(), label = "ToolbarTextEnd")
+    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, motion.fastSpatialSpec(), label = "ToolbarTextScale")
+    val container by animateColorAsState(
+        when {
+            active -> colors.primary
+            highlighted -> colors.tertiaryContainer
+            else -> colors.secondaryContainer
+        },
+        motion.defaultEffectsSpec(),
+        label = "ToolbarTextContainer"
+    )
+    val content by animateColorAsState(
+        when {
+            active -> colors.onPrimary
+            highlighted -> colors.onTertiaryContainer
+            else -> colors.onSecondaryContainer
+        },
+        motion.defaultEffectsSpec(),
+        label = "ToolbarTextContent"
+    )
+    androidx.compose.material3.Surface(
+        onClick = {
+            haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+            onClick()
+        },
+        shape = RoundedCornerShape(topStart = start, bottomStart = start, topEnd = end, bottomEnd = end),
+        color = container,
+        contentColor = content,
+        interactionSource = interaction,
+        modifier = Modifier
+            .height(genHeight)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (leadingIcon != null) Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+            AnimatedContent(
+                targetState = label,
+                transitionSpec = {
+                    (fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()))
+                        .using(SizeTransform(clip = false))
+                },
+                label = "ToolbarTextLabel"
+            ) { text ->
+                Text(text = text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        }
+    }
 }

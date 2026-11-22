@@ -2,6 +2,7 @@
 
 package com.lostf1sh.pixelplayeross.presentation.screens
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material.icons.rounded.Shuffle
 import com.lostf1sh.pixelplayeross.ui.theme.withInterfaceFont
@@ -405,19 +406,6 @@ fun LibraryScreen(
     // The pager's tab, available in this frame. currentTabId only catches up after
     // onLibraryTabSelected runs, so header actions, selection and back read this one instead.
     val visibleCurrentTabId = resolveVisibleLibraryTabId(tabTitles, currentTabIndex, fallback = currentTabId)
-    // Mod: the header design under review (A or C), see LibraryHeaderStyles.kt.
-    val headerStyle = rememberLibraryHeaderStyle()
-    val headerSongCount by playerViewModel.songCountFlow.collectAsStateWithLifecycle()
-    val headerAlbums by playerViewModel.albumsFlow.collectAsStateWithLifecycle()
-    val headerArtists by playerViewModel.artistsFlow.collectAsStateWithLifecycle()
-    val headerLiked by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
-    val headerCount = when (visibleCurrentTabId) {
-        LibraryTabId.SONGS -> pluralStringResource(R.plurals.library_header_songs, headerSongCount, headerSongCount)
-        LibraryTabId.LIKED -> pluralStringResource(R.plurals.library_header_liked, headerLiked.size, headerLiked.size)
-        LibraryTabId.ALBUMS -> pluralStringResource(R.plurals.library_header_albums, headerAlbums.size, headerAlbums.size)
-        LibraryTabId.ARTISTS -> pluralStringResource(R.plurals.library_header_artists, headerArtists.size, headerArtists.size)
-        else -> null
-    }
     val isSortSheetVisible by playerViewModel.isSortingSheetVisible.collectAsStateWithLifecycle()
     val canNavigateBackInFolders by remember(playerViewModel) {
         playerViewModel.playerUiState
@@ -858,181 +846,108 @@ fun LibraryScreen(
             Column(
                 modifier = Modifier.background(headerContainerColor)
             ) {
-                TopAppBar(
-                    title = {
-                        if (isCompactNavigation) {
-                            LibraryNavigationCompactTitle(
-                                modifier = Modifier.padding(start = 2.dp),
-                                title = currentTabTitle,
-                                pageIndex = pagerState.currentPage,
-                                onClick = {
-                                    showTabSwitcherSheet = true
-                                },
-                                onSwipeLeft = {
-                                    scope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                                    }
-                                },
-                                onSwipeRight = {
-                                    scope.launch {
-                                        if (pagerState.currentPage > 0) {
-                                            pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                if (isCompactNavigation) {
+                    TopAppBar(
+                        title = {
+                            if (isCompactNavigation) {
+                                LibraryNavigationCompactTitle(
+                                    modifier = Modifier.padding(start = 2.dp),
+                                    title = currentTabTitle,
+                                    pageIndex = pagerState.currentPage,
+                                    onClick = {
+                                        showTabSwitcherSheet = true
+                                    },
+                                    onSwipeLeft = {
+                                        scope.launch {
+                                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                        }
+                                    },
+                                    onSwipeRight = {
+                                        scope.launch {
+                                            if (pagerState.currentPage > 0) {
+                                                pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                            }
                                         }
                                     }
-                                }
-                            )
-                        } else {
-                            Text(
-                                modifier = Modifier.padding(start = 8.dp),
-                                text = stringResource(R.string.presentation_batch_d_library_title),
-                                fontFamily = RoundedSans,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 40.sp,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                    },
-                    actions = {
-                        FilledIconButton(
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            ),
-                            onClick = {
-                                navController.navigateSafely(Screen.AudioBookmarks.route)
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Bookmark,
-                                contentDescription = stringResource(R.string.audio_bookmarks_cd_open)
-                            )
-                        }
-                        FilledIconButton(
-                            modifier = Modifier.padding(end = 14.dp),
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            ),
-                            onClick = {
-                                navController.navigateSafely(Screen.Settings.route)
-                            }
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.rounded_settings_24),
-                                contentDescription = stringResource(R.string.presentation_batch_d_open_settings_cd)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent
-                    )
-                )
-                if (!isCompactNavigation && headerStyle != LibraryHeaderStyle.TABS) {
-                    val headerTabs = remember(tabTitles) { tabTitles.map { it.toLibraryTabIdOrNull() ?: LibraryTabId.SONGS } }
-                    val selectHeaderTab: (Int) -> Unit = { index ->
-                        scope.launch {
-                            pagerState.animateScrollToPage(
-                                targetPageForTabIndex(
-                                    currentPage = pagerState.currentPage,
-                                    targetTabIndex = index,
-                                    tabCount = tabTitles.size,
-                                    compactMode = isCompactNavigation
                                 )
-                            )
-                        }
-                    }
-                    if (headerStyle == LibraryHeaderStyle.GROUP) {
-                        LibraryGroupTabs(
-                            tabs = headerTabs,
-                            selectedIndex = currentTabIndex,
-                            onSelect = selectHeaderTab,
-                            onEditTabs = { showReorderTabsSheet = true },
-                            titleOf = { it.displayTitle() },
-                            iconOf = { it.iconRes() },
-                            modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
-                        )
-                    } else {
-                        LibraryExpandingTabs(
-                            tabs = headerTabs,
-                            selectedIndex = currentTabIndex,
-                            onSelect = selectHeaderTab,
-                            onEditTabs = { showReorderTabsSheet = true },
-                            titleOf = { it.displayTitle() },
-                            iconOf = { it.iconRes() },
-                            summary = null,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
-                        )
-                    }
-                } else if (!isCompactNavigation) {
-                    val showTabIndicator = false
-                    PrimaryScrollableTabRow(
-                        selectedTabIndex = currentTabIndex,
-                        containerColor = Color.Transparent,
-                        edgePadding = 12.dp,
-                        indicator = {
-                            if (showTabIndicator) {
-                                TabRowDefaults.PrimaryIndicator(
-                                    modifier = Modifier.tabIndicatorOffset(selectedTabIndex = currentTabIndex),
-                                    height = 3.dp,
-                                    color = MaterialTheme.colorScheme.primary
+                            } else {
+                                Text(
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    text = stringResource(R.string.presentation_batch_d_library_title),
+                                    fontFamily = RoundedSans,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 40.sp,
+                                    letterSpacing = 1.sp
                                 )
                             }
                         },
-                        divider = {}
-                    ) {
-                        tabTitles.forEachIndexed { index, rawId ->
-                            val tabId = rawId.toLibraryTabIdOrNull() ?: LibraryTabId.SONGS
-                            // Mod: tabs shaped like the toolbar buttons below, the selected one a pill.
-                            TabAnimation(
-                                index = index,
-                                title = tabId.storageKey,
-                                selectedIndex = currentTabIndex,
-                                unselectedColor = MaterialTheme.colorScheme.secondaryContainer,
-                                onUnselectedColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                unselectedCornerPercent = LibraryTabSquareCornerPercent,
+                        actions = {
+                            FilledIconButton(
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ),
                                 onClick = {
-                                    scope.launch {
-                                        pagerState.animateScrollToPage(
-                                            targetPageForTabIndex(
-                                                currentPage = pagerState.currentPage,
-                                                targetTabIndex = index,
-                                                tabCount = tabTitles.size,
-                                                compactMode = isCompactNavigation
-                                            )
-                                        )
-                                    }
+                                    navController.navigateSafely(Screen.AudioBookmarks.route)
                                 }
                             ) {
-                                Text(
-                                    text = stringResource(tabId.titleRes),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = if (currentTabIndex == index) FontWeight.Bold else FontWeight.Medium
+                                Icon(
+                                    imageVector = Icons.Rounded.Bookmark,
+                                    contentDescription = stringResource(R.string.audio_bookmarks_cd_open)
                                 )
                             }
-                        }
-                        TabAnimation(
-                            index = -1,
-                            title = stringResource(R.string.presentation_batch_d_edit_library_tabs_cd),
-                            selectedIndex = currentTabIndex,
-                            unselectedColor = MaterialTheme.colorScheme.secondaryContainer,
-                            onUnselectedColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            unselectedCornerPercent = LibraryTabSquareCornerPercent,
-                            onClick = { showReorderTabsSheet = true }
-                        ) {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = stringResource(R.string.presentation_batch_d_reorder_tabs_cd),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
-                            )
-                        }
-                    }
-                } else {
+                            FilledIconButton(
+                                modifier = Modifier.padding(end = 14.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ),
+                                onClick = {
+                                    navController.navigateSafely(Screen.Settings.route)
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.rounded_settings_24),
+                                    contentDescription = stringResource(R.string.presentation_batch_d_open_settings_cd)
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            scrolledContainerColor = Color.Transparent
+                        )
+                    )
                     CompactLibraryPagerIndicator(
                         currentIndex = currentTabIndex,
                         pageCount = tabTitles.size,
                         modifier = Modifier.padding(top = 8.dp, bottom = 10.dp)
+                    )
+                } else {
+                    // Mod: no big title, the tabs as words right under the status bar, the rest behind the menu.
+                    val headerTabs = remember(tabTitles) { tabTitles.map { it.toLibraryTabIdOrNull() ?: LibraryTabId.SONGS } }
+                    LibraryTextTabsHeader(
+                        tabs = headerTabs,
+                        selectedIndex = currentTabIndex,
+                        onSelect = { index ->
+                            scope.launch {
+                                pagerState.animateScrollToPage(
+                                    targetPageForTabIndex(
+                                        currentPage = pagerState.currentPage,
+                                        targetTabIndex = index,
+                                        tabCount = tabTitles.size,
+                                        compactMode = isCompactNavigation
+                                    )
+                                )
+                            }
+                        },
+                        onBookmarks = { navController.navigateSafely(Screen.AudioBookmarks.route) },
+                        onReorderTabs = { showReorderTabsSheet = true },
+                        onSettings = { navController.navigateSafely(Screen.Settings.route) },
+                        titleOf = { it.displayTitle() },
+                        modifier = Modifier
+                            .statusBarsPadding()
+                            .padding(top = 6.dp, bottom = 12.dp)
                     )
                 }
             }
@@ -1306,8 +1221,8 @@ fun LibraryScreen(
                                     showLocateButton = showLocateButton,
                                     onSortClick = { playerViewModel.showSortingSheet() },
                                     sortMenuOpen = isSortSheetVisible,
-                                    showMainAction = headerStyle != LibraryHeaderStyle.EXPAND || visibleCurrentTabId == LibraryTabId.PLAYLISTS,
-                                    leadingLabel = headerCount.takeIf { headerStyle == LibraryHeaderStyle.EXPAND },
+                                    sortLabel = currentSelectedSortOption?.let { stringResource(it.methodLabelRes) },
+                                    sortDirection = currentSelectedSortOption?.direction,
                                     onLocateClick = { locateAction?.invoke() },
                                     isPlaylistTab = visibleCurrentTabId == LibraryTabId.PLAYLISTS,
                                     isFoldersTab = visibleCurrentTabId == LibraryTabId.FOLDERS && (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null),
@@ -1597,9 +1512,6 @@ fun LibraryScreen(
                                 selectedSongForInfo?.id?.takeIf { showSongInfoBottomSheet }
                         ) {
                         Box(modifier = Modifier.fillMaxSize()) {
-                            // Mod, design C: Shuffle floats above the mini player instead of sitting in the toolbar.
-                            val floatingShuffle = headerStyle == LibraryHeaderStyle.EXPAND &&
-                                visibleCurrentTabId != LibraryTabId.PLAYLISTS && visibleCurrentTabId != LibraryTabId.FOLDERS
                             HorizontalPager(
                                 state = pagerState,
                                 modifier = Modifier
@@ -1851,29 +1763,7 @@ fun LibraryScreen(
                                     .align(Alignment.TopCenter)
                                     .zIndex(1f)
                             )
-                                                    if (floatingShuffle) {
-                                androidx.compose.material3.ExtendedFloatingActionButton(
-                                    onClick = {
-                                        when (visibleCurrentTabId) {
-                                            LibraryTabId.LIKED -> playerViewModel.shuffleFavoriteSongs()
-                                            LibraryTabId.ALBUMS -> playerViewModel.playRandomAlbum()
-                                            LibraryTabId.ARTISTS -> playerViewModel.shuffleRandomArtist()
-                                            LibraryTabId.GENRES -> playerViewModel.shuffleRandomGenre()
-                                            else -> playerViewModel.shuffleAllSongs()
-                                        }
-                                    },
-                                    icon = { Icon(Icons.Rounded.Shuffle, contentDescription = null) },
-                                    text = { Text(stringResource(R.string.shortcut_shuffle_short)) },
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    // Tonal, no shadow, as the rest of the mod's floating controls.
-                                    elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(end = 16.dp, bottom = bottomBarHeightDp + MiniPlayerHeight + 20.dp)
-                                )
-                            }
-}
+                        }
                         }
                     }
                 }

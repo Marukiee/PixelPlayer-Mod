@@ -31,4 +31,11 @@
     <plurals name="library_header_liked"><item quantity="one">%d geliket</item><item quantity="other">%d geliket</item></plurals>
     <plurals name="library_header_albums"><item quantity="one">%d album</item><item quantity="other">%d albums</item></plurals>
     <plurals name="library_header_artists"><item quantity="one">%d artiest</item><item quantity="other">%d artiesten</item></plurals>
+    <string name="library_menu_more">Meer</string>
+    <string name="library_menu_bookmarks">Bladwijzers</string>
+    <string name="library_menu_reorder_tabs">Tabbladen ordenen</string>
+    <string name="library_menu_settings">Instellingen</string>
+    <string name="library_filter_all">Alles</string>
+    <string name="library_filter_phone">Telefoon</string>
+    <string name="library_filter_server">Server</string>
 </resources>
