@@ -869,11 +869,13 @@ class MainActivity : ComponentActivity() {
         }
 
         val showScrollbar by userPreferencesRepository.showScrollbarFlow.collectAsStateWithLifecycle(initialValue = true)
+        val showSongQualityBadge by userPreferencesRepository.showSongQualityBadgeFlow.collectAsStateWithLifecycle(initialValue = false)
 
         CompositionLocalProvider(
             LocalAppHapticsConfig provides appHapticsConfig,
             LocalHapticFeedback provides scopedHapticFeedback,
-            LocalShowScrollbar provides showScrollbar
+            LocalShowScrollbar provides showScrollbar,
+            com.lostf1sh.pixelplayeross.ui.theme.LocalShowSongQualityBadge provides showSongQualityBadge
         ) {
             val sidebarShortcuts by userPreferencesRepository.sidebarShortcutsFlow
                 .collectAsStateWithLifecycle(initialValue = SidebarShortcutKeys.DEFAULT)

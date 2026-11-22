@@ -34,6 +34,9 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.ColorSchemePair
 import androidx.core.graphics.ColorUtils
 
 val LocalPixelPlayerDarkTheme = staticCompositionLocalOf { false }
+
+/** Mod: show the LQ/HQ/SQ/HR label next to the artist in song lists (setting under Appearance). */
+val LocalShowSongQualityBadge = staticCompositionLocalOf { false }
 val LocalPixelPlayerAmoledTheme = staticCompositionLocalOf { false }
 val LocalShowScrollbar = staticCompositionLocalOf { true }
 internal val LocalUseSystemFont = staticCompositionLocalOf { false }

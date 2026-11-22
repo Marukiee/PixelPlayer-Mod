@@ -4125,6 +4125,13 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /** Mod: moves the position by [deltaMs], for holding previous or next in the player. */
+    fun seekByDelta(deltaMs: Long) {
+        val state = stablePlayerState.value
+        val duration = state.totalDuration.takeIf { it > 0L } ?: state.currentSong?.duration ?: return
+        seekTo((currentPlaybackPosition.value + deltaMs).coerceIn(0L, duration.coerceAtLeast(0L)))
+    }
+
     fun seekTo(position: Long) {
         playbackStateHolder.seekTo(position)
     }

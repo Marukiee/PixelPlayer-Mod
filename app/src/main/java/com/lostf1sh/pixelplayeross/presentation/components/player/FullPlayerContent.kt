@@ -1370,6 +1370,8 @@ private fun FullPlayerControlsSection(
                 onPrevious = onPrevious,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
+                onSeekForward = onSeekForward,
+                onSeekBackward = onSeekBackward,
                 height = 80.dp,
                 pressAnimationSpec = stableControlAnimationSpec,
                 releaseDelay = 220L,

@@ -743,6 +743,13 @@ class SettingsViewModel @Inject constructor(
     val miniPlayerStyle: StateFlow<String> = userPreferencesRepository.miniPlayerStyleFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lostf1sh.pixelplayeross.data.preferences.MiniPlayerStyle.RING)
 
+    val showSongQualityBadge: StateFlow<Boolean> = userPreferencesRepository.showSongQualityBadgeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setShowSongQualityBadge(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.setShowSongQualityBadge(enabled) }
+    }
+
     fun setMiniPlayerStyle(style: String) {
         viewModelScope.launch { userPreferencesRepository.setMiniPlayerStyle(style) }
     }

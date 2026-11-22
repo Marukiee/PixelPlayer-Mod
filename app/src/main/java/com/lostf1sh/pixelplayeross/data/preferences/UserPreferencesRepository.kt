@@ -162,6 +162,7 @@ constructor(
         val NAV_BAR_COMPACT_MODE = booleanPreferencesKey("nav_bar_compact_mode")
         val CAROUSEL_STYLE = stringPreferencesKey("carousel_style")
         val MINI_PLAYER_STYLE = stringPreferencesKey("mini_player_style")
+        val SHOW_SONG_QUALITY_BADGE = booleanPreferencesKey("show_song_quality_badge")
         val LIBRARY_NAVIGATION_MODE = stringPreferencesKey("library_navigation_mode")
         val LAUNCH_TAB = stringPreferencesKey("launch_tab")
 
@@ -1677,6 +1678,13 @@ constructor(
 
     suspend fun setMiniPlayerStyle(style: String) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.MINI_PLAYER_STYLE] = style }
+    }
+
+    val showSongQualityBadgeFlow: Flow<Boolean> =
+        dataStore.data.map { preferences -> preferences[PreferencesKeys.SHOW_SONG_QUALITY_BADGE] ?: false }
+
+    suspend fun setShowSongQualityBadge(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[PreferencesKeys.SHOW_SONG_QUALITY_BADGE] = enabled }
     }
 
     val launchTabFlow: Flow<String> =

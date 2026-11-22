@@ -40,6 +40,16 @@ import androidx.compose.ui.unit.dp
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.components.LocalMaterialTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.composed
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import kotlin.math.roundToInt
 
@@ -53,6 +63,9 @@ fun AnimatedPlaybackControls(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Mod: holding previous or next seeks back or forward, faster after three seconds. Null leaves only the tap. */
+    onSeekForward: ((Long) -> Unit)? = null,
+    onSeekBackward: ((Long) -> Unit)? = null,
     height: Dp = 90.dp,
     baseWeight: Float = 1f,
     expansionWeight: Float = 1.1f,
@@ -82,6 +95,7 @@ fun AnimatedPlaybackControls(
     var pendingPlayPauseState by remember { mutableStateOf<Boolean?>(null) }
     var playPauseTapCount by remember { mutableIntStateOf(0) }
     val hapticFeedback = LocalHapticFeedback.current
+    val holdScope = rememberCoroutineScope()
 
     LaunchedEffect(lastClicked) {
         if (lastClicked != null) {
@@ -155,10 +169,16 @@ fun AnimatedPlaybackControls(
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(colorPreviousButton)
-                    .clickable {
-                        lastClicked = PlaybackButtonType.PREVIOUS
-                        onPrevious()
-                    },
+                    .skipButtonGestures(
+                        onClick = {
+                            lastClicked = PlaybackButtonType.PREVIOUS
+                            onPrevious()
+                        },
+                        onSeek = onSeekBackward,
+                        direction = -1L,
+                        scope = holdScope,
+                        haptics = hapticFeedback
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -214,10 +234,16 @@ fun AnimatedPlaybackControls(
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(colorNextButton)
-                    .clickable {
-                        lastClicked = PlaybackButtonType.NEXT
-                        onNext()
-                    },
+                    .skipButtonGestures(
+                        onClick = {
+                            lastClicked = PlaybackButtonType.NEXT
+                            onNext()
+                        },
+                        onSeek = onSeekForward,
+                        direction = 1L,
+                        scope = holdScope,
+                        haptics = hapticFeedback
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -255,5 +281,53 @@ fun AnimatedPlaybackControls(
 }
 
 private val ButtonGap = 6.dp
+
+/**
+ * Mod: a tap skips; holding seeks in steps of half a second every 100 ms, a second per step after three seconds,
+ * until the finger lets go.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.skipButtonGestures(
+    onClick: () -> Unit,
+    onSeek: ((Long) -> Unit)?,
+    direction: Long,
+    scope: CoroutineScope,
+    haptics: HapticFeedback
+): Modifier = composed {
+    var seekJob by remember { mutableStateOf<Job?>(null) }
+    this
+        .pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Final)
+                    if (event.changes.all { !it.pressed }) {
+                        seekJob?.cancel()
+                        seekJob = null
+                    }
+                }
+            }
+        }
+        .combinedClickable(
+            onClick = onClick,
+            onLongClick = if (onSeek != null) {
+                {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    seekJob?.cancel()
+                    seekJob = scope.launch {
+                        var elapsed = 0L
+                        while (true) {
+                            delay(HOLD_SEEK_TICK_MS)
+                            elapsed += HOLD_SEEK_TICK_MS
+                            val step = if (elapsed >= 3_000L) 1_000L else 500L
+                            if (elapsed % 400L == 0L) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSeek(direction * step)
+                        }
+                    }
+                }
+            } else null
+        )
+}
+
+private const val HOLD_SEEK_TICK_MS = 100L
 private const val PLAY_PAUSE_CONFIRM_TIMEOUT_MS = 1_000L
 

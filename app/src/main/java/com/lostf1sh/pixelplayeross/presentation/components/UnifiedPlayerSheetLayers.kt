@@ -288,6 +288,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         isFavoriteProvider = isFavoriteProvider,
                         onPlayPause = onPlayPause,
                         onSeek = onSeek,
+                        onSeekForward = playerViewModel::seekByDelta,
+                        onSeekBackward = playerViewModel::seekByDelta,
                         onNext = onNext,
                         onPrevious = onPrevious,
                         onCollapse = onCollapse,

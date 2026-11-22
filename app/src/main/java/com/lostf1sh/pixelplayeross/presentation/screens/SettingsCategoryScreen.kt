@@ -858,6 +858,20 @@ fun SettingsCategoryScreen(
                                     onSelectionChanged = { settingsViewModel.setMiniPlayerStyle(it) },
                                     leadingIcon = { Icon(Icons.Outlined.PlayCircle, null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
+                                val showSongQualityBadge by settingsViewModel.showSongQualityBadge.collectAsStateWithLifecycle()
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.settings_show_song_quality_badge_title),
+                                    subtitle = stringResource(R.string.settings_show_song_quality_badge_subtitle),
+                                    checked = showSongQualityBadge,
+                                    onCheckedChange = { settingsViewModel.setShowSongQualityBadge(it) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painterResource(R.drawable.rounded_label),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+                                )
                             }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_home_collage)) {

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_show_song_quality_badge_subtitle">Show LQ / HQ / SQ / HR badges before the artist name in song lists</string>
+    <string name="settings_show_song_quality_badge_title">Show quality badges</string>
+</resources>
