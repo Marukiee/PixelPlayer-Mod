@@ -69,6 +69,13 @@ fun List<Song>.withLocalCopiesFrom(candidates: List<Song>): List<Song> {
     }
 }
 
+/** Mod: the copy on the phone of this server song among [candidates], or null for a local song or when there is none. */
+fun Song.localCopyIn(candidates: List<Song>): Song? {
+    if (!isRemote) return null
+    val title = SearchTextNormalizer.fold(this.title)
+    return candidates.firstOrNull { !it.isRemote && SearchTextNormalizer.fold(it.title) == title && it.isSameRecordingAs(this) }
+}
+
 private fun Song.isSameRecordingAs(other: Song): Boolean {
     val artistMatches = NavidromeSongMatcher.artistMatches(
         SearchTextNormalizer.fold(artist),

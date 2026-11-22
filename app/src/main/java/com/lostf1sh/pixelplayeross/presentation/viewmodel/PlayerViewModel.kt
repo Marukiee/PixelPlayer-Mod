@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.viewmodel
 
+import com.lostf1sh.pixelplayeross.data.model.localCopyIn
 import com.lostf1sh.pixelplayeross.data.model.withLocalCopiesFrom
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -2933,16 +2934,23 @@ class PlayerViewModel @Inject constructor(
         directPlaybackJob = viewModelScope.launch {
             transitionSchedulerJob?.cancel()
 
-            val validSongs = hydrateSongsIfNeeded(songsToPlay)
+            val hydratedSongs = hydrateSongsIfNeeded(songsToPlay)
             throwIfDirectPlaybackRequestIsStale(requestToken)
+            // Mod: a server song that is also on the phone plays as the local file, the tapped one too. Without
+            // server songs in the list this finds nothing and changes nothing.
+            val localCandidates = musicRepository.getLocalCopyCandidates(hydratedSongs + startSong)
+            throwIfDirectPlaybackRequestIsStale(requestToken)
+            val validSongs = hydratedSongs.withLocalCopiesFrom(localCandidates)
+            val localStartSong = startSong.localCopyIn(localCandidates) ?: startSong
 
             if (validSongs.isEmpty()) {
                 _toastEvents.emit(context.getString(R.string.no_valid_songs))
                 return@launch
             }
 
-            val validStartSong =
-                validSongs.firstOrNull { it.id == startSong.id } ?: validSongs.first()
+            val validStartSong = validSongs.firstOrNull { it.id == localStartSong.id }
+                ?: validSongs.firstOrNull { it.id == startSong.id }
+                ?: validSongs.first()
 
             // Every entry is queued from playlistId, so shuffle off can put each tag back in place.
             queueStateHolder.setOriginalQueueOrder(validSongs, List(validSongs.size) { playlistId })

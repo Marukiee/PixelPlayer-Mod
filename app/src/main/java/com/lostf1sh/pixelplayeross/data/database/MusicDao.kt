@@ -105,6 +105,32 @@ private const val HIDE_SERVER_COPIES_OF_LOCAL_SONGS = """
         )
 """
 
+/** Mod: as above for Liked Songs, but only when the local copy is liked too, so a liked song never drops out. */
+private const val HIDE_SERVER_COPIES_OF_LIKED_LOCAL_SONGS = """
+        AND (
+            :filterMode != 0
+            OR songs.source_type = 0
+            OR NOT EXISTS (
+                SELECT 1 FROM songs AS local_copy
+                WHERE local_copy.title = songs.title
+                AND local_copy.source_type = 0
+                AND local_copy.id IN (SELECT songId FROM favorites WHERE isFavorite = 1)
+                AND abs(local_copy.duration - songs.duration) <= 3000
+                AND (
+                    lower(local_copy.artist_name) = lower(songs.artist_name)
+                    OR (
+                        local_copy.artist_name != '' AND songs.artist_name != ''
+                        AND (
+                            instr(lower(songs.artist_name), lower(local_copy.artist_name)) = 1
+                            OR instr(lower(local_copy.artist_name), lower(songs.artist_name)) = 1
+                        )
+                    )
+                )
+                AND (:applyDirectoryFilter = 0 OR local_copy.parent_directory_path IN (:allowedParentDirs))
+            )
+        )
+"""
+
 private const val SONG_LIST_PROJECTION = """
     id, title, artist_name, artist_id, album_artist, album_artist_id, album_name, album_id,
     content_uri_string, album_art_uri_string, duration, genre, file_path,
@@ -856,6 +882,7 @@ interface MusicDao {
                 AND songs.source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LIKED_LOCAL_SONGS + """
         ORDER BY
             CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE NOCASE ASC,
             CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE NOCASE DESC,
@@ -958,6 +985,7 @@ interface MusicDao {
                 AND songs.source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LIKED_LOCAL_SONGS + """
         ORDER BY
             CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE NOCASE ASC,
             CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE NOCASE DESC,
@@ -1001,6 +1029,7 @@ interface MusicDao {
                 AND songs.source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LIKED_LOCAL_SONGS + """
         ORDER BY songs.title COLLATE NOCASE ASC
     """)
     suspend fun getFavoriteSongsList(
@@ -1025,6 +1054,7 @@ interface MusicDao {
                 AND songs.source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LIKED_LOCAL_SONGS + """
         ORDER BY
             CASE WHEN :sortOrder = 'liked_title_az' THEN songs.title END COLLATE NOCASE ASC,
             CASE WHEN :sortOrder = 'liked_title_za' THEN songs.title END COLLATE NOCASE DESC,
@@ -1071,6 +1101,7 @@ interface MusicDao {
                 AND songs.source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LIKED_LOCAL_SONGS + """
     """)
     fun getFavoriteSongCount(
         allowedParentDirs: List<String>,
