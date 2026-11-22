@@ -1,0 +1,11 @@
+[
+  {
+    "version": "0.8.0-mod.32",
+    "en": {
+      "new": ["Now built on PixelPlayerOSS, with all your likes", "Updates install from this card"]
+    },
+    "nl": {
+      "new": ["Nu gebouwd op PixelPlayerOSS, met al je likes", "Updates installeren vanaf deze kaart"]
+    }
+  }
+]

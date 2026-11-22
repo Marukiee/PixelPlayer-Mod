@@ -1,3 +1,10 @@
+- Gebouwd op PixelPlayerOSS, de Google-vrije versie die actief wordt bijgewerkt; je likes, afspeellijsten, luistergeschiedenis en instellingen gaan mee
+- Updatekaart bovenaan Home: een tik op Bijwerken en de app installeert de nieuwe versie zelf
+- Home, speler, minispeler en Zoeken zoals je ze kent, met de nieuwe zoekbalk en iconen van OSS
+- Bladwijzers in een nummer (nieuw uit OSS) via de drie puntjes in de speler
+- Minispeler: kies onder Uiterlijk tussen een ring om de afspeelknop of een gevulde knop
+- Chromecast is weg (OSS heeft geen Google-diensten); Sonos en Bluetooth werken zoals altijd
+
 - Speler: tik op de titel om naar het album te gaan
 - Sonos: zonder wifi zegt de app dat de speakers alleen via je wifi thuis werken, in plaats van een foutmelding na een tijd
 - Spotify: grote knop naar het Spotify-dashboard en uitleg bij de Redirect URI

@@ -47,16 +47,20 @@ Daarbij: kleine dingen die OSS mooier heeft gemaakt (iconen, de nieuwe zoekbalk 
 
 De oude mod (branch `mark-mod`) blijft bestaan tot de OSS-versie op de telefoon goed werkt.
 
-## Stand op 2026-11-21, 23:15 (verder om 01:20, daarna uitbrengen)
+## Stand op 2026-11-22 (0.8.0-mod.32, eerste release op OSS)
 
-Mark: "stop voor nu en ga verder om 1:20", daarna "breng dan alles uit als nieuwe release". Dus om 01:20 de rest afmaken en uitbrengen als 0.8.0-mod.32 (code 41).
+Erin: import van de oude gegevens, likes bij scans, Sonos en het verbinden-paneel, Navidrome-sterren en luisterbeurten, Spotify, Afspelen via in de instellingen, naam PixelPlayer, navigatiebalk 450 ms, de updatekaart (`markupdate` uit Keeper, commit 2661c5d) bovenaan Home, en de keuzes 1A tot 4A:
 
-Klaar en gecommit op `oss-basis`: import oude gegevens, likes bij scans, Sonos en verbinden-paneel, Navidrome-sterren en scrobbles, navigatiebalk 450 ms, naam PixelPlayer, Afspelen via in de instellingen, sha256 in de release-workflow.
+- Home van de mod; Your Mix opent weer zijn eigen mixpagina (de Daily Mix-pagina van OSS met een `kind`).
+- Speler: kamerpil en drie puntjes als segmentpaar; achter de puntjes Nummeropties, Bladwijzer opslaan (OSS) en Wachtrij. Titel opent het album, bestandsinfo met bron. Golvende tijdbalk zoals in beide versies.
+- Minispeler: uitvoerknop in plaats van vorige, ring of gevulde afspeelknop (instelling onder Uiterlijk), met het morphende afspeelicoon van OSS.
+- Zoeken van de mod op de zoekbalk van OSS; filters zijn de toggleknoppen van OSS in een rij die scrolt. Vegen naar de wachtrij met de ene veegactie van OSS.
+- Lokaal gaat voor: zoeken, nummerlijst, willekeurige shuffle, mixen, genrepagina's en shufflen van een lijst.
 
-Bezig (niet gecommit): `SearchScreen.kt` heeft de mod-diff als patch gekregen, 13 van 19 stukken. De 6 afgewezen stukken staan in de scratchpad (`oss/rej_search.rej`); verdwenen, maak de patch dan opnieuw met `git diff 63cb59b9 mark-mod -- .../SearchScreen.kt` in broncode, pakketnaam omzetten, `patch -p1 --dry-run`. Zoekbalk van OSS houden (Marks wens). Nodig erbij: `SpotifySearchSection.kt`, `data/search/RecentSearchSongs.kt`, de zoek- en Spotify-functies in `PlayerViewModel` (recentSearchSongs, playSongKeepingQueue, sendToast), `EnhancedSongListItem` met trailingIcon.
+Nog niet overgezet (volgende ronde):
 
-Nog te doen, in deze volgorde: Zoeken afmaken, minispeler (3A), speler (2A, bladwijzer in het menu), homepage (1A), lokaal gaat voor overal, dan release. De mod-diffs passen grotendeels als patch (minispeler/UnifiedPlayerSheetShared 2 van 6, FullPlayerContent 25 van 35, HomeScreen 5 van 14, PlayerViewModel 5 van 10).
-
-Updatekaart: de gedeelde module `markupdate` bouwt nog niet op AGP 9 (gemeld aan de Tandem-sessie). Is die er om 01:20 niet, dan gaat de release zonder kaart; de update-check van OSS moet dan uit of naar Marukiee/PixelPlayer-Mod wijzen, nooit naar de OSS-releases.
-
-Release: branch `oss-basis` naar remote `mod` pushen (nooit `origin` of `oss`), changelog bovenaan MOD_CHANGELOG.md als nieuw blok met lege regel erna, tag `v0.8.0-mod.32`, `gh run watch`, `gh release view`, handtekening `fe01845b...` nakijken, APK naar `PixelPlayer/apk/`.
+- Recently Played, de genre- en Daily Mix-pagina's en de doorklikbare statistieken van de mod.
+- Vorige en volgende vasthouden om te spoelen (de knoppen van OSS zijn anders opgebouwd).
+- Vegen met een eigen actie per richting (OSS heeft een actie voor beide), en het kwaliteitslabel in lijsten.
+- De minispeler boven het verbinden-paneel.
+- Een tik op een servernummer in een lijst speelt het lokale bestand; Liked Songs zonder dubbele servercopie.

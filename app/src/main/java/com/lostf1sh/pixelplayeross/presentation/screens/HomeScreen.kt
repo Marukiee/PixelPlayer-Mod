@@ -271,7 +271,7 @@ fun HomeScreen(
     val rediscoverSongs by homeViewModel.rediscoverSongs.collectAsStateWithLifecycle()
     val topArtists by homeViewModel.topArtists.collectAsStateWithLifecycle()
     val isPlaying by remember(playerViewModel.stablePlayerState) {
-        playerViewModel.stablePlayerState.map { it.isPlaying || it.playWhenReady }.distinctUntilChanged()
+        playerViewModel.stablePlayerState.map { it.isPlaying || (it.playWhenReady && it.isBuffering) }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
     val currentQueueName by remember(playerViewModel.playerUiState) {
         playerViewModel.playerUiState.map { it.currentQueueSourceName }.distinctUntilChanged()

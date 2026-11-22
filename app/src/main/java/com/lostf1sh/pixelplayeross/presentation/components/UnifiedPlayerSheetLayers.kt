@@ -66,7 +66,8 @@ private fun MiniPlayerRow(
     val sonosGroup = sonosSession?.group
     MiniPlayerContentInternal(
         song = song,
-        isPlaying = infrequentPlayerState.isPlaying || infrequentPlayerState.playWhenReady,
+        // Pause while it plays or loads to play, as in the mod; a restored song that cannot start shows play.
+        isPlaying = infrequentPlayerState.isPlaying || (infrequentPlayerState.playWhenReady && infrequentPlayerState.isBuffering),
         isOutputConnecting = isOutputConnecting,
         isPreparingPlayback = isPreparingPlayback,
         output = PlayerOutputIcon.of(
