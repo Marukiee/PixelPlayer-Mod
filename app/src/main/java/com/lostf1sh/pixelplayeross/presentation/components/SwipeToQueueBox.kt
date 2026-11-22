@@ -1,5 +1,14 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -63,8 +72,12 @@ fun rememberSwipeToQueue(playerViewModel: PlayerViewModel): ((Song) -> Unit)? {
 }
 
 /**
- * Lets a song row slide towards the end edge, and with the mod's second setting towards the start edge too; letting go
- * past the threshold calls [onSwipe]. With a null [onSwipe], [content] gets [modifier] as is and no gesture is added.
+ * Lets a song row slide sideways to queue it, with the feel of the swipe in the queue (QueueItemDismissGestureHandler):
+ * the row first resists (up to 60 dp of drag moves it at most 20 dp), then it snaps to the finger with a tick and
+ * follows it closely; crossing the commit line (40 % of the width) and coming back each tick, and letting go past it
+ * queues the song with a firmer tick before the row springs back. Behind the row a round pill grows from the edge
+ * with the queue icon. Towards the start edge only while the mod's second swipe setting is on.
+ * With a null [onSwipe], [content] gets [modifier] as is and no gesture is added.
  */
 @Composable
 fun SwipeToQueueBox(
@@ -79,80 +92,134 @@ fun SwipeToQueueBox(
 
     val currentOnSwipe by rememberUpdatedState(onSwipe)
     val directions = LocalSongSwipeDirections.current
-    val haptics = LocalHapticFeedback.current
+    val hapticView = androidx.compose.ui.platform.LocalView.current
+    val appHapticsConfig = com.lostf1sh.pixelplayeross.presentation.utils.LocalAppHapticsConfig.current
     val scope = rememberCoroutineScope()
     val offset = remember { Animatable(0f) }
-    val thresholdPx = with(LocalDensity.current) { SwipeToQueueThreshold.toPx() }
+    val density = LocalDensity.current
     // Offsets are kept towards the end edge, which is left in right-to-left layouts.
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
-    val minOffset = if (directions.towardsStart) -thresholdPx * 1.5f else 0f
-    val maxOffset = if (directions.towardsEnd) thresholdPx * 1.5f else 0f
+    var rowWidth by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    var rowHeight by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var inZone by remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    fun tick(constant: Int) = com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback(
+        hapticView, appHapticsConfig, constant
+    )
+
+    val colors = MaterialTheme.colorScheme
+    val revealPx = kotlin.math.abs(offset.value)
+    val revealProgress = (revealPx / with(density) { 56.dp.toPx() }).coerceIn(0f, 1f)
+    val pillColor by androidx.compose.animation.animateColorAsState(
+        if (inZone) colors.primary else colors.primaryContainer, tween(150), label = "swipePill"
+    )
+    val iconColor by androidx.compose.animation.animateColorAsState(
+        if (inZone) colors.onPrimary else colors.onPrimaryContainer, tween(150), label = "swipeIcon"
+    )
+    val iconScale by androidx.compose.animation.core.animateFloatAsState(
+        if (inZone) 1.08f else 0.95f, tween(120), label = "swipeIconScale"
+    )
 
     Box(modifier) {
-        Icon(
-            painter = painterResource(R.drawable.rounded_queue_music_24),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 20.dp)
-                .graphicsLayer {
-                    val progress = (offset.value / thresholdPx).coerceIn(0f, 1f)
-                    alpha = progress
-                    scaleX = 0.6f + 0.4f * progress
-                    scaleY = scaleX
-                }
-        )
-        if (directions.towardsStart) {
-            Icon(
-                painter = painterResource(R.drawable.rounded_queue_music_24),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+        if (revealPx > 0f && rowHeight > 0) {
+            val towardsEnd = offset.value > 0f
+            Box(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 20.dp)
-                    .graphicsLayer {
-                        val progress = (-offset.value / thresholdPx).coerceIn(0f, 1f)
-                        alpha = progress
-                        scaleX = 0.6f + 0.4f * progress
-                        scaleY = scaleX
-                    }
-            )
+                    .align(if (towardsEnd) Alignment.CenterStart else Alignment.CenterEnd)
+                    .height(with(density) { rowHeight.toDp() })
+                    .width(with(density) { revealPx.toDp() })
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(pillColor),
+                contentAlignment = if (towardsEnd) Alignment.CenterStart else Alignment.CenterEnd
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.rounded_queue_music_24),
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .graphicsLayer {
+                            alpha = revealProgress * if (inZone) 1f else 0.88f
+                            scaleX = iconScale
+                            scaleY = iconScale
+                        }
+                )
+            }
         }
         content(
             Modifier
+                .onSizeChanged {
+                    rowWidth = it.width.toFloat()
+                    rowHeight = it.height
+                }
                 .graphicsLayer { translationX = offset.value * direction }
-                .pointerInput(direction, thresholdPx, minOffset, maxOffset) {
+                .pointerInput(direction, directions) {
+                    val tensionThreshold = 60.dp.toPx()
+                    val maxTension = 20.dp.toPx()
                     var dragged = 0f
+                    var freeDrag = false
                     fun settle() {
-                        dragged = 0f
-                        scope.launch { offset.animateTo(0f) }
+                        scope.launch {
+                            offset.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                        }
                     }
                     detectHorizontalDragGestures(
-                        onDragStart = { dragged = 0f },
+                        onDragStart = {
+                            dragged = 0f
+                            freeDrag = false
+                            inZone = false
+                            scope.launch { offset.stop() }
+                        },
                         onDragEnd = {
-                            when {
-                                dragged >= thresholdPx -> {
-                                    LastSwipe.towardsStart = false
-                                    currentOnSwipe()
-                                }
-                                dragged <= -thresholdPx -> {
-                                    LastSwipe.towardsStart = true
-                                    currentOnSwipe()
-                                }
+                            val commit = rowWidth * 0.40f
+                            if (freeDrag && kotlin.math.abs(dragged) > commit) {
+                                tick(androidx.core.view.HapticFeedbackConstantsCompat.GESTURE_END)
+                                LastSwipe.towardsStart = dragged < 0f
+                                currentOnSwipe()
                             }
+                            inZone = false
                             settle()
                         },
-                        onDragCancel = { settle() }
+                        onDragCancel = {
+                            inZone = false
+                            settle()
+                        }
                     ) { change, dragAmount ->
                         change.consume()
-                        val wasArmed = kotlin.math.abs(dragged) >= thresholdPx
-                        dragged = (dragged + dragAmount * direction).coerceIn(minOffset, maxOffset)
-                        if (!wasArmed && kotlin.math.abs(dragged) >= thresholdPx) {
-                            haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                        var next = dragged + dragAmount * direction
+                        // Only the directions that have an action move the row.
+                        if (!directions.towardsEnd && next > 0f) next = 0f
+                        if (!directions.towardsStart && next < 0f) next = 0f
+                        // Never further than the commit line plus a little, so the row stays on screen.
+                        val limit = rowWidth * 0.55f
+                        dragged = next.coerceIn(-limit, limit)
+                        val distance = kotlin.math.abs(dragged)
+                        if (!freeDrag) {
+                            if (distance < tensionThreshold) {
+                                val tension = maxTension * (distance / tensionThreshold)
+                                scope.launch { offset.snapTo(kotlin.math.sign(dragged) * tension) }
+                            } else {
+                                freeDrag = true
+                                tick(androidx.core.view.HapticFeedbackConstantsCompat.GESTURE_THRESHOLD_ACTIVATE)
+                                val target = dragged
+                                scope.launch {
+                                    offset.animateTo(target, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                }
+                            }
+                        } else {
+                            val nowInZone = distance > rowWidth * 0.40f
+                            if (nowInZone != inZone) {
+                                inZone = nowInZone
+                                tick(
+                                    if (nowInZone) androidx.core.view.HapticFeedbackConstantsCompat.GESTURE_THRESHOLD_ACTIVATE
+                                    else androidx.core.view.HapticFeedbackConstantsCompat.GESTURE_THRESHOLD_DEACTIVATE
+                                )
+                            }
+                            val target = dragged
+                            scope.launch {
+                                offset.animateTo(target, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh))
+                            }
                         }
-                        val target = dragged
-                        scope.launch { offset.snapTo(target) }
                     }
                 }
         )
