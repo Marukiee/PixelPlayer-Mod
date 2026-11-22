@@ -45,3 +45,6 @@ markdown.xml
 /AGENTS.md
 
 graphify-out/
+
+# Build output of the shared update module
+markupdate/*/build/

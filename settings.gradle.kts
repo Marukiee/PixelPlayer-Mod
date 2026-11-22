@@ -30,4 +30,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "PixelPlayerOSS"
 include(":app")
+// Marks shared update card, a copy of Keeper android/markupdate (see markupdate/BRON). Never change it here.
+include(":markupdate:core", ":markupdate:card")
 include(":baselineprofile")

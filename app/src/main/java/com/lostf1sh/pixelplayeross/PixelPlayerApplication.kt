@@ -78,9 +78,6 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
     lateinit var m3uSyncCoordinator: dagger.Lazy<M3uSyncCoordinator>
 
     @Inject
-    lateinit var updateCheckScheduler: dagger.Lazy<com.lostf1sh.pixelplayeross.data.update.UpdateCheckScheduler>
-
-    @Inject
     lateinit var songMetadataEditor: dagger.Lazy<SongMetadataEditor>
 
     @Inject
@@ -151,7 +148,18 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
 
         m3uSyncCoordinator.get().start()
 
-        updateCheckScheduler.get().start()
+        // Mod: Marks shared update card looks at his own releases. OSS's own update check (the OSS releases) stays off.
+        nl.markmaaktmedia.markupdate.MarkUpdate.init(
+            this,
+            nl.markmaaktmedia.markupdate.MarkUpdateConfig(
+                owner = "Marukiee",
+                repo = "PixelPlayer-Mod",
+                apkAsset = "PixelPlayer-Mod.apk",
+                currentVersion = BuildConfig.VERSION_NAME,
+                appName = "PixelPlayer",
+                notificationIcon = R.drawable.monochrome_player
+            )
+        )
 
         advancedPerformanceDiagnosticsController.get().start(startupScope)
 

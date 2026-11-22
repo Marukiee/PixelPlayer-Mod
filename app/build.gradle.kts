@@ -207,6 +207,8 @@ kotlin {
 }
 
 dependencies {
+    // Marks shared update card (copy of Keeper android/markupdate, never changed here).
+    implementation(project(":markupdate:card"))
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.profileinstaller)
     "baselineProfile"(project(":baselineprofile"))

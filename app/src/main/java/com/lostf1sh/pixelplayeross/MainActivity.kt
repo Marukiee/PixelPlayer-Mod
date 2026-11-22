@@ -329,6 +329,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            // Mod: looks for a new release on Marukiee/PixelPlayer-Mod (at most every 6 hours); the card on Home shows it.
+            LaunchedEffect(Unit) { nl.markmaaktmedia.markupdate.MarkUpdate.get().checkIfDue() }
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
             val themePreset by themePreferencesRepository.themePresetFlow.collectAsStateWithLifecycle(initialValue = ThemePreset.DEFAULT)

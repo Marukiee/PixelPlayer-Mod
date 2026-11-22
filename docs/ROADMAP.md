@@ -73,6 +73,7 @@ Volgorde gekozen door Mark (2026-11-02):
    - [ ] Sonos met wifi en Tailscale tegelijk nog op de telefoon nalopen
    - [ ] Spotify-pagina ingelogd (grote knop boven Client ID, uitleg onder de Redirect URI) nog op de telefoon bekijken
 21. [ ] YouTube als bron (Mark, 2026-11-08, "misschien"): uitgezocht, zie "YouTube als bron". Keuze van Mark
+28. [ ] **Mac-app** (Mark, 2026-11-22): PixelPlayer ook op de Mac, met dezelfde functies, om vanaf de Mac muziek af te spelen. Muziek op de Mac zelf en Navidrome, likes en luistergegevens gelijk met de telefoon, Sonos (verbinden, groeperen, volume) en Spotify. Nog niets uitgezocht
 
 ## Luistergegevens naar Navidrome
 

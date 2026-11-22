@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Lyrics
-import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -105,13 +104,6 @@ internal sealed interface MainSettingsEntry {
             icon = Icons.Rounded.AccountCircle,
             iconTone = SettingsIconTone.TERTIARY,
             route = Screen.Accounts.createRoute()
-        ),
-        UPDATES(
-            titleRes = R.string.updates_title,
-            subtitleRes = R.string.updates_settings_subtitle,
-            icon = Icons.Rounded.SystemUpdate,
-            iconTone = SettingsIconTone.PRIMARY,
-            route = Screen.Updates.route
         )
     }
 }
@@ -133,7 +125,6 @@ internal val mainSettingsEntries: List<MainSettingsEntry> = buildList {
     add(MainSettingsEntry.Destination.DOWNLOADS)
     add(MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES))
     add(MainSettingsEntry.Destination.ACCOUNTS)
-    add(MainSettingsEntry.Destination.UPDATES)
     add(MainSettingsEntry.Category(SettingsCategory.ABOUT))
 }
 
