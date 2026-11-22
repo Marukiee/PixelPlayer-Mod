@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ButtonDefaults
@@ -96,6 +99,57 @@ fun GenreGradientTopBar(
     )
 }
 
+
+/** The top of Home in the mod: only the name and a settings button. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeGradientTopBar(
+    onSettingsClick: () -> Unit,
+    titleStyle: TextStyle,
+    isScrolled: Boolean = false,
+) {
+    val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHighest
+
+    PixelPlayerStatusBarStyle(color = surfaceContainerHigh)
+
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (isScrolled) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "topbar_alpha_transition"
+    )
+
+    TopAppBar(
+        modifier = Modifier.background(surfaceContainerHigh.copy(alpha = animatedAlpha)),
+        title = {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = titleStyle,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        },
+        actions = {
+            Box(
+                modifier = Modifier
+                    .padding(end = 14.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            ) {
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        painter = painterResource(R.drawable.rounded_settings_24),
+                        contentDescription = stringResource(R.string.common_settings),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        },
+        colors = topAppBarColors(
+            containerColor = Color.Transparent
+        )
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

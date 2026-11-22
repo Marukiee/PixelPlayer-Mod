@@ -1,7 +1,5 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
 
-import com.lostf1sh.pixelplayeross.ui.theme.withInterfaceFont
-
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafelyReplacing
 
@@ -9,7 +7,6 @@ import android.content.Intent
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +29,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -43,6 +41,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,17 +73,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.window.core.layout.WindowSizeClass
+import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
+import com.lostf1sh.pixelplayeross.presentation.components.home.GenreFlag
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeMixCard
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomePlayback
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeMixVisual
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeMixesRow
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeRecentlyPlayedList
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeStatsCardPlaceholder
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeRediscoverSection
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeStatsCard
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeTopArtistsRow
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeYourMixCard
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeUpdateCard
+import com.lostf1sh.pixelplayeross.presentation.components.home.genreIllustration
+import com.lostf1sh.pixelplayeross.presentation.components.home.genreLibraryId
+import com.lostf1sh.pixelplayeross.presentation.components.home.topGenreNames
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.HomeViewModel
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.currentStateAsState
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.CollagePattern
@@ -94,71 +109,46 @@ import com.lostf1sh.pixelplayeross.presentation.components.DailyMixSection
 import com.lostf1sh.pixelplayeross.presentation.components.HomeGradientTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.HomeOptionsBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
-import com.lostf1sh.pixelplayeross.presentation.components.RecentlyAddedSection
-import com.lostf1sh.pixelplayeross.presentation.components.RecentlyPlayedSection
-import com.lostf1sh.pixelplayeross.presentation.components.RecentlyPlayedSectionMinSongsToShow
-import com.lostf1sh.pixelplayeross.presentation.components.RecentlyPlayedSongOptionsSheet
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.StatsOverviewCard
 import com.lostf1sh.pixelplayeross.presentation.components.resolveMainScreenBottomGradientHeight
 import com.lostf1sh.pixelplayeross.presentation.model.collectRecentlyPlayedSongIds
 import com.lostf1sh.pixelplayeross.presentation.model.mapRecentlyPlayedSongs
-import com.lostf1sh.pixelplayeross.presentation.model.withUpdatedSongs
-import com.lostf1sh.pixelplayeross.presentation.model.withoutSong
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.PlayingEqIcon
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
-import com.lostf1sh.pixelplayeross.presentation.components.StreamingProviderSheet
-import com.lostf1sh.pixelplayeross.presentation.recap.RecapHomeCard
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
-import com.lostf1sh.pixelplayeross.presentation.viewmodel.RecapEntryViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.StatsViewModel
-import com.lostf1sh.pixelplayeross.presentation.viewmodel.StreamingProviderLoginViewModel
-import com.lostf1sh.pixelplayeross.presentation.viewmodel.sharedPlayerViewModel
 import com.lostf1sh.pixelplayeross.ui.theme.ExpTitleTypography
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import androidx.compose.ui.res.stringResource
-import com.lostf1sh.pixelplayeross.presentation.components.rememberModalSheetState
 
 private const val HomeLoadingPlaceholderMinDurationMillis = 1200L
-private const val HomeScrollRestoreGraceMillis = 1_500L
 
-/** A Home song a long press opened options for, with the queue that playing it from there uses. */
-private data class HomeSongOptions(
-    val song: Song,
-    val queueSongs: ImmutableList<Song>,
-    val queueName: String,
-    /** Play builds the full library queue, as tapping a Home library preview does. */
-    val playFromLibrary: Boolean = false
-)
-
+// Modern HomeScreen with collapsible top bar and staggered grid layout
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     paddingValuesParent: PaddingValues,
-    playerViewModel: PlayerViewModel = sharedPlayerViewModel(),
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
-    streamingLoginViewModel: StreamingProviderLoginViewModel = hiltViewModel(),
+    homeViewModel: HomeViewModel = hiltViewModel(),
     onOpenSidebar: () -> Unit
 ) {
     val context = LocalContext.current
+    // DETECTAR MODO BENCHMARK
     val isBenchmarkMode = remember {
         (context as? android.app.Activity)?.intent?.getBooleanExtra("is_benchmark", false) ?: false
     }
     val statsViewModel: StatsViewModel = hiltViewModel()
-    val recapEntryViewModel: RecapEntryViewModel = hiltViewModel()
     val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val dailyMixSongs by playerViewModel.dailyMixSongs.collectAsStateWithLifecycle()
     val curatedYourMixSongs by playerViewModel.yourMixSongs.collectAsStateWithLifecycle()
@@ -213,16 +203,14 @@ fun HomeScreen(
             maxItems = 64
         )
     }
+    // Keep the visible Home snapshot stable and only refresh it once the screen is off-screen.
     var recentlyPlayedSongs by rememberSaveable { mutableStateOf(latestRecentlyPlayedSongs) }
     val latestRecentlyPlayedSongsState = rememberUpdatedState(latestRecentlyPlayedSongs)
 
     LaunchedEffect(latestRecentlyPlayedSongs, lifecycleOwner) {
         val isHomeVisible = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
-        recentlyPlayedSongs = if (recentlyPlayedSongs.isEmpty() || !isHomeVisible) {
-            latestRecentlyPlayedSongs
-        } else {
-            // Keep the pills in place while Home is on screen, but show edits to their songs.
-            recentlyPlayedSongs.withUpdatedSongs(latestRecentlyPlayedSongs)
+        if (recentlyPlayedSongs.isEmpty() || !isHomeVisible) {
+            recentlyPlayedSongs = latestRecentlyPlayedSongs
         }
     }
 
@@ -246,64 +234,147 @@ fun HomeScreen(
         yourMixSongs.isNotEmpty() || hasHomeLoadingMinimumElapsed || isBenchmarkMode
     }
 
-    val yourMixSubtitle = stringResource(R.string.home_your_mix_subtitle)
-    val yourMixQueueName = stringResource(R.string.home_your_mix_queue_name)
-    val recentlyPlayedQueueName = stringResource(R.string.presentation_batch_b_queue_recently_played)
-    val recentlyAddedQueueName = stringResource(R.string.home_recently_added_title)
+    val yourMixSong: String = "Today's Mix for you"
 
-    // Seed with the live value: starting from null made the bottom padding grow one frame
-    // after returning to Home, once the scroll position was already restored, which left the
-    // last section under the mini player and nav bar. The seed is read once inside remember
-    // so the StateFlow is not read during composition.
-    val initialCurrentSong = remember(playerViewModel) {
-        playerViewModel.stablePlayerState.value.currentSong
-    }
+    // 2) Observar sólo el currentSong (o null) para saber si mostrar padding
     val currentSong by remember(playerViewModel.stablePlayerState) {
         playerViewModel.stablePlayerState.map { it.currentSong }
-    }.collectAsStateWithLifecycle(initialValue = initialCurrentSong)
+    }.collectAsStateWithLifecycle(initialValue = null)
 
+    // 3) Observe shuffle state for sync
     val isShuffleEnabled by remember(playerViewModel.stablePlayerState) {
         playerViewModel.stablePlayerState
             .map { it.isShuffleEnabled }
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
 
+    // Padding inferior si hay canción en reproducción
     val bottomPadding = if (currentSong != null) MiniPlayerHeight else 0.dp
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
-    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-    val useNavigationRail = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
-    val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode, useNavigationRail)
+    val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode)
 
     var showOptionsBottomSheet by remember { mutableStateOf(false) }
     var showChangelogBottomSheet by remember { mutableStateOf(false) }
     var showBetaInfoBottomSheet by remember { mutableStateOf(false) }
-    var showStreamingProviderSheet by remember { mutableStateOf(false) }
-    var songForOptions by remember { mutableStateOf<HomeSongOptions?>(null) }
-    val sheetState = rememberModalSheetState()
-    val betaSheetState = rememberModalSheetState()
+    val sheetState = rememberModalBottomSheetState()
+    val betaSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     LocalContext.current
 
-    val homeStatsOverviewState by statsViewModel.homeOverviewState.collectAsStateWithLifecycle()
-    val recapHomeCard by recapEntryViewModel.homeCard.collectAsStateWithLifecycle()
+    val homeOverviewState by statsViewModel.homeOverviewState.collectAsStateWithLifecycle()
+    val homeStatsOverview = (homeOverviewState as? com.lostf1sh.pixelplayeross.presentation.viewmodel.HomeStatsOverviewState.Ready)?.summary
+    var holdStatsSlot by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(STATS_SLOT_HOLD_MS)
+        holdStatsSlot = false
+    }
+    val rediscoverSongs by homeViewModel.rediscoverSongs.collectAsStateWithLifecycle()
+    val topArtists by homeViewModel.topArtists.collectAsStateWithLifecycle()
+    val isPlaying by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.isPlaying || it.playWhenReady }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
+    val currentQueueName by remember(playerViewModel.playerUiState) {
+        playerViewModel.playerUiState.map { it.currentQueueSourceName }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = "")
+    val homePlayback = remember(currentQueueName, isPlaying) {
+        HomePlayback(currentQueueName, isPlaying, playerViewModel::playPause)
+    }
+    LaunchedEffect(homeStatsOverview) {
+        homeViewModel.updateTopArtists(homeStatsOverview?.topArtists.orEmpty())
+    }
+    val cardTitleStyle = rememberYourMixTitleStyle(fontSize = 40.sp, lineHeight = 40.sp)
+    val mixTitleStyle = rememberYourMixTitleStyle(fontSize = 20.sp, lineHeight = 22.sp)
+    val dailyMixTitle = stringResource(R.string.home_mix_daily_title)
+    val dailyMixSubtitle = stringResource(R.string.home_mix_daily_subtitle)
+    val genreMixSubtitle = stringResource(R.string.home_mix_genre_subtitle)
+    val artistMixSubtitle = stringResource(R.string.home_mix_artist_subtitle)
+    val genreMixNames = remember(homeStatsOverview) {
+        topGenreNames(homeStatsOverview?.topGenres.orEmpty(), limit = 3)
+    }
+    val topLibraryArtist = remember(topArtists) { topArtists.firstOrNull { it.artistId != null } }
+    val customGenreIcons by playerViewModel.customGenreIcons.collectAsStateWithLifecycle()
+    val mixCards = remember(dailyMixSongs, genreMixNames, topLibraryArtist, dailyMixTitle, customGenreIcons) {
+        buildList {
+            if (dailyMixSongs.isNotEmpty()) {
+                add(
+                    HomeMixCard(
+                        key = "daily_mix",
+                        title = dailyMixTitle,
+                        subtitle = dailyMixSubtitle,
+                        queueName = dailyMixTitle,
+                        visual = HomeMixVisual.Tonal,
+                        onOpen = { navController.navigateSafely(Screen.DailyMixScreen.route) },
+                        onPlay = {
+                            playerViewModel.playSongsShuffled(dailyMixSongs, queueName = dailyMixTitle, startAtZero = true)
+                        }
+                    )
+                )
+            }
+            genreMixNames.forEach { genre ->
+                add(
+                    HomeMixCard(
+                        key = "genre_$genre",
+                        title = genre,
+                        subtitle = genreMixSubtitle,
+                        queueName = genre,
+                        visual = HomeMixVisual.Genre(
+                            genreName = genre,
+                            illustration = genreIllustration(genre, customGenreIcons),
+                            flag = GenreFlag.forGenre(genre)
+                        ),
+                        onOpen = {
+                            navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(genreLibraryId(genre), "UTF-8")))
+                        },
+                        onPlay = {
+                            scope.launch {
+                                val songs = homeViewModel.songsForGenre(genre)
+                                if (songs.isNotEmpty()) {
+                                    playerViewModel.playSongsShuffled(songs, queueName = genre, startAtZero = true)
+                                }
+                            }
+                        }
+                    )
+                )
+            }
+            topLibraryArtist?.artistId?.let { artistId ->
+                add(
+                    HomeMixCard(
+                        key = "artist_$artistId",
+                        title = topLibraryArtist.name,
+                        subtitle = artistMixSubtitle,
+                        queueName = topLibraryArtist.name,
+                        visual = HomeMixVisual.Artist(topLibraryArtist.imageModel),
+                        onOpen = { navController.navigateSafely(Screen.ArtistDetail.createRoute(artistId)) },
+                        onPlay = {
+                            scope.launch {
+                                val songs = homeViewModel.songsForArtist(artistId)
+                                if (songs.isNotEmpty()) {
+                                    playerViewModel.playSongsShuffled(songs, queueName = topLibraryArtist.name, startAtZero = true)
+                                }
+                            }
+                        }
+                    )
+                )
+            }
+        }
+    }
 
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val density = LocalDensity.current
-    val scrollThresholdPx = remember(density) { with(density) { 180.dp.toPx() } }
+    // The Your Mix card sits right under the top bar, so the bar needs its background as soon as
+    // anything scrolls beneath it.
+    val scrollThresholdPx = remember(density) { with(density) { 4.dp.toPx() } }
     val isScrolledPastThreshold = remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > scrollThresholdPx }
     }
+    val topBarTitleStyle = rememberYourMixTitleStyle(fontSize = 24.sp, lineHeight = 26.sp)
 
+    // Persist the scroll position across navigation away/back. The Stats card and other
+    // conditional sections can shift indices while data re-emits when returning, which
+    // would otherwise leave the list scrolled to the wrong place or jump to the top.
     var savedScrollIndex by rememberSaveable { mutableIntStateOf(0) }
     var savedScrollOffset by rememberSaveable { mutableIntStateOf(0) }
     var needsScrollRestore by rememberSaveable { mutableStateOf(false) }
-    // ON_PAUSE fires while Home is still composed (during its exit transition, or before the
-    // window hides), so restoring right away would only re-apply the current position and save
-    // the flag as false. Wait until Home is resumed again; the grace window starts there too.
-    val lifecycleState = lifecycleOwner.lifecycle.currentStateAsState()
-    val isHomeResumed by remember(lifecycleState) {
-        derivedStateOf { lifecycleState.value.isAtLeast(Lifecycle.State.RESUMED) }
-    }
 
     DisposableEffect(lifecycleOwner, listState) {
         val observer = LifecycleEventObserver { _, event ->
@@ -317,43 +388,25 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Sections can re-emit empty values for a moment when returning, so the list is briefly
-    // shorter than when we left it. Keep re-applying the saved position as content arrives
-    // until it is actually reached, the user drags the list, or a short grace window ends.
     LaunchedEffect(
         needsScrollRestore,
-        isHomeResumed,
         yourMixSongs.isNotEmpty(),
         dailyMixSongs.isNotEmpty(),
-        homeMixPreviewSongs.isNotEmpty(),
         recentlyPlayedSongs.size,
-        homeStatsOverviewState,
-        recapHomeCard,
-        bottomPadding
+        homeStatsOverview,
+        rediscoverSongs.size,
+        topArtists.size
     ) {
-        if (!needsScrollRestore || !isHomeResumed) return@LaunchedEffect
+        if (!needsScrollRestore) return@LaunchedEffect
         val totalItems = listState.layoutInfo.totalItemsCount
         if (totalItems == 0) return@LaunchedEffect
         val targetIndex = savedScrollIndex.coerceIn(0, (totalItems - 1).coerceAtLeast(0))
         listState.scrollToItem(targetIndex, savedScrollOffset)
-        if (listState.firstVisibleItemIndex == savedScrollIndex &&
-            listState.firstVisibleItemScrollOffset == savedScrollOffset
-        ) {
-            needsScrollRestore = false
-        }
-    }
-
-    LaunchedEffect(needsScrollRestore, isHomeResumed) {
-        if (!needsScrollRestore || !isHomeResumed) return@LaunchedEffect
-        launch {
-            listState.interactionSource.interactions
-                .filterIsInstance<DragInteraction.Start>()
-                .first()
-            needsScrollRestore = false
-        }
-        delay(HomeScrollRestoreGraceMillis)
         needsScrollRestore = false
     }
+
+    // Drawer state for sidebar
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -362,19 +415,10 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 HomeGradientTopBar(
-                    onNavigationIconClick = {
+                    onSettingsClick = {
                         navController.navigateSafely(Screen.Settings.route)
                     },
-                    onMoreOptionsClick = {
-                        showChangelogBottomSheet = true
-                    },
-                    onBetaClick = {
-                        showBetaInfoBottomSheet = true
-                    },
-                    onStreamingClick = {
-                          showStreamingProviderSheet = true
-                    },
-                    onMenuClick = onOpenSidebar,
+                    titleStyle = topBarTitleStyle,
                     isScrolled = isScrolledPastThreshold.value
                 )
             }
@@ -396,6 +440,8 @@ fun HomeScreen(
                         key = "your_mix_placeholder",
                         contentType = "your_mix_placeholder"
                     ) {
+                        Column {
+                        HomeUpdateCard()
                         if (shouldShowYourMixLoadingPlaceholder) {
                             YourMixLoadingPlaceholder()
                         } else {
@@ -407,369 +453,165 @@ fun HomeScreen(
                                 }
                             )
                         }
-                    }
-                } else if (useNavigationRail) {
-                    item(
-                        key = "your_mix_hero_wide",
-                        contentType = "your_mix_hero_wide"
-                    ) {
-                        val basePattern = settingsUiState.collagePattern
-                        val isAutoRotate = settingsUiState.collageAutoRotate
-                        val patterns = remember { CollagePattern.entries }
-
-                        val activePattern = if (isAutoRotate) {
-                            var rotationIndex by rememberSaveable { mutableIntStateOf(-1) }
-                            LaunchedEffect(Unit) { rotationIndex++ }
-                            remember(rotationIndex) {
-                                patterns[rotationIndex.coerceAtLeast(0) % patterns.size]
-                            }
-                        } else {
-                            basePattern
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(modifier = Modifier.weight(0.46f)) {
-                                YourMixHeader(
-                                    song = yourMixSubtitle,
-                                    isShuffleEnabled = isShuffleEnabled,
-                                    onPlayShuffled = {
-                                        playerViewModel.shuffleAllSongs(queueName = yourMixQueueName)
-                                    }
-                                )
-                            }
-                            Box(modifier = Modifier.weight(0.54f)) {
-                                AlbumArtCollage(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    songs = yourMixSongs,
-                                    padding = 12.dp,
-                                    height = 290.dp,
-                                    pattern = activePattern,
-                                    onSongLongClick = { song ->
-                                        songForOptions = HomeSongOptions(
-                                            song, yourMixSongs, yourMixQueueName, playFromLibrary = usesFallbackHomeMix
-                                        )
-                                    },
-                                    onSongClick = { song ->
-                                        if (usesFallbackHomeMix) {
-                                            playerViewModel.showAndPlaySongFromLibrary(song, queueName = yourMixQueueName)
-                                        } else {
-                                            playerViewModel.showAndPlaySong(song, yourMixSongs, yourMixQueueName)
-                                        }
-                                    }
-                                )
-                            }
                         }
                     }
                 } else {
                     item(
-                        key = "your_mix_header",
-                        contentType = "your_mix_header"
+                        key = "your_mix_card",
+                        contentType = "your_mix_card"
                     ) {
-                        YourMixHeader(
-                            song = yourMixSubtitle,
-                            isShuffleEnabled = isShuffleEnabled,
-                            onPlayShuffled = {
-                                playerViewModel.shuffleAllSongs(queueName = yourMixQueueName)
-                            }
-                        )
-                    }
-                    item(
-                        key = "album_art_collage",
-                        contentType = "album_art_collage"
-                    ) {
-                        val basePattern = settingsUiState.collagePattern
-                        val isAutoRotate = settingsUiState.collageAutoRotate
-                        val patterns = remember { CollagePattern.entries }
-
-                        val activePattern = if (isAutoRotate) {
-                            var rotationIndex by rememberSaveable { mutableIntStateOf(-1) }
-                            LaunchedEffect(Unit) { rotationIndex++ }
-                            remember(rotationIndex) {
-                                patterns[rotationIndex.coerceAtLeast(0) % patterns.size]
-                            }
-                        } else {
-                            basePattern
-                        }
-
-                        AlbumArtCollage(
-                            modifier = Modifier.fillMaxWidth(),
+                        Column {
+                        HomeUpdateCard()
+                        HomeYourMixCard(
+                            modifier = Modifier.padding(top = 8.dp),
                             songs = yourMixSongs,
-                            padding = 14.dp,
-                            height = 400.dp,
-                            pattern = activePattern,
-                            onSongLongClick = { song ->
-                                songForOptions = HomeSongOptions(
-                                    song, yourMixSongs, yourMixQueueName, playFromLibrary = usesFallbackHomeMix
-                                )
+                            titleStyle = cardTitleStyle,
+                            playback = homePlayback,
+                            queueName = "Your Mix",
+                            onPlay = {
+                                if (usesFallbackHomeMix) {
+                                    playerViewModel.shuffleAllSongs(queueName = "Your Mix")
+                                } else {
+                                    playerViewModel.playSongs(
+                                        songsToPlay = yourMixSongs,
+                                        startSong = yourMixSongs.first(),
+                                        queueName = "Your Mix"
+                                    )
+                                }
+                            },
+                            onShuffle = {
+                                if (usesFallbackHomeMix) {
+                                    playerViewModel.shuffleAllSongs(queueName = "Your Mix")
+                                } else {
+                                    playerViewModel.playSongsShuffled(
+                                        songsToPlay = yourMixSongs,
+                                        queueName = "Your Mix",
+                                        startAtZero = true,
+                                    )
+                                }
                             },
                             onSongClick = { song ->
                                 if (usesFallbackHomeMix) {
-                                    playerViewModel.showAndPlaySongFromLibrary(song, queueName = yourMixQueueName)
+                                    playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
                                 } else {
-                                    playerViewModel.showAndPlaySong(song, yourMixSongs, yourMixQueueName)
+                                    playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
                                 }
-                            }
+                            },
+                            onOpen = { navController.navigateSafely(Screen.YourMix.route) }
                         )
+                        }
                     }
                 }
 
-                // Seasonal: December to mid-January, until dismissed for that year.
-                recapHomeCard?.let { entry ->
-                    item(
-                        key = "recap_home_card",
-                        contentType = "recap_home_card"
-                    ) {
-                        RecapHomeCard(
-                            entry = entry,
-                            onOpen = { navController.navigateSafely(Screen.Recap.createRoute(entry.year)) },
-                            onDismiss = { recapEntryViewModel.dismissHomeCard(entry.year) },
-                            modifier = Modifier.animateItem()
-                        )
-                    }
-                }
-
-                if (useNavigationRail && dailyMixSongs.isNotEmpty()) {
-                    if (recentlyPlayedSongs.size >= RecentlyPlayedSectionMinSongsToShow) {
-                        item(
-                            key = "recently_played_section",
-                            contentType = "recently_played_section"
-                        ) {
-                            RecentlyPlayedSection(
-                                songs = remember(recentlyPlayedSongs) { recentlyPlayedSongs.toImmutableList() },
-                                onSongClick = { song ->
-                                    if (recentlyPlayedQueue.isNotEmpty()) {
-                                        playerViewModel.playSongs(
-                                            songsToPlay = recentlyPlayedQueue,
-                                            startSong = song,
-                                            queueName = recentlyPlayedQueueName
-                                        )
-                                    }
-                                },
-                                onSongLongClick = { song ->
-                                    songForOptions = HomeSongOptions(song, recentlyPlayedQueue, recentlyPlayedQueueName)
-                                },
-                                onOpenAllClick = {
-                                    navController.navigateSafely(Screen.RecentlyPlayed.route)
-                                },
-                                themeStateHolder = playerViewModel.themeStateHolder,
-                                currentSongId = currentSong?.id,
-                                contentPadding = PaddingValues(start = 8.dp, end = 24.dp)
-                            )
-                        }
-                    }
-
-                    item(
-                        key = "foldable_dashboard_row",
-                        contentType = "foldable_dashboard_row"
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                DailyMixSection(
-                                    songs = dailyMixSongs,
-                                    onClickOpen = {
-                                        navController.navigateSafely(Screen.DailyMixScreen.route)
-                                    },
-                                    onNavigateToAlbum = { song ->
-                                        navController.navigateSafelyReplacing(
-                                            route = Screen.AlbumDetail.createRoute(song.albumId),
-                                            patternToPop = Screen.AlbumDetail.route
-                                        )
-                                    },
-                                    onNavigateToArtist = { song ->
-                                        navController.navigateSafelyReplacing(
-                                            route = Screen.ArtistDetail.createRoute(song.artistId),
-                                            patternToPop = Screen.ArtistDetail.route
-                                        )
-                                    },
-                                    onNavigateToGenre = { song ->
-                                        song.genre?.let {
-                                            navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")))
-                                        }
-                                    },
-                                    playerViewModel = playerViewModel,
-                                    topSpacing = 0.dp
-                                )
-                            }
-                            Box(modifier = Modifier.weight(1f)) {
-                                StatsOverviewCard(
-                                    state = homeStatsOverviewState,
-                                    onClick = { navController.navigateSafely(Screen.Stats.route) }
-                                )
-                            }
-                        }
-                    }
-
-                    if (homeMixPreviewSongs.isNotEmpty()) {
-                        item(
-                            key = "recently_added_section",
-                            contentType = "recently_added_section"
-                        ) {
-                            RecentlyAddedSection(
-                                songs = homeMixPreviewSongs,
-                                onSongClick = { song ->
-                                    playerViewModel.showAndPlaySong(
-                                        song = song,
-                                        contextSongs = homeMixPreviewSongs,
-                                        queueName = recentlyAddedQueueName
-                                    )
-                                },
-                                onSongLongClick = { song ->
-                                    songForOptions = HomeSongOptions(
-                                        song = song,
-                                        queueSongs = homeMixPreviewSongs,
-                                        queueName = recentlyAddedQueueName
-                                    )
-                                },
-                                onPlayAllClick = {
-                                    homeMixPreviewSongs.firstOrNull()?.let { firstSong ->
-                                        playerViewModel.showAndPlaySong(
-                                            song = firstSong,
-                                            contextSongs = homeMixPreviewSongs,
-                                            queueName = recentlyAddedQueueName
-                                        )
-                                    }
-                                },
-                                currentSongId = currentSong?.id,
-                                contentPadding = PaddingValues(start = 16.dp, end = 24.dp)
-                            )
-                        }
-                    }
-                } else {
-                    if (dailyMixSongs.isNotEmpty()) {
-                        item(
-                            key = "daily_mix_section",
-                            contentType = "daily_mix_section"
-                        ) {
-                            DailyMixSection(
-                                songs = dailyMixSongs,
-                                onClickOpen = {
-                                    navController.navigateSafely(Screen.DailyMixScreen.route)
-                                },
-                                onNavigateToAlbum = { song ->
-                                    navController.navigateSafelyReplacing(
-                                        route = Screen.AlbumDetail.createRoute(song.albumId),
-                                        patternToPop = Screen.AlbumDetail.route
-                                    )
-                                },
-                                onNavigateToArtist = { song ->
-                                    navController.navigateSafelyReplacing(
-                                        route = Screen.ArtistDetail.createRoute(song.artistId),
-                                        patternToPop = Screen.ArtistDetail.route
-                                    )
-                                },
-                                onNavigateToGenre = { song ->
-                                    song.genre?.let {
-                                        navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")))
-                                    }
-                                },
-                                playerViewModel = playerViewModel
-                            )
-                        }
-                    }
-
-                    if (recentlyPlayedSongs.size >= RecentlyPlayedSectionMinSongsToShow) {
-                        item(
-                            key = "recently_played_section",
-                            contentType = "recently_played_section"
-                        ) {
-                            RecentlyPlayedSection(
-                                songs = remember(recentlyPlayedSongs) { recentlyPlayedSongs.toImmutableList() },
-                                onSongClick = { song ->
-                                    if (recentlyPlayedQueue.isNotEmpty()) {
-                                        playerViewModel.playSongs(
-                                            songsToPlay = recentlyPlayedQueue,
-                                            startSong = song,
-                                            queueName = recentlyPlayedQueueName
-                                        )
-                                    }
-                                },
-                                onSongLongClick = { song ->
-                                    songForOptions = HomeSongOptions(song, recentlyPlayedQueue, recentlyPlayedQueueName)
-                                },
-                                onOpenAllClick = {
-                                    navController.navigateSafely(Screen.RecentlyPlayed.route)
-                                },
-                                themeStateHolder = playerViewModel.themeStateHolder,
-                                currentSongId = currentSong?.id,
-                                contentPadding = PaddingValues(start = 8.dp, end = 24.dp)
-                            )
-                        }
-                    }
-
-                    if (homeMixPreviewSongs.isNotEmpty()) {
-                        item(
-                            key = "recently_added_section",
-                            contentType = "recently_added_section"
-                        ) {
-                            RecentlyAddedSection(
-                                songs = homeMixPreviewSongs,
-                                onSongClick = { song ->
-                                    playerViewModel.showAndPlaySong(
-                                        song = song,
-                                        contextSongs = homeMixPreviewSongs,
-                                        queueName = recentlyAddedQueueName
-                                    )
-                                },
-                                onSongLongClick = { song ->
-                                    songForOptions = HomeSongOptions(
-                                        song = song,
-                                        queueSongs = homeMixPreviewSongs,
-                                        queueName = recentlyAddedQueueName
-                                    )
-                                },
-                                onPlayAllClick = {
-                                    homeMixPreviewSongs.firstOrNull()?.let { firstSong ->
-                                        playerViewModel.showAndPlaySong(
-                                            song = firstSong,
-                                            contextSongs = homeMixPreviewSongs,
-                                            queueName = recentlyAddedQueueName
-                                        )
-                                    }
-                                },
-                                currentSongId = currentSong?.id,
-                                contentPadding = PaddingValues(start = 16.dp, end = 24.dp)
-                            )
-                        }
-                    }
-
-                    // Always shown, even before any listening history, so Stats stays reachable.
+                // Its place is kept while it loads, or everything below would jump down when it arrives.
+                val statsSummary = homeStatsOverview
+                if (statsSummary != null || holdStatsSlot) {
                     item(
                         key = "listening_stats_preview",
                         contentType = "listening_stats_preview"
                     ) {
-                        StatsOverviewCard(
-                            state = homeStatsOverviewState,
-                            onClick = { navController.navigateSafely(Screen.Stats.route) }
+                        if (statsSummary != null) {
+                            HomeStatsCard(
+                                summary = statsSummary,
+                                titleStyle = cardTitleStyle,
+                                onClick = { navController.navigateSafely(Screen.Stats.route) }
+                            )
+                        } else {
+                            HomeStatsCardPlaceholder()
+                        }
+                    }
+                }
+
+                if (mixCards.isNotEmpty()) {
+                    item(
+                        key = "made_for_you",
+                        contentType = "made_for_you"
+                    ) {
+                        HomeMixesRow(mixes = mixCards, titleStyle = mixTitleStyle, playback = homePlayback)
+                    }
+                }
+
+                if (topArtists.isNotEmpty()) {
+                    item(
+                        key = "top_artists",
+                        contentType = "top_artists"
+                    ) {
+                        HomeTopArtistsRow(
+                            title = when (homeStatsOverview?.range) {
+                                StatsTimeRange.WEEK -> stringResource(R.string.home_top_artists_week)
+                                StatsTimeRange.MONTH -> stringResource(R.string.home_top_artists_month)
+                                else -> stringResource(R.string.home_top_artists_generic)
+                            },
+                            artists = topArtists,
+                            onArtistClick = { artistId ->
+                                navController.navigateSafely(Screen.ArtistDetail.createRoute(artistId))
+                            }
+                        )
+                    }
+                }
+
+                if (rediscoverSongs.isNotEmpty()) {
+                    item(
+                        key = "rediscover",
+                        contentType = "rediscover"
+                    ) {
+                        HomeRediscoverSection(
+                            songs = rediscoverSongs,
+                            currentSongId = currentSong?.id,
+                            isPlaying = isPlaying,
+                            playback = homePlayback,
+                            queueName = "Rediscover",
+                            onSongClick = { song ->
+                                playerViewModel.playSongs(rediscoverSongs, song, queueName = "Rediscover")
+                            },
+                            onPlayAll = {
+                                playerViewModel.playSongs(rediscoverSongs, rediscoverSongs.first(), queueName = "Rediscover")
+                            }
+                        )
+                    }
+                }
+
+                if (recentlyPlayedSongs.isNotEmpty()) {
+                    item(
+                        key = "recently_played_section",
+                        contentType = "recently_played_section"
+                    ) {
+                        HomeRecentlyPlayedList(
+                            items = recentlyPlayedSongs,
+                            onSongClick = { song ->
+                                if (recentlyPlayedQueue.isNotEmpty()) {
+                                    playerViewModel.playSongs(
+                                        songsToPlay = recentlyPlayedQueue,
+                                        startSong = song,
+                                        queueName = "Recently Played"
+                                    )
+                                }
+                            },
+                            onOpenAllClick = {
+                                navController.navigateSafely(Screen.RecentlyPlayed.route)
+                            }
                         )
                     }
                 }
             }
         }
-        if (bottomGradientHeight > 0.dp) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .height(bottomGradientHeight)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.2f to Color.Transparent,
-                                0.8f to MaterialTheme.colorScheme.surfaceContainerLowest,
-                                1.0f to MaterialTheme.colorScheme.surfaceContainerLowest
-                            )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .height(bottomGradientHeight)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color.Transparent,
+                            0.2f to Color.Transparent,
+                            0.8f to MaterialTheme.colorScheme.surfaceContainerLowest,
+                            1.0f to MaterialTheme.colorScheme.surfaceContainerLowest
                         )
                     )
-            )
+                )
+        ) {
+
         }
     }
     if (showOptionsBottomSheet) {
@@ -803,54 +645,10 @@ fun HomeScreen(
         ModalBottomSheet(
             onDismissRequest = { showBetaInfoBottomSheet = false },
             sheetState = betaSheetState,
+            //contentWindowInsets = { WindowInsets.statusBars.only(WindowInsets.statusBars) }
         ) {
             BetaInfoBottomSheet()
         }
-    }
-    if (showStreamingProviderSheet) {
-        val isNavidromeLoggedIn by streamingLoginViewModel.isNavidromeLoggedIn.collectAsStateWithLifecycle()
-        val isJellyfinLoggedIn by streamingLoginViewModel.isJellyfinLoggedIn.collectAsStateWithLifecycle()
-        StreamingProviderSheet(
-            onDismissRequest = { showStreamingProviderSheet = false },
-            isNavidromeLoggedIn = isNavidromeLoggedIn,
-            onNavigateToNavidromeDashboard = {
-                navController.navigateSafely(Screen.NavidromeDashboard.route)
-            },
-            isJellyfinLoggedIn = isJellyfinLoggedIn,
-            onNavigateToJellyfinDashboard = {
-                navController.navigateSafely(Screen.JellyfinDashboard.route)
-            }
-        )
-    }
-    songForOptions?.let { (song, queueSongs, queueName, playFromLibrary) ->
-        RecentlyPlayedSongOptionsSheet(
-            song = song,
-            queueSongs = queueSongs,
-            queueName = queueName,
-            playFromLibrary = playFromLibrary,
-            playerViewModel = playerViewModel,
-            onDismiss = { songForOptions = null },
-            onSongDeleted = { deletedSong ->
-                recentlyPlayedSongs = recentlyPlayedSongs.withoutSong(deletedSong.id)
-            },
-            onNavigateToAlbum = { selectedSong ->
-                navController.navigateSafelyReplacing(
-                    route = Screen.AlbumDetail.createRoute(selectedSong.albumId),
-                    patternToPop = Screen.AlbumDetail.route
-                )
-            },
-            onNavigateToArtist = { artistId ->
-                navController.navigateSafelyReplacing(
-                    route = Screen.ArtistDetail.createRoute(artistId),
-                    patternToPop = Screen.ArtistDetail.route
-                )
-            },
-            onNavigateToGenre = { selectedSong ->
-                selectedSong.genre?.let {
-                    navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")))
-                }
-            }
-        )
     }
 }
 
@@ -891,7 +689,16 @@ private fun YourMixEmptyPlaceholder(
         ) {
             Surface(
                 modifier = Modifier.size(76.dp),
-                shape = ShapeCache.expressiveHero,
+                shape = AbsoluteSmoothCornerShape(
+                    cornerRadiusTL = 28.dp,
+                    smoothnessAsPercentTR = 60,
+                    cornerRadiusBR = 28.dp,
+                    smoothnessAsPercentTL = 60,
+                    cornerRadiusBL = 28.dp,
+                    smoothnessAsPercentBR = 60,
+                    cornerRadiusTR = 28.dp,
+                    smoothnessAsPercentBL = 60,
+                ),
                 color = colors.secondaryContainer,
                 contentColor = colors.onSecondaryContainer
             ) {
@@ -971,6 +778,7 @@ fun YourMixHeader(
                 .align(Alignment.TopStart)
                 .padding(top = 48.dp, start = 12.dp)
         ) {
+            // Your Mix Title
             Text(
                 text = stringResource(R.string.home_your_mix_title),
                 style = titleStyle,
@@ -978,6 +786,7 @@ fun YourMixHeader(
                 modifier = Modifier
             )
 
+            // Artist/Song subtitle
             Text(
                 text = song,
                 style = MaterialTheme.typography.bodyMedium,
@@ -985,6 +794,7 @@ fun YourMixHeader(
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
+        // Play Button - color changes based on shuffle state
         LargeExtendedFloatingActionButton(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -1005,7 +815,7 @@ fun YourMixHeader(
         ) {
             Icon(
                 painter = painterResource(R.drawable.rounded_shuffle_24),
-                contentDescription = stringResource(R.string.cd_shuffle_play),
+                contentDescription = stringResource(R.string.common_shuffle_play),
                 modifier = Modifier.size(36.dp)
             )
         }
@@ -1013,6 +823,7 @@ fun YourMixHeader(
 }
 
 
+// SongListItem (modificado para aceptar parámetros individuales)
 @Composable
 fun SongListItemFavs(
     modifier: Modifier = Modifier,
@@ -1050,7 +861,7 @@ fun SongListItemFavs(
             ) {
                 SmartImage(
                     model = albumArtUrl,
-                    contentDescription = stringResource(R.string.cd_album_art_for_title, title),
+                    contentDescription = stringResource(R.string.common_album_art_for_title, title),
                     contentScale = ContentScale.Crop,
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.size(48.dp)
@@ -1077,15 +888,16 @@ fun SongListItemFavs(
                     modifier = Modifier
                         .weight(0.1f)
                         .padding(start = 8.dp)
-                        .size(width = 18.dp, height = 16.dp),
+                        .size(width = 18.dp, height = 16.dp), // similar al tamaño del ícono
                     color = colors.primary,
-                    isPlaying = isPlaying
+                    isPlaying = isPlaying  // o conectalo a tu estado real de reproducción
                 )
             }
         }
     }
 }
 
+// Wrapper Composable for SongListItemFavs to isolate state observation
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun SongListItemFavsWrapper(
@@ -1094,12 +906,15 @@ fun SongListItemFavsWrapper(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Collect the stablePlayerState once
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
 
+    // Derive isThisSongPlaying using remember
     val isThisSongPlaying = remember(song.id, stablePlayerState.currentSong?.id, stablePlayerState.isPlaying) {
         song.id == stablePlayerState.currentSong?.id
     }
 
+    // Call the presentational composable
     SongListItemFavs(
         modifier = modifier,
         cardCorners = 0.dp,
@@ -1115,8 +930,11 @@ fun SongListItemFavsWrapper(
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
-private fun rememberYourMixTitleStyle(): TextStyle {
-    return remember {
+internal fun rememberYourMixTitleStyle(
+    fontSize: TextUnit = 64.sp,
+    lineHeight: TextUnit = 62.sp
+): TextStyle {
+    return remember(fontSize, lineHeight) {
         TextStyle(
             fontFamily = FontFamily(
                 Font(
@@ -1132,8 +950,10 @@ private fun rememberYourMixTitleStyle(): TextStyle {
                 )
             ),
             fontWeight = FontWeight(760),
-            fontSize = 64.sp,
-            lineHeight = 62.sp
+            fontSize = fontSize,
+            lineHeight = lineHeight
         )
-    }.withInterfaceFont()
+    }
 }
+
+private const val STATS_SLOT_HOLD_MS = 3_000L

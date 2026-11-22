@@ -99,6 +99,14 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import kotlinx.collections.immutable.persistentListOf
 
+/** The mix page shows the Daily Mix, or Your Mix from the card on Home (mod). */
+enum class MixScreenKind { DAILY_MIX, YOUR_MIX }
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+fun YourMixScreen(playerViewModel: PlayerViewModel, navController: NavController) =
+    DailyMixScreen(playerViewModel = playerViewModel, navController = navController, kind = MixScreenKind.YOUR_MIX)
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -108,11 +116,28 @@ fun DailyMixScreen(
     playerViewModel: PlayerViewModel,
     navController: NavController,
     smartMixViewModel: SmartMixViewModel = hiltViewModel(),
+    kind: MixScreenKind = MixScreenKind.DAILY_MIX,
 ) = traceSection("DailyMixScreen.Composition") {
-    val dailyMixTitle = stringResource(R.string.presentation_batch_b_daily_mix_title)
+    val isYourMix = kind == MixScreenKind.YOUR_MIX
+    val dailyMixTitle = if (isYourMix) {
+        stringResource(R.string.home_your_mix_title).replace('\n', ' ')
+    } else {
+        stringResource(R.string.presentation_batch_b_daily_mix_title)
+    }
     val playItLabel = stringResource(R.string.presentation_batch_b_play_it)
     val shuffleLabel = stringResource(R.string.shortcut_shuffle_short)
-    val dailyMixSongs: ImmutableList<Song> by playerViewModel.dailyMixSongs.collectAsStateWithLifecycle()
+    val dailyMixSource: ImmutableList<Song> by playerViewModel.dailyMixSongs.collectAsStateWithLifecycle()
+    val yourMixSource: ImmutableList<Song> by playerViewModel.yourMixSongs.collectAsStateWithLifecycle()
+    val homeMixPreview: ImmutableList<Song> by playerViewModel.homeMixPreviewSongs.collectAsStateWithLifecycle()
+    // Your Mix falls back the same way as on Home: curated mix, then Daily Mix, then the library preview.
+    val dailyMixSongs: ImmutableList<Song> = remember(isYourMix, dailyMixSource, yourMixSource, homeMixPreview) {
+        when {
+            !isYourMix -> dailyMixSource
+            yourMixSource.isNotEmpty() -> yourMixSource
+            dailyMixSource.isNotEmpty() -> dailyMixSource
+            else -> homeMixPreview
+        }
+    }
     val currentSongId by remember { playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged() }.collectAsStateWithLifecycle(initialValue = null)
     val isPlaying by remember { playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged() }.collectAsStateWithLifecycle(initialValue = false)
     val isShuffleEnabled by remember { playerViewModel.stablePlayerState.map { it.isShuffleEnabled }.distinctUntilChanged() }.collectAsStateWithLifecycle(initialValue = false)
@@ -145,9 +170,11 @@ fun DailyMixScreen(
 
     if (showSongInfoSheet && selectedSongForInfo != null) {
         val song = selectedSongForInfo!!
-        val removeFromListTrigger = remember(dailyMixSongs) {
-            {
-                playerViewModel.removeFromDailyMix(song.id)
+        val removeFromListTrigger = remember(dailyMixSongs, isYourMix) {
+            if (isYourMix) {
+                {}
+            } else {
+                { playerViewModel.removeFromDailyMix(song.id) }
             }
         }
         SongInfoBottomSheet(
@@ -247,7 +274,10 @@ fun DailyMixScreen(
                     ExpressiveDailyMixHeader(
                         songs = dailyMixSongs,
                         scrollState = lazyListState,
-                        onTuneMix = { smartMixViewModel.open(SmartMixTarget.DailyMix) }
+                        title = dailyMixTitle,
+                        onTuneMix = if (isYourMix) null else {
+                            { smartMixViewModel.open(SmartMixTarget.DailyMix) }
+                        }
                     )
                 }
 
@@ -394,9 +424,10 @@ fun DailyMixScreen(
 private fun ExpressiveDailyMixHeader(
     songs: ImmutableList<Song>,
     scrollState: LazyListState,
-    onTuneMix: () -> Unit
+    title: String,
+    onTuneMix: (() -> Unit)?
 ) = traceSection("ExpressiveDailyMixHeader.Composition") {
-    val dailyMixHeaderTitle = stringResource(R.string.presentation_batch_b_daily_mix_title)
+    val dailyMixHeaderTitle = title
     val albumArts = remember(songs) { songs.map { it.albumArtUriString }.distinct().take(3) }
     val totalDuration = remember(songs) { songs.sumOf { it.duration } }
 
@@ -533,7 +564,7 @@ private fun ExpressiveDailyMixHeader(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                 )
             }
-            LargeExtendedFloatingActionButton(
+            if (onTuneMix != null) LargeExtendedFloatingActionButton(
                 onClick = onTuneMix,
                 shape = RoundedStarShape(
                     sides = 8,

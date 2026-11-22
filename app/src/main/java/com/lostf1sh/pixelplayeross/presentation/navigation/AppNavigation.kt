@@ -344,6 +344,20 @@ fun AppNavigation(
                 }
             }
             composable(
+                Screen.YourMix.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    com.lostf1sh.pixelplayeross.presentation.screens.YourMixScreen(
+                        playerViewModel = playerViewModel,
+                        navController = navController
+                    )
+                }
+            }
+            composable(
                 Screen.RecentlyPlayed.route,
                 enterTransition = { enterTransition() },
                 exitTransition = { exitTransition() },
