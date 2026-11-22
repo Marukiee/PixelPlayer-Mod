@@ -74,6 +74,37 @@ private const val SONG_DETAIL_PROJECTION = """
     songs.mb_artist_id AS mb_artist_id
 """
 
+/**
+ * Leaves out a song from a server (Navidrome, Jellyfin) when the same recording is also on the phone, in the library
+ * without the Offline/Online filter: the local file wins, because it plays without a connection. Same title, an
+ * artist that is the same or starts the same, and at most three seconds apart. A server song that is not on the phone
+ * stays. The title index keeps it fast. Uses the :filterMode, :applyDirectoryFilter and :allowedParentDirs of the
+ * query it is in, so a file in a hidden folder does not hide the server copy.
+ */
+private const val HIDE_SERVER_COPIES_OF_LOCAL_SONGS = """
+        AND (
+            :filterMode != 0
+            OR songs.source_type = 0
+            OR NOT EXISTS (
+                SELECT 1 FROM songs AS local_copy
+                WHERE local_copy.title = songs.title
+                AND local_copy.source_type = 0
+                AND abs(local_copy.duration - songs.duration) <= 3000
+                AND (
+                    lower(local_copy.artist_name) = lower(songs.artist_name)
+                    OR (
+                        local_copy.artist_name != '' AND songs.artist_name != ''
+                        AND (
+                            instr(lower(songs.artist_name), lower(local_copy.artist_name)) = 1
+                            OR instr(lower(local_copy.artist_name), lower(songs.artist_name)) = 1
+                        )
+                    )
+                )
+                AND (:applyDirectoryFilter = 0 OR local_copy.parent_directory_path IN (:allowedParentDirs))
+            )
+        )
+"""
+
 private const val SONG_LIST_PROJECTION = """
     id, title, artist_name, artist_id, album_artist, album_artist_id, album_name, album_id,
     content_uri_string, album_art_uri_string, duration, genre, file_path,
@@ -672,6 +703,22 @@ interface MusicDao {
     suspend fun getMimeTypeCounts(): List<MimeTypeCountRow>
 
     /**
+     * Mod: songs on the phone whose title matches one of [titles], ignoring case. The caller checks artist and
+     * length, so a queue can swap a server song for the local file.
+     */
+    @Query("SELECT " + SONG_LIST_PROJECTION + """
+        FROM songs
+        WHERE source_type = 0
+        AND title COLLATE NOCASE IN (:titles)
+        AND (:applyDirectoryFilter = 0 OR parent_directory_path IN (:allowedParentDirs))
+    """)
+    suspend fun getLocalSongsWithTitles(
+        titles: List<String>,
+        allowedParentDirs: List<String>,
+        applyDirectoryFilter: Boolean
+    ): List<SongEntity>
+
+    /**
      * Returns random songs for efficient shuffle without loading all songs into memory.
      * Uses SQLite RANDOM() for true randomness.
      */
@@ -679,13 +726,16 @@ interface MusicDao {
         SELECT """ + SONG_LIST_PROJECTION + """
         FROM songs
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
+        """ + HIDE_SERVER_COPIES_OF_LOCAL_SONGS + """
         ORDER BY RANDOM()
         LIMIT :limit
     """)
     suspend fun getRandomSongs(
         limit: Int,
         allowedParentDirs: List<String> = emptyList(),
-        applyDirectoryFilter: Boolean = false
+        applyDirectoryFilter: Boolean = false,
+        /** Mod: 0 leaves out a server song that is also on the phone, so the sample plays the local file. */
+        filterMode: Int = 0
     ): List<SongEntity>
 
     @Query("""
@@ -780,6 +830,7 @@ interface MusicDao {
                 AND source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LOCAL_SONGS + """
         ORDER BY """ + LIBRARY_SONG_ORDER + """
     """)
     suspend fun getSongIdsSorted(
@@ -848,6 +899,7 @@ interface MusicDao {
                 AND source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LOCAL_SONGS + """
         ORDER BY """ + LIBRARY_SONG_ORDER + """
     """)
     fun getSongsPaginated(
@@ -873,6 +925,7 @@ interface MusicDao {
                 AND source_type != 0
             )
         )
+        """ + HIDE_SERVER_COPIES_OF_LOCAL_SONGS + """
         ORDER BY """ + LIBRARY_SONG_ORDER + """
         LIMIT :limit OFFSET :offset
     """)

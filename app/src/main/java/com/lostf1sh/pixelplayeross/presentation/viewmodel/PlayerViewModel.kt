@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.viewmodel
 
+import com.lostf1sh.pixelplayeross.data.model.withLocalCopiesFrom
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.net.Uri
@@ -2973,8 +2974,11 @@ class PlayerViewModel @Inject constructor(
         cancelPendingFullQueuePlayback()
         val requestToken = beginDirectPlaybackRequest()
         directPlaybackJob = viewModelScope.launch {
+            // Mod: a server song that is also on the phone plays as the local file.
+            val localFirst = songsToPlay.withLocalCopiesFrom(musicRepository.getLocalCopyCandidates(songsToPlay))
+            throwIfDirectPlaybackRequestIsStale(requestToken)
             val result = queueStateHolder.prepareShuffledQueueSuspending(
-                songsToPlay,
+                localFirst,
                 startAtZero,
                 playlistId
             )

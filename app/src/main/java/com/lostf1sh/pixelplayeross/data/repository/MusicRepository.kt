@@ -96,6 +96,12 @@ interface MusicRepository {
     suspend fun getRandomSongs(limit: Int): List<Song>
 
     /**
+     * Mod: songs on the phone that may be the same recording as one of the server songs in [songs], found by
+     * title. Empty when [songs] holds no server song. Pair with [com.lostf1sh.pixelplayeross.data.model.withLocalCopiesFrom].
+     */
+    suspend fun getLocalCopyCandidates(songs: List<Song>): List<Song>
+
+    /**
      * Returns a bounded song page without materializing the full library.
      */
     suspend fun getSongsPage(

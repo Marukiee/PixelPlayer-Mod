@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.viewmodel
 
+import com.lostf1sh.pixelplayeross.data.model.preferLocalCopies
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -147,7 +148,8 @@ class GenreDetailViewModel @Inject constructor(
                     val genre = initialGenre ?: findGenre(musicRepository.getGenres().first(), genreId)
                         ?: fallbackGenre(genreId)
 
-                    val songs = musicRepository.getMusicByGenre(genre.name).first()
+                    // Mod: the local file of a song wins over its server copy.
+                    val songs = musicRepository.getMusicByGenre(genre.name).first().preferLocalCopies(musicRepository.getAllSongsOnce())
                     val artists = musicRepository.getArtists().first()
                     artistMap = artists.associate { it.name.trim().lowercase() to it.imageUrl }
 
