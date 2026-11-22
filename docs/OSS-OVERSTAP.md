@@ -57,10 +57,4 @@ Erin: import van de oude gegevens, likes bij scans, Sonos en het verbinden-panee
 - Zoeken van de mod op de zoekbalk van OSS; filters zijn de toggleknoppen van OSS in een rij die scrolt. Vegen naar de wachtrij met de ene veegactie van OSS.
 - Lokaal gaat voor: zoeken, nummerlijst, willekeurige shuffle, mixen, genrepagina's en shufflen van een lijst.
 
-Nog niet overgezet (volgende ronde):
-
-- Recently Played, de genre- en Daily Mix-pagina's en de doorklikbare statistieken van de mod.
-- Vorige en volgende vasthouden om te spoelen (de knoppen van OSS zijn anders opgebouwd).
-- Vegen met een eigen actie per richting (OSS heeft een actie voor beide), en het kwaliteitslabel in lijsten.
-- De minispeler boven het verbinden-paneel.
-- Een tik op een servernummer in een lijst speelt het lokale bestand; Liked Songs zonder dubbele servercopie.
+In 0.8.0-mod.33 kwam de rest erbij: vorige en volgende vasthouden om te spoelen, kwaliteitslabel in lijsten (instelling onder Uiterlijk), vegen naar links en rechts met elk een eigen actie (de OSS-veegbox kent beide richtingen; de keuzes van de oude mod gaan mee via `swipe_left_action` en `swipe_right_action`), Recently Played, genre-, Daily Mix- en Your Mix-pagina van de mod (de Smart Mix-knop van OSS in plaats van de AI-knop), de minispeler boven het verbinden-paneel, en lokaal gaat voor bij een tik in een lijst en in Liked Songs. Doorklikbare statistieken had OSS zelf al; alleen het weglaten van Spotify-nummers kwam van de mod.

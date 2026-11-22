@@ -1,3 +1,11 @@
+- Speler: vorige of volgende vasthouden om terug of vooruit te spoelen
+- Recently Played, de genrepagina's, Daily Mix en Your Mix weer zoals in de mod
+- Nummers in lijsten naar links en naar rechts vegen, elk met een eigen actie
+- Kwaliteitslabel (LQ, HQ, SQ, HR) bij nummers, aan te zetten onder Uiterlijk
+- De minispeler blijft boven het verbinden-paneel staan
+- Een servernummer dat ook op je telefoon staat speelt als lokaal bestand, ook als je het aantikt; Liked Songs toont het een keer
+- Spotify-nummers tellen niet meer mee in de luisterstatistieken
+
 - Gebouwd op PixelPlayerOSS, de Google-vrije versie die actief wordt bijgewerkt; je likes, afspeellijsten, luistergeschiedenis en instellingen gaan mee
 - Updatekaart bovenaan Home: een tik op Bijwerken en de app installeert de nieuwe versie zelf
 - Home, speler, minispeler en Zoeken zoals je ze kent, met de nieuwe zoekbalk en iconen van OSS

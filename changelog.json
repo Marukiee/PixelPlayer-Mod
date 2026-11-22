@@ -1,11 +1,32 @@
 [
   {
-    "version": "0.8.0-mod.32",
+    "version": "0.8.0-mod.33",
     "en": {
-      "new": ["Now built on PixelPlayerOSS, with all your likes", "Updates install from this card"]
+      "new": [
+        "Recently Played, genre and mix pages from the mod",
+        "Hold previous or next to seek"
+      ]
     },
     "nl": {
-      "new": ["Nu gebouwd op PixelPlayerOSS, met al je likes", "Updates installeren vanaf deze kaart"]
+      "new": [
+        "Recently Played, genre- en mixpagina's van de mod",
+        "Vorige of volgende vasthouden om te spoelen"
+      ]
+    }
+  },
+  {
+    "version": "0.8.0-mod.32",
+    "en": {
+      "new": [
+        "Now built on PixelPlayerOSS, with all your likes",
+        "Updates install from this card"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Nu gebouwd op PixelPlayerOSS, met al je likes",
+        "Updates installeren vanaf deze kaart"
+      ]
     }
   }
 ]
