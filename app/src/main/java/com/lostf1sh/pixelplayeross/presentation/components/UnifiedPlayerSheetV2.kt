@@ -1,5 +1,8 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -585,6 +588,9 @@ fun UnifiedPlayerSheetV2(
     )
     val albumColorScheme = sheetThemeState.albumColorScheme
     val miniPlayerScheme = sheetThemeState.miniPlayerScheme
+    // Mod: where the mini player sits, so the connect panel can lift it along; hidden while the panel shows its copy.
+    val miniPlayerBounds = remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val miniPlayerLift = remember { MiniPlayerLift() }
     val isPreparingPlayback = sheetThemeState.isPreparingPlayback
     val miniReadyAlpha = sheetThemeState.miniReadyAlpha
     val miniAppearScale = sheetThemeState.miniAppearScale
@@ -688,7 +694,11 @@ fun UnifiedPlayerSheetV2(
                                     translationY = collapsedDismissOffsetY.value
                                     scaleX = miniAppearScale
                                     scaleY = visualOvershootScaleY.value * miniAppearScale
-                                    alpha = miniReadyAlpha * skipContentAlpha.value
+                                    alpha = if (miniPlayerLift.isLifted() && miniPlayerScheme != null) {
+                                        0f
+                                    } else {
+                                        miniReadyAlpha * skipContentAlpha.value
+                                    }
                                     transformOrigin = TransformOrigin(0.5f, 1f)
                                 }
                                 .layout { measurable, constraints ->
@@ -713,6 +723,7 @@ fun UnifiedPlayerSheetV2(
                                         placeable.placeRelative(startPaddingPx, 0)
                                     }
                                 }
+                                .onGloballyPositioned { miniPlayerBounds.value = it.boundsInWindow() }
                                 .shadow(
                                     elevation = visualCardShadowElevation,
                                     shape = sheetInteractionState.playerShadowShape,
@@ -886,7 +897,36 @@ fun UnifiedPlayerSheetV2(
         albumColorScheme = albumColorScheme,
         playerViewModel = playerViewModel,
         onDismiss = castSheetState.dismissCastSheet,
-        onExpansionChanged = castSheetState.onCastExpansionChanged
+        onExpansionChanged = castSheetState.onCastExpansionChanged,
+        // Opened from the full player there is no mini player on the screen to take over from.
+        miniPlayerRest = { miniPlayerBounds.value.takeIf { currentSheetContentState == PlayerSheetState.COLLAPSED } },
+        miniPlayerLift = miniPlayerLift,
+        miniPlayerAbovePanel = { close, modifier ->
+            val song = infrequentPlayerState.currentSong
+            val scheme = miniPlayerScheme
+            if (song != null && scheme != null) {
+                MiniPlayerAbovePanel(
+                    song = song,
+                    scheme = scheme,
+                    shape = if (currentSheetContentState == PlayerSheetState.COLLAPSED) {
+                        sheetInteractionState.playerShadowShape
+                    } else {
+                        RoundedCornerShape(24.dp)
+                    },
+                    infrequentPlayerState = infrequentPlayerState,
+                    isOutputConnecting = isOutputConnecting,
+                    isPreparingPlayback = isPreparingPlayback,
+                    playerViewModel = playerViewModel,
+                    currentPositionProvider = positionToDisplayProvider,
+                    onOutputClick = close,
+                    onBodyClick = {
+                        close()
+                        if (currentSheetContentState == PlayerSheetState.COLLAPSED) playerViewModel.togglePlayerSheetState()
+                    },
+                    modifier = modifier
+                )
+            }
+        }
     )
 
     UnifiedPlayerSaveQueueLayer(

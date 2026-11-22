@@ -1,5 +1,9 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -43,6 +47,52 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerSheetState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState
 
+/**
+ * Mod: the mini player above the connect panel, so the music can be controlled without closing it. It looks the same
+ * as the real one, which it covers until the panel takes it along; the output button closes the panel.
+ */
+@Composable
+internal fun MiniPlayerAbovePanel(
+    song: Song,
+    scheme: androidx.compose.material3.ColorScheme,
+    shape: androidx.compose.ui.graphics.Shape,
+    infrequentPlayerState: StablePlayerState,
+    isOutputConnecting: Boolean,
+    isPreparingPlayback: Boolean,
+    playerViewModel: PlayerViewModel,
+    currentPositionProvider: () -> Long,
+    onOutputClick: () -> Unit,
+    onBodyClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    CompositionLocalProvider(LocalMaterialTheme provides scheme) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .shadow(elevation = 3.dp, shape = shape, clip = false)
+                .background(scheme.primaryContainer, shape)
+                .clip(shape)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = onBodyClick
+                )
+        ) {
+            MiniPlayerRow(
+                song = song,
+                infrequentPlayerState = infrequentPlayerState,
+                isOutputConnecting = isOutputConnecting,
+                isPreparingPlayback = isPreparingPlayback,
+                playerViewModel = playerViewModel,
+                currentPositionProvider = currentPositionProvider,
+                canScroll = infrequentPlayerState.isPlaying,
+                modifier = Modifier.fillMaxSize(),
+                onOutputClick = onOutputClick
+            )
+        }
+    }
+}
+
 /** Mod: the mini player with the output button (Sonos, Bluetooth or this phone) and the progress ring. */
 @Composable
 private fun MiniPlayerRow(
@@ -53,7 +103,8 @@ private fun MiniPlayerRow(
     playerViewModel: PlayerViewModel,
     currentPositionProvider: () -> Long,
     canScroll: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOutputClick: (() -> Unit)? = null
 ) {
     val sonosViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.SonosViewModel =
         androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
@@ -80,7 +131,7 @@ private fun MiniPlayerRow(
             if (duration > 0L) currentPositionProvider().toFloat() / duration else 0f
         },
         onPlayPause = { playerViewModel.playPause() },
-        onOutputClick = { openConnectPanel?.invoke() },
+        onOutputClick = { if (onOutputClick != null) onOutputClick() else openConnectPanel?.invoke() },
         onNext = { playerViewModel.nextSong() },
         canScroll = canScroll,
         modifier = modifier
