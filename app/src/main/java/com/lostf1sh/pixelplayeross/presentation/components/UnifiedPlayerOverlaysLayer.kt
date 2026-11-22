@@ -188,6 +188,10 @@ internal fun UnifiedPlayerSongInfoLayer(
         }.collectAsStateWithLifecycle(initialValue = staticSong)
 
         val liveSong = liveSongState
+        // Mod: the bookmark button shows for the song that plays, which is the one a bookmark is for.
+        val playingSongId by remember(playerViewModel) {
+            playerViewModel.stablePlayerState.map { it.currentSong?.id }
+        }.collectAsStateWithLifecycle(initialValue = null)
 
         MaterialTheme(
             colorScheme = albumColorScheme,
@@ -252,6 +256,14 @@ internal fun UnifiedPlayerSongInfoLayer(
                 removeFromListTrigger = {
                     playerViewModel.removeSongFromQueue(liveSong.id)
                     onDismissSongInfo()
+                },
+                onSaveBookmark = if (playingSongId == liveSong.id) {
+                    {
+                        onDismissSongInfo()
+                        playerViewModel.requestBookmark()
+                    }
+                } else {
+                    null
                 }
             )
 

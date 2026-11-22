@@ -4143,6 +4143,14 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private val _bookmarkRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** Mod: the bookmark button in the song options asks the player to open its bookmark dialog. */
+    val bookmarkRequests = _bookmarkRequests.asSharedFlow()
+
+    fun requestBookmark() {
+        _bookmarkRequests.tryEmit(Unit)
+    }
+
     /** Mod: moves the position by [deltaMs], for holding previous or next in the player. */
     fun seekByDelta(deltaMs: Long) {
         val state = stablePlayerState.value

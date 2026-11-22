@@ -426,6 +426,10 @@ fun FullPlayerContent(
         }
     }
 
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.bookmarkRequests.collect { showSaveBookmarkDialog = true }
+    }
+
     if (showSaveBookmarkDialog) {
         val bookmarkProgressMs = remember(showSaveBookmarkDialog) { currentPositionProvider() }
         val lyricBookmarkTitle = resolveLyricBookmarkTitle(
@@ -945,73 +949,20 @@ fun FullPlayerContent(
                                     }
                                 }
                             }
-                            // Mod: the options of the song behind three dots, with the bookmark of OSS and the queue
-                            // (also reached by swiping up).
-                            var showPlayerMenu by remember { mutableStateOf(false) }
-                            Box {
-                                Box(
-                                    modifier = Modifier
-                                        .size(height = 42.dp, width = 50.dp)
-                                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 50.dp, bottomStart = 6.dp, bottomEnd = 50.dp))
-                                        .background(
-                                            if (isFoldableTwoPane && foldableRightPane == FoldableRightPane.QUEUE) {
-                                                playerAccentColor.copy(alpha = 0.9f)
-                                            } else {
-                                                playerOnAccentColor.copy(alpha = 0.7f)
-                                            }
-                                        )
-                                        .clickable { showPlayerMenu = true },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.MoreVert,
-                                        contentDescription = stringResource(R.string.player_cd_more_options),
-                                        tint = if (isFoldableTwoPane && foldableRightPane == FoldableRightPane.QUEUE) {
-                                            playerOnAccentColor
-                                        } else {
-                                            playerAccentColor
-                                        }
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = showPlayerMenu,
-                                    onDismissRequest = { showPlayerMenu = false },
-                                    shape = RoundedCornerShape(20.dp)
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.player_menu_song_options)) },
-                                        leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
-                                        onClick = {
-                                            showPlayerMenu = false
-                                            onSongInfoClick(song)
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.player_menu_bookmark)) },
-                                        leadingIcon = { Icon(Icons.Rounded.Bookmark, contentDescription = null) },
-                                        onClick = {
-                                            showPlayerMenu = false
-                                            showSaveBookmarkDialog = true
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.player_menu_queue)) },
-                                        leadingIcon = { Icon(painterResource(R.drawable.rounded_queue_music_24), contentDescription = null) },
-                                        onClick = {
-                                            showPlayerMenu = false
-                                            if (isFoldableTwoPane) {
-                                                foldableRightPane = if (foldableRightPane == FoldableRightPane.QUEUE) {
-                                                    null
-                                                } else {
-                                                    FoldableRightPane.QUEUE
-                                                }
-                                            } else {
-                                                showSongInfoBottomSheet = true
-                                                onShowQueueClicked()
-                                            }
-                                        }
-                                    )
-                                }
+                            // Mod: three dots open the song options right away; the OSS bookmark sits there.
+                            Box(
+                                modifier = Modifier
+                                    .size(height = 42.dp, width = 50.dp)
+                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 50.dp, bottomStart = 6.dp, bottomEnd = 50.dp))
+                                    .background(playerOnAccentColor.copy(alpha = 0.7f))
+                                    .clickable { onSongInfoClick(song) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.MoreVert,
+                                    contentDescription = stringResource(R.string.player_cd_more_options),
+                                    tint = playerAccentColor
+                                )
                             }
                         }
                     }

@@ -2,6 +2,7 @@
 
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import androidx.compose.material.icons.rounded.Bookmark
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -132,6 +133,8 @@ fun SongInfoBottomSheet(
         customMetadataChanges: CustomMetadataChanges
     ) -> Unit,
     removeFromListTrigger: () -> Unit,
+    /** Mod: saves a bookmark at the playing position; only from the player, for the song that plays. */
+    onSaveBookmark: (() -> Unit)? = null,
     songInfoViewModel: SongInfoBottomSheetViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -682,32 +685,40 @@ fun SongInfoBottomSheet(
                                             }
                                         }
 
-                                        if (!isCloudSong) {
+                                        // Mod: no MusicBrainz lookup here; from the player the bookmark sits next to Set as sound.
+                                        if (!isCloudSong || onSaveBookmark != null) {
                                             item {
-                                                RingtoneActionButton(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .heightIn(min = 66.dp),
-                                                    showText = true,
-                                                    onClick = { showTonePickerDialog = true },
-                                                )
-                                            }
-                                        }
-
-                                        item {
-                                            FilledTonalButton(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .heightIn(min = 66.dp),
-                                                shape = CircleShape,
-                                                onClick = { songInfoViewModel.searchMusicBrainz(song) }
-                                            ) {
-                                                Icon(
-                                                    Icons.Rounded.TravelExplore,
-                                                    contentDescription = stringResource(R.string.musicbrainz_lookup)
-                                                )
-                                                Spacer(Modifier.width(10.dp))
-                                                Text(stringResource(R.string.musicbrainz_lookup))
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    if (!isCloudSong) {
+                                                        RingtoneActionButton(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .heightIn(min = 66.dp),
+                                                            showText = true,
+                                                            onClick = { showTonePickerDialog = true },
+                                                        )
+                                                    }
+                                                    if (onSaveBookmark != null) {
+                                                        FilledTonalButton(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .heightIn(min = 66.dp),
+                                                            shape = CircleShape,
+                                                            onClick = onSaveBookmark
+                                                        ) {
+                                                            Icon(Icons.Rounded.Bookmark, contentDescription = null)
+                                                            Spacer(Modifier.width(8.dp))
+                                                            Text(
+                                                                stringResource(R.string.song_info_bookmark),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
 
