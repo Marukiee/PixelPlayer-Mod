@@ -140,6 +140,8 @@ fun EnhancedSongListItem(
     /** The icon of the button at the end: the menu, or a cross where the row can be taken away. */
     trailingIcon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Rounded.MoreVert,
     trailingDescription: String? = null,
+    /** Mod: short text at the end of the row, such as the time a song was played. */
+    trailingLabel: String? = null,
     onLongPress: () -> Unit = {},
     onSwipeToQueue: (() -> Unit)? = null,
     onMoreOptionsClick: (Song) -> Unit,
@@ -430,6 +432,16 @@ fun EnhancedSongListItem(
                             modifier = Modifier.weight(1f, fill = false)
                         )
                     }
+                }
+
+                if (trailingLabel != null) {
+                    Text(
+                        text = trailingLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = contentColor.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
                 }
                 
                 val showPlayingIndicator = isCurrentSong && !isSelectionMode

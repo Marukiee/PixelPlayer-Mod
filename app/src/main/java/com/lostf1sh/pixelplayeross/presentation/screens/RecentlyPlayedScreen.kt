@@ -1,18 +1,16 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
 
-import com.lostf1sh.pixelplayeross.ui.theme.withInterfaceFont
-
-import com.lostf1sh.pixelplayeross.presentation.components.rememberSwipeToQueue
-import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
-
-import com.lostf1sh.pixelplayeross.utils.traceSection
+import android.os.Trace
+import android.text.format.DateFormat as AndroidDateFormat
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,156 +20,134 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.runtime.key
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.Layout
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Song
-import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistBottomSheet
-import com.lostf1sh.pixelplayeross.presentation.components.RecentlyPlayedRangeSelector
 import com.lostf1sh.pixelplayeross.presentation.components.SongInfoBottomSheet
-import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomePlayback
+import com.lostf1sh.pixelplayeross.presentation.components.home.HomeSectionHeader
+import com.lostf1sh.pixelplayeross.presentation.components.home.rememberHomePlayButton
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.EnhancedSongListItem
+import com.lostf1sh.pixelplayeross.presentation.model.HistoryDay
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
-import com.lostf1sh.pixelplayeross.presentation.model.RecentlyPlayedSongUiModel
-import com.lostf1sh.pixelplayeross.presentation.model.collectRecentlyPlayedSongIds
-import com.lostf1sh.pixelplayeross.presentation.model.mapRecentlyPlayedSongs
-import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
+import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.ListeningHistoryViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
-import kotlinx.collections.immutable.toImmutableList
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
+import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
-import androidx.compose.ui.res.stringResource
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import kotlin.math.abs
 
+/**
+ * Everything played, per day. The strip of days at the top follows the list and jumps to a day when tapped, the
+ * calendar reaches any date further back.
+ */
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RecentlyPlayedScreen(
     playerViewModel: PlayerViewModel,
+    navController: NavController,
     playlistViewModel: PlaylistViewModel = hiltViewModel(),
-    navController: NavController
-) = traceSection("RecentlyPlayedScreen.Composition") {
-    val context = LocalContext.current
-    val queueRecentlyPlayed = stringResource(R.string.presentation_batch_b_queue_recently_played)
-    val shuffleLabel = stringResource(R.string.shortcut_shuffle_short)
-    val playbackHistory by playerViewModel.playbackHistory.collectAsStateWithLifecycle()
-    val currentSongId by remember(playerViewModel.stablePlayerState) {
-        playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
-    }.collectAsStateWithLifecycle(initialValue = null)
-    val isPlaying by remember(playerViewModel.stablePlayerState) {
-        playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
-    }.collectAsStateWithLifecycle(initialValue = false)
+    historyViewModel: ListeningHistoryViewModel = hiltViewModel()
+) {
+    Trace.beginSection("RecentlyPlayedScreen.Composition")
+
+    val days by historyViewModel.days.collectAsStateWithLifecycle()
     val favoriteSongIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
-    val swipeToQueue = rememberSwipeToQueue(playerViewModel)
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
+    val queueTitle = stringResource(R.string.recently_played_queue_name)
 
-    var selectedRange by rememberSaveable { mutableStateOf(StatsTimeRange.WEEK) }
-    val lazyListState = rememberLazyListState()
-    var showSongInfoBottomSheet by remember { mutableStateOf(false) }
-    var showPlaylistBottomSheet by remember { mutableStateOf(false) }
-    val bottomBarHeightDp = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    var showCalendar by remember { mutableStateOf(false) }
+    var showSongInfoSheet by remember { mutableStateOf(false) }
+    var showPlaylistSheet by remember { mutableStateOf(false) }
+    var infoQueue by remember { mutableStateOf<List<Song>>(emptyList()) }
 
-    val recentSongIds = remember(playbackHistory, selectedRange) {
-        collectRecentlyPlayedSongIds(
-            playbackHistory = playbackHistory,
-            range = selectedRange,
-            maxItems = Int.MAX_VALUE
-        )
-    }
-    val recentSongsInitialValue: List<Song>? = remember(recentSongIds) {
-        if (recentSongIds.isEmpty()) emptyList<Song>() else null
-    }
-    val recentlyPlayedSourceSongs by remember(recentSongIds, playerViewModel) {
-        playerViewModel.observeSongs(recentSongIds)
-            .map<List<Song>, List<Song>?> { it }
-    }.collectAsStateWithLifecycle(initialValue = recentSongsInitialValue)
-
-    val recentlyPlayedSongs = remember(playbackHistory, recentlyPlayedSourceSongs, selectedRange) {
-        val sourceSongs = recentlyPlayedSourceSongs ?: return@remember persistentListOf()
-        mapRecentlyPlayedSongs(
-            playbackHistory = playbackHistory,
-            songs = sourceSongs,
-            range = selectedRange,
-            maxItems = Int.MAX_VALUE
-        ).toImmutableList()
-    }
-    val groupedSongs = remember(recentlyPlayedSongs, selectedRange, context) {
-        groupRecentlyPlayedSongs(
-            context = context,
-            songs = recentlyPlayedSongs,
-            range = selectedRange
-        )
-    }
-    val queueSongs = remember(recentlyPlayedSongs) {
-        recentlyPlayedSongs.map { it.song }.toImmutableList()
-    }
-
-    val bgColors = listOf(
-        MaterialTheme.colorScheme.secondary.copy(alpha = 0.24f),
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-        MaterialTheme.colorScheme.surface
-    )
-
-    val backgroundBrush = remember {
+    val surface = MaterialTheme.colorScheme.surface
+    val headerColor = MaterialTheme.colorScheme.primary
+    val backgroundBrush = remember(surface, headerColor) {
         Brush.verticalGradient(
-            colors = bgColors,
+            colors = listOf(headerColor.copy(alpha = 0.25f), surface.copy(alpha = 0.5f), surface),
             endY = 1200f
         )
     }
@@ -181,147 +157,86 @@ fun RecentlyPlayedScreen(
             .fillMaxSize()
             .background(backgroundBrush)
     ) {
-        if (recentlyPlayedSourceSongs == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                ContainedLoadingIndicator()
-            }
-        } else {
-            LazyColumn(
-                state = lazyListState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item(key = "recently_played_header") {
-                    ExpressiveRecentlyPlayedHeader(
-                        title = stringResource(R.string.presentation_batch_b_recently_played_title),
-                        songs = recentlyPlayedSongs,
-                        selectedRange = selectedRange,
-                        scrollState = lazyListState
-                    )
+        Column(modifier = Modifier.fillMaxSize()) {
+            HistoryTopBar(
+                title = stringResource(R.string.recently_played_title),
+                showCalendarButton = !days.isNullOrEmpty(),
+                onBack = { navController.popBackStack() },
+                onOpenCalendar = { showCalendar = true }
+            )
+            val loaded = days
+            when {
+                loaded == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    ContainedLoadingIndicator()
                 }
-
-                item(key = "recently_played_range_selector") {
-                    RecentlyPlayedRangeSelector(
-                        selected = selectedRange,
-                        onRangeSelected = { selectedRange = it },
-                        modifier = Modifier.padding(horizontal = 0.dp)
-                    )
-                }
-
-                if (recentlyPlayedSongs.isNotEmpty()) {
-                    item(key = "recently_played_actions") {
-                        RecentlyPlayedActions(
-                            onPlay = {
-                                val firstSong = queueSongs.firstOrNull() ?: return@RecentlyPlayedActions
-                                playerViewModel.playSongs(queueSongs, firstSong, queueRecentlyPlayed)
-                            },
-                            onShuffle = {
-                                playerViewModel.playSongsShuffled(
-                                    songsToPlay = queueSongs,
-                                    queueName = queueRecentlyPlayed,
-                                    startAtZero = true,
-                                )
-                            },
-                            shuffleLabel = shuffleLabel,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
+                loaded.isEmpty() -> Text(
+                    text = stringResource(R.string.recently_played_empty),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)
+                )
+                else -> HistoryContent(
+                    days = loaded,
+                    playerViewModel = playerViewModel,
+                    showCalendar = showCalendar,
+                    onCalendarClosed = { showCalendar = false },
+                    onSongOptions = { song, queue ->
+                        infoQueue = queue
+                        playerViewModel.selectSongForInfo(song)
+                        showSongInfoSheet = true
                     }
-                }
-
-                if (recentlyPlayedSongs.isEmpty()) {
-                    item(key = "recently_played_empty") {
-                        RecentlyPlayedEmptyState(
-                            range = selectedRange,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-                } else {
-                    groupedSongs.forEachIndexed { groupIndex, group ->
-                        item(key = "recently_played_time_${groupIndex}_${group.key}") {
-                            RecentlyPlayedTimestampDivider(
-                                label = group.label,
-                                isHourBucket = group.isHourBucket,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-                        items(group.songs, key = { songUi -> songUi.song.id }, contentType = { "recently_played_song" }) { item ->
-                            EnhancedSongListItem(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                song = item.song,
-                                isCurrentSong = currentSongId == item.song.id,
-                                isPlaying = currentSongId == item.song.id && isPlaying,
-                                onClick = {
-                                    playerViewModel.playSongs(
-                                        songsToPlay = queueSongs,
-                                        startSong = item.song,
-                                        queueName = queueRecentlyPlayed
-                                    )
-                                },
-                                onSwipeToQueue = swipeToQueue?.let { { it(item.song) } },
-                                onMoreOptionsClick = { song ->
-                                    playerViewModel.selectSongForInfo(song)
-                                    showSongInfoBottomSheet = true
-                                }
-                            )
-                        }
-                    }
-                }
+                )
             }
         }
 
-        if (showSongInfoBottomSheet && selectedSongForInfo != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .height(80.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            MaterialTheme.colorScheme.surfaceContainerLowest.copy(0.5f),
+                            MaterialTheme.colorScheme.surfaceContainerLowest
+                        )
+                    )
+                )
+        )
+
+        if (showSongInfoSheet && selectedSongForInfo != null) {
             val song = selectedSongForInfo!!
             SongInfoBottomSheet(
                 song = song,
                 isFavorite = favoriteSongIds.contains(song.id),
-                onToggleFavorite = {
-                    playerViewModel.toggleFavoriteSpecificSong(song)
-                },
+                onToggleFavorite = { playerViewModel.toggleFavoriteSpecificSong(song) },
                 onDismiss = {
-                    showSongInfoBottomSheet = false
-                    showPlaylistBottomSheet = false
+                    showSongInfoSheet = false
+                    showPlaylistSheet = false
                 },
-                onPlaySong = {
-                    if (queueSongs.isNotEmpty()) {
-                        playerViewModel.playSongs(queueSongs, song, queueRecentlyPlayed)
-                    }
-                    showSongInfoBottomSheet = false
-                },
-                onAddToQueue = {
-                    playerViewModel.addSongToQueue(song)
-                    showSongInfoBottomSheet = false
-                },
-                onAddNextToQueue = {
-                    playerViewModel.addSongNextToQueue(song)
-                    showSongInfoBottomSheet = false
-                },
-                onAddToPlayList = {
-                    showPlaylistBottomSheet = true
-                },
+                onPlaySong = { playerViewModel.playSongs(infoQueue, song, queueTitle) },
+                onAddToQueue = { playerViewModel.addSongToQueue(song) },
+                onAddNextToQueue = { playerViewModel.addSongNextToQueue(song) },
+                onAddToPlayList = { showPlaylistSheet = true },
                 onDeleteFromDevice = playerViewModel::deleteFromDevice,
                 onNavigateToAlbum = {
                     navController.navigateSafely(Screen.AlbumDetail.createRoute(song.albumId))
-                    showSongInfoBottomSheet = false
+                    showSongInfoSheet = false
                 },
                 onNavigateToArtist = {
                     navController.navigateSafely(Screen.ArtistDetail.createRoute(song.artistId))
-                    showSongInfoBottomSheet = false
+                    showSongInfoSheet = false
                 },
                 onNavigateToArtistById = { artistId ->
                     navController.navigateSafely(Screen.ArtistDetail.createRoute(artistId))
-                    showSongInfoBottomSheet = false
+                    showSongInfoSheet = false
                 },
                 onNavigateToGenre = {
                     song.genre?.let {
                         navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")))
                     }
-                    showSongInfoBottomSheet = false
+                    showSongInfoSheet = false
                 },
                 onEditSong = { newTitle, newArtist, newAlbum, newAlbumArtist, newComposer, newGenre, newLyrics, newTrackNumber, newDiscNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate, customMetadataChanges ->
                     playerViewModel.editSongMetadata(
@@ -344,105 +259,382 @@ fun RecentlyPlayedScreen(
                 removeFromListTrigger = {}
             )
 
-            if (showPlaylistBottomSheet) {
+            if (showPlaylistSheet) {
                 PlaylistBottomSheet(
                     playlistUiState = playlistUiState,
-                    songs = persistentListOf(song),
-                    onDismiss = { showPlaylistBottomSheet = false },
-                    bottomBarHeight = bottomBarHeightDp,
+                    songs = kotlinx.collections.immutable.persistentListOf(song),
+                    onDismiss = { showPlaylistSheet = false },
+                    bottomBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
                     playerViewModel = playerViewModel,
                 )
             }
         }
+    }
 
-        FilledIconButton(
-            onClick = { navController.popBackStack() },
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ),
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(start = 10.dp, top = 8.dp)
-                .clip(CircleShape)
-        ) {
+    Trace.endSection()
+}
+
+@Composable
+private fun HistoryTopBar(
+    title: String,
+    showCalendarButton: Boolean,
+    onBack: () -> Unit,
+    onOpenCalendar: () -> Unit
+) {
+    val buttonColors = IconButtonDefaults.filledIconButtonColors(
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        FilledIconButton(onClick = onBack, colors = buttonColors, modifier = Modifier.clip(CircleShape)) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = stringResource(R.string.auth_cd_back)
+                contentDescription = stringResource(R.string.common_back)
+            )
+        }
+        Text(
+            text = title,
+            style = rememberHistoryTitleStyle(),
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        if (showCalendarButton) {
+            FilledIconButton(onClick = onOpenCalendar, colors = buttonColors, modifier = Modifier.clip(CircleShape)) {
+                Icon(
+                    imageVector = Icons.Rounded.CalendarMonth,
+                    contentDescription = stringResource(R.string.recently_played_pick_date)
+                )
+            }
+        }
+    }
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryContent(
+    days: List<HistoryDay>,
+    playerViewModel: PlayerViewModel,
+    showCalendar: Boolean,
+    onCalendarClosed: () -> Unit,
+    onSongOptions: (Song, List<Song>) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    val stripState = rememberLazyListState()
+    val pillWidthPx = with(LocalDensity.current) { DAY_PILL_WIDTH.roundToPx() }
+
+    val isPlaying by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.isPlaying || (it.playWhenReady && it.isBuffering) }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
+    val currentQueueName by remember(playerViewModel.playerUiState) {
+        playerViewModel.playerUiState.map { it.currentQueueSourceName }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = "")
+    val playback = HomePlayback(currentQueueName, isPlaying, playerViewModel::playPause)
+    val swipeToQueue = com.lostf1sh.pixelplayeross.presentation.components.rememberSwipeToQueue(playerViewModel)
+
+    // Each day takes a header plus its songs in the list.
+    val dayStarts = remember(days) {
+        var next = 0
+        days.map { day -> next.also { next += 1 + day.plays.size } }
+    }
+    // The strip holds only days; the months sit above it (HistoryMonthLabels).
+    val stripIndexOfDay = remember(days) { days.withIndex().associate { (index, day) -> day.date to index } }
+
+    // A day picked at the end of the list may not reach the top, so it stays selected until the list is dragged.
+    var pickedDay by remember { mutableStateOf<LocalDate?>(null) }
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(isDragged) { if (isDragged) pickedDay = null }
+    val dayAtTop by remember(days, dayStarts) {
+        derivedStateOf {
+            val found = dayStarts.binarySearch(listState.firstVisibleItemIndex)
+            days[(if (found >= 0) found else -found - 2).coerceIn(days.indices)].date
+        }
+    }
+    val selectedDay = pickedDay ?: dayAtTop
+
+    LaunchedEffect(selectedDay, stripIndexOfDay) {
+        val index = stripIndexOfDay[selectedDay] ?: return@LaunchedEffect
+        val centered = (stripState.layoutInfo.viewportSize.width - pillWidthPx) / 2
+        stripState.animateScrollToItem(index, scrollOffset = -centered)
+    }
+
+    fun goToDay(date: LocalDate) {
+        val dayIndex = days.indexOfFirst { it.date == date }
+        if (dayIndex < 0) return
+        pickedDay = date
+        val target = dayStarts[dayIndex]
+        scope.launch {
+            if (abs(target - listState.firstVisibleItemIndex) > FAR_JUMP_ITEMS) {
+                listState.scrollToItem(target)
+            } else {
+                listState.animateScrollToItem(target)
+            }
+        }
+    }
+
+    HistoryMonthLabels(days = days, stripState = stripState)
+    LazyRow(
+        state = stripState,
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        items(days, key = { "day_${it.date}" }, contentType = { "history_day_pill" }) { day ->
+            HistoryDayPill(
+                date = day.date,
+                selected = day.date == selectedDay,
+                onClick = { goToDay(day.date) }
+            )
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            // Rows fade out under the strip instead of being cut off in a straight line.
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                val fade = 12.dp.toPx()
+                drawRect(
+                    brush = Brush.verticalGradient(0f to Color.Transparent, 1f to Color.Black, endY = fade),
+                    size = Size(size.width, fade),
+                    blendMode = BlendMode.DstIn
+                )
+            },
+        contentPadding = PaddingValues(
+            top = 12.dp,
+            bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        days.forEachIndexed { dayIndex, day ->
+            val queue = day.plays.map { it.song }
+            item(key = "day_${day.date}", contentType = "history_day") {
+                val dayLabel = historyDayLabel(day.date)
+                val playButton = rememberHomePlayButton(dayLabel, playback) {
+                    playerViewModel.playSongs(queue, queue.first(), dayLabel)
+                }
+                HomeSectionHeader(
+                    title = dayLabel,
+                    subtitle = formatSongCount(day.plays.size),
+                    actionIcon = Icons.Rounded.PlayArrow,
+                    actionContentDescription = stringResource(R.string.recently_played_play_day),
+                    actionPlaying = playButton.showPause,
+                    onActionClick = playButton.onClick,
+                    modifier = Modifier.padding(top = if (dayIndex == 0) 0.dp else 16.dp, bottom = 4.dp)
+                )
+            }
+            items(
+                items = day.plays,
+                key = { "play_${day.date}_${it.song.id}" },
+                contentType = { "history_song" }
+            ) { play ->
+                val time = remember(play.lastPlayedAt) { formatHistoryTime(context, play.lastPlayedAt) }
+                val dayLabel = historyDayLabel(day.date)
+                EnhancedSongListItem(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    song = play.song,
+                    isPlaying = false,
+                    trailingLabel = if (play.playCount > 1) {
+                        stringResource(R.string.recently_played_count_and_time, play.playCount, time)
+                    } else {
+                        time
+                    },
+                    onSwipeToQueue = swipeToQueue?.let { queueSong -> { queueSong(play.song) } },
+                    onClick = { playerViewModel.playSongs(queue, play.song, dayLabel) },
+                    onMoreOptionsClick = { song -> onSongOptions(song, queue) }
+                )
+            }
+        }
+    }
+
+    if (showCalendar) {
+        val available = remember(days) { days.map { it.date }.toSet() }
+        val years = remember(available) { available.map { it.year }.toSet() }
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedDay.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            yearRange = years.min()..years.max(),
+            selectableDates = remember(available, years) {
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long) =
+                        Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneOffset.UTC).toLocalDate() in available
+
+                    override fun isSelectableYear(year: Int) = year in years
+                }
+            }
+        )
+        // One tap on a date is enough.
+        LaunchedEffect(pickerState) {
+            val millis = snapshotFlow { pickerState.selectedDateMillis }.drop(1).filterNotNull().first()
+            goToDay(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
+            onCalendarClosed()
+        }
+        DatePickerDialog(
+            onDismissRequest = onCalendarClosed,
+            confirmButton = {
+                TextButton(onClick = onCalendarClosed) { Text(stringResource(R.string.common_cancel)) }
+            }
+        ) {
+            DatePicker(state = pickerState, showModeToggle = false)
+        }
+    }
+}
+
+/**
+ * The month above the day strip, so it shows halfway through a month too. Each month's name sits above its newest day
+ * and stays at the left edge while its days are in view; the next month's name pushes it out, like a sticky header.
+ * Placed from the strip's scroll position in the layout step, so scrolling moves it without recomposing.
+ */
+@Composable
+private fun HistoryMonthLabels(days: List<HistoryDay>, stripState: LazyListState) {
+    val monthOfIndex = remember(days) { days.map { YearMonth.from(it.date) } }
+    val firstIndexOfMonth = remember(monthOfIndex) {
+        buildMap { monthOfIndex.forEachIndexed { index, month -> putIfAbsent(month, index) } }
+    }
+    val visibleMonths by remember(monthOfIndex) {
+        derivedStateOf {
+            stripState.layoutInfo.visibleItemsInfo.mapNotNull { monthOfIndex.getOrNull(it.index) }.distinct()
+        }
+    }
+    val density = LocalDensity.current
+    val insetPx = with(density) { 4.dp.roundToPx() }
+    val gapPx = with(density) { 12.dp.roundToPx() }
+    Layout(
+        content = { visibleMonths.forEach { month -> key(month) { HistoryMonthName(month) } } },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds()
+            .padding(bottom = 8.dp)
+    ) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+        val months = visibleMonths
+        val height = placeables.maxOfOrNull { it.height } ?: 0
+        layout(constraints.maxWidth, height) {
+            val info = stripState.layoutInfo
+            // Item offsets start after the strip's own side padding; the label lines up with the pill's text.
+            val edgePx = info.beforeContentPadding + insetPx
+            fun firstVisibleOf(month: YearMonth) = info.visibleItemsInfo.firstOrNull { monthOfIndex.getOrNull(it.index) == month }
+            fun startOf(month: YearMonth): Int? {
+                val first = firstVisibleOf(month) ?: return null
+                // Above its newest day while that day is in view, else held at the left edge.
+                val x = if (first.index == firstIndexOfMonth[month]) first.offset + edgePx else edgePx
+                return maxOf(x, edgePx)
+            }
+            placeables.forEachIndexed { i, placeable ->
+                val month = months.getOrNull(i) ?: return@forEachIndexed
+                var x = startOf(month) ?: return@forEachIndexed
+                months.getOrNull(i + 1)?.let(::startOf)?.let { nextX -> x = minOf(x, nextX - placeable.width - gapPx) }
+                placeable.place(x, 0)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryMonthName(month: YearMonth) {
+    val locale = Locale.getDefault()
+    val label = remember(month, locale) {
+        val pattern = if (month.year == YearMonth.now().year) "LLLL" else "LLLL yyyy"
+        month.format(DateTimeFormatter.ofPattern(pattern, locale)).replaceFirstChar { it.titlecase(locale) }
+    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun HistoryDayPill(date: LocalDate, selected: Boolean, onClick: () -> Unit) {
+    val motion = MotionScheme.expressive()
+    val corner by animateDpAsState(
+        targetValue = if (selected) DAY_PILL_WIDTH / 2 else 16.dp,
+        animationSpec = motion.defaultSpatialSpec(),
+        label = "dayPillCorner"
+    )
+    val container by animateColorAsState(
+        // Unselected days on the brightest container, so they stand apart from the page behind them.
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+        animationSpec = motion.defaultEffectsSpec(),
+        label = "dayPillContainer"
+    )
+    val content by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        animationSpec = motion.defaultEffectsSpec(),
+        label = "dayPillContent"
+    )
+    val locale = Locale.getDefault()
+    val weekday = remember(date, locale) {
+        date.format(DateTimeFormatter.ofPattern("EEE", locale)).trimEnd('.').replaceFirstChar { it.titlecase(locale) }
+    }
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(corner),
+        color = container,
+        contentColor = content,
+        modifier = Modifier.size(width = DAY_PILL_WIDTH, height = 68.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = weekday,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
 @Composable
-private fun ExpressiveRecentlyPlayedHeader(
-    title: String,
-    songs: ImmutableList<RecentlyPlayedSongUiModel>,
-    selectedRange: StatsTimeRange,
-    scrollState: LazyListState
-) {
-    val highlightedArt = remember(songs) { songs.take(4).map { it.song.albumArtUriString } }
-    val parallaxOffset by remember {
-        derivedStateOf {
-            if (scrollState.firstVisibleItemIndex == 0) scrollState.firstVisibleItemScrollOffset * 0.36f else 0f
+private fun historyDayLabel(date: LocalDate): String {
+    val today = LocalDate.now()
+    val locale = Locale.getDefault()
+    return when (date) {
+        today -> stringResource(R.string.recently_played_date_today)
+        today.minusDays(1) -> stringResource(R.string.recently_played_date_yesterday)
+        else -> {
+            val pattern = if (date.year == today.year) "EEEE d MMMM" else "EEEE d MMMM yyyy"
+            date.format(DateTimeFormatter.ofPattern(pattern, locale)).replaceFirstChar { it.titlecase(locale) }
         }
     }
-    val headerAlpha by remember {
-        derivedStateOf {
-            (1f - (scrollState.firstVisibleItemScrollOffset / 520f)).coerceIn(0f, 1f)
-        }
-    }
+}
 
-    val surface = MaterialTheme.colorScheme.surface
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
-    val titleStyle = rememberRecentlyPlayedTitleStyle()
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(190.dp)
-            .graphicsLayer {
-                translationY = parallaxOffset
-                alpha = headerAlpha
-            }
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            secondary.copy(alpha = 0.24f),
-                            primary.copy(alpha = 0.10f),
-                            surface.copy(alpha = 0.95f),
-                            surface
-                        ),
-                        endY = 780f
-                    )
-                )
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.Bottom
-        ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = title,
-                style = titleStyle,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
+private fun formatHistoryTime(context: android.content.Context, timestamp: Long): String {
+    val pattern = if (AndroidDateFormat.is24HourFormat(context)) "HH:mm" else "h:mm a"
+    return Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
 }
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
-private fun rememberRecentlyPlayedTitleStyle(): TextStyle {
+private fun rememberHistoryTitleStyle(): TextStyle {
     return remember {
         TextStyle(
             fontFamily = FontFamily(
@@ -450,7 +642,7 @@ private fun rememberRecentlyPlayedTitleStyle(): TextStyle {
                     resId = R.font.gflex_variable,
                     variationSettings = FontVariation.Settings(
                         FontVariation.weight(560),
-                        FontVariation.width(122f),
+                        FontVariation.width(110f),
                         FontVariation.grade(40),
                         FontVariation.Setting("ROND", 100f),
                         FontVariation.Setting("XTRA", 520f),
@@ -460,320 +652,11 @@ private fun rememberRecentlyPlayedTitleStyle(): TextStyle {
                 )
             ),
             fontWeight = FontWeight(560),
-            fontSize = 34.sp,
-            lineHeight = 38.sp,
-            letterSpacing = (-0.4).sp
-        )
-    }.withInterfaceFont()
-}
-
-@Composable
-private fun RecentlyPlayedActions(
-    onPlay: () -> Unit,
-    onShuffle: () -> Unit,
-    shuffleLabel: String,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Button(
-            onClick = onPlay,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxSize(),
-            shape = RoundedCornerShape(
-                topStart = 52.dp,
-                topEnd = 14.dp,
-                bottomStart = 52.dp,
-                bottomEnd = 14.dp
-            )
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.IconSize)
-            )
-            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text(stringResource(R.string.presentation_batch_b_play_latest))
-        }
-
-        FilledTonalButton(
-            onClick = onShuffle,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxSize(),
-            shape = RoundedCornerShape(
-                topStart = 14.dp,
-                topEnd = 52.dp,
-                bottomStart = 14.dp,
-                bottomEnd = 52.dp
-            )
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Shuffle,
-                contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.IconSize)
-            )
-            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text(shuffleLabel)
-        }
-    }
-}
-
-@Composable
-private fun RecentlyPlayedTimestampDivider(
-    label: String,
-    isHourBucket: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val colors = MaterialTheme.colorScheme
-    val railColor = if (isHourBucket) colors.primary else colors.secondary
-    val chipContainer = if (isHourBucket) {
-        colors.primaryContainer.copy(alpha = 0.78f)
-    } else {
-        colors.secondaryContainer.copy(alpha = 0.78f)
-    }
-    val chipContent = if (isHourBucket) colors.onPrimaryContainer else colors.onSecondaryContainer
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(8.dp)
-                .clip(RoundedCornerShape(50))
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            railColor.copy(alpha = 0f),
-                            railColor.copy(alpha = 0.50f)
-                        )
-                    )
-                )
-        )
-        Surface(
-            color = chipContainer,
-            shape = AbsoluteSmoothCornerShape(
-                cornerRadiusTL = 22.dp,
-                smoothnessAsPercentTR = 60,
-                cornerRadiusTR = 22.dp,
-                smoothnessAsPercentBR = 60,
-                cornerRadiusBL = 22.dp,
-                smoothnessAsPercentBL = 60,
-                cornerRadiusBR = 22.dp,
-                smoothnessAsPercentTL = 60
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(railColor)
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = chipContent
-                )
-            }
-        }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(8.dp)
-                .clip(RoundedCornerShape(50))
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            railColor.copy(alpha = 0.50f),
-                            railColor.copy(alpha = 0f)
-                        )
-                    )
-                )
+            fontSize = 28.sp,
+            lineHeight = 32.sp
         )
     }
 }
 
-@Composable
-private fun RecentlyPlayedEmptyState(
-    range: StatsTimeRange,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = AbsoluteSmoothCornerShape(
-            cornerRadiusTL = 26.dp,
-            smoothnessAsPercentTR = 60,
-            cornerRadiusTR = 26.dp,
-            smoothnessAsPercentBR = 60,
-            cornerRadiusBL = 26.dp,
-            smoothnessAsPercentBL = 60,
-            cornerRadiusBR = 26.dp,
-            smoothnessAsPercentTL = 60
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(
-                    R.string.presentation_batch_b_recent_empty_title,
-                    range.displayName.lowercase()
-                ),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = stringResource(R.string.presentation_batch_b_recent_empty_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-private data class TimestampGroup(
-    val key: String,
-    val label: String,
-    val isHourBucket: Boolean,
-    val songs: List<RecentlyPlayedSongUiModel>
-)
-
-private fun groupRecentlyPlayedSongs(
-    context: android.content.Context,
-    songs: List<RecentlyPlayedSongUiModel>,
-    range: StatsTimeRange
-): List<TimestampGroup> {
-    if (songs.isEmpty()) return emptyList()
-    val zoneId = ZoneId.systemDefault()
-    val sorted = songs.sortedByDescending { it.lastPlayedTimestamp }
-
-    val groups = mutableListOf<TimestampGroup>()
-    var currentBucketKey: String? = null
-    var currentLabel: String? = null
-    var currentIsHourBucket = false
-    var bucket = mutableListOf<RecentlyPlayedSongUiModel>()
-
-    sorted.forEach { item ->
-        val timeBucket = resolveTimestampBucket(
-            context = context,
-            timestamp = item.lastPlayedTimestamp,
-            range = range,
-            zoneId = zoneId
-        )
-        if (currentBucketKey == null || currentBucketKey == timeBucket.key) {
-            currentBucketKey = timeBucket.key
-            currentLabel = timeBucket.label
-            currentIsHourBucket = timeBucket.isHourBucket
-            bucket += item
-        } else {
-            groups += TimestampGroup(
-                key = currentBucketKey,
-                label = currentLabel!!,
-                isHourBucket = currentIsHourBucket,
-                songs = bucket
-            )
-            currentBucketKey = timeBucket.key
-            currentLabel = timeBucket.label
-            currentIsHourBucket = timeBucket.isHourBucket
-            bucket = mutableListOf(item)
-        }
-    }
-
-    if (bucket.isNotEmpty() && currentLabel != null && currentBucketKey != null) {
-        groups += TimestampGroup(
-            key = currentBucketKey,
-            label = currentLabel,
-            isHourBucket = currentIsHourBucket,
-            songs = bucket
-        )
-    }
-
-    return groups
-}
-
-private data class TimestampBucket(
-    val key: String,
-    val label: String,
-    val isHourBucket: Boolean
-)
-
-private fun resolveTimestampBucket(
-    context: android.content.Context,
-    timestamp: Long,
-    range: StatsTimeRange,
-    zoneId: ZoneId
-): TimestampBucket {
-    val safeTimestamp = timestamp.coerceAtLeast(0L)
-    val safeNow = System.currentTimeMillis().coerceAtLeast(0L)
-    val zonedDateTime = Instant.ofEpochMilli(safeTimestamp).atZone(zoneId)
-    val date = zonedDateTime.toLocalDate()
-    val nowDate = Instant.ofEpochMilli(safeNow).atZone(zoneId).toLocalDate()
-
-    if (range == StatsTimeRange.DAY) {
-        val hourStart = zonedDateTime
-            .withMinute(0)
-            .withSecond(0)
-            .withNano(0)
-        return TimestampBucket(
-            key = hourStart.toInstant().toEpochMilli().toString(),
-            label = hourStart.format(
-                DateTimeFormatter.ofPattern(
-                    if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h a",
-                    Locale.getDefault()
-                )
-            ),
-            isHourBucket = true
-        )
-    }
-
-    return when {
-        date == nowDate -> {
-            TimestampBucket(
-                key = date.toString(),
-                label = context.getString(R.string.presentation_batch_b_date_today),
-                isHourBucket = false
-            )
-        }
-        date == nowDate.minusDays(1) -> {
-            TimestampBucket(
-                key = date.toString(),
-                label = context.getString(R.string.presentation_batch_b_date_yesterday),
-                isHourBucket = false
-            )
-        }
-        range == StatsTimeRange.YEAR || range == StatsTimeRange.ALL -> {
-            TimestampBucket(
-                key = date.toString(),
-                label = date.format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())),
-                isHourBucket = false
-            )
-        }
-        else -> {
-            TimestampBucket(
-                key = date.toString(),
-                label = date.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())),
-                isHourBucket = false
-            )
-        }
-    }
-}
+private val DAY_PILL_WIDTH = 52.dp
+private const val FAR_JUMP_ITEMS = 40

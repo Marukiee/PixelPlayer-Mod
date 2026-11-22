@@ -6,4 +6,14 @@
     <string name="settings_swipe_left_title">Swipe left</string>
     <string name="settings_swipe_right_description">Swipe a song row to the right in lists.</string>
     <string name="settings_swipe_left_description">Swipe a song row to the left in lists.</string>
+    <string name="common_back">Back</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="recently_played_count_and_time">%1$dx %2$s</string>
+    <string name="recently_played_date_today">Today</string>
+    <string name="recently_played_date_yesterday">Yesterday</string>
+    <string name="recently_played_empty">Nothing played yet</string>
+    <string name="recently_played_pick_date">Go to a date</string>
+    <string name="recently_played_play_day">Play this day</string>
+    <string name="recently_played_queue_name">Recently Played</string>
+    <string name="recently_played_title">Recently Played</string>
 </resources>
