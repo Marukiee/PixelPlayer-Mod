@@ -945,7 +945,7 @@ fun LibraryScreen(
                         titleOf = { it.displayTitle() },
                         modifier = Modifier
                             .statusBarsPadding()
-                            .padding(top = 6.dp, bottom = 12.dp)
+                            .padding(top = 12.dp, bottom = 12.dp)
                     )
                 }
             }
