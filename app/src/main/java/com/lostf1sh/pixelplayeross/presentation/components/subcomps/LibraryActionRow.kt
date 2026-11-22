@@ -632,10 +632,10 @@ private fun ReactiveToolbarButton(
     val end by animateDpAsState(if (pressed || active) round else endCorner, motion.fastSpatialSpec(), label = "ToolbarEnd")
     val scale by animateFloatAsState(if (pressed) 0.9f else 1f, motion.fastSpatialSpec(), label = "ToolbarScale")
     val container by animateColorAsState(
-        if (active) colors.primary else colors.secondaryContainer, motion.defaultEffectsSpec(), label = "ToolbarContainer"
+        if (active) colors.primary else colors.surfaceContainerHigh, motion.defaultEffectsSpec(), label = "ToolbarContainer"
     )
     val contentColor by animateColorAsState(
-        if (active) colors.onPrimary else colors.onSecondaryContainer, motion.defaultEffectsSpec(), label = "ToolbarContent"
+        if (active) colors.onPrimary else colors.onSurface, motion.defaultEffectsSpec(), label = "ToolbarContent"
     )
     FilledTonalIconButton(
         onClick = {
@@ -683,7 +683,7 @@ private fun ReactiveToolbarTextButton(
         when {
             active -> colors.primary
             highlighted -> colors.tertiaryContainer
-            else -> colors.secondaryContainer
+            else -> colors.surfaceContainerHigh
         },
         motion.defaultEffectsSpec(),
         label = "ToolbarTextContainer"
@@ -692,7 +692,7 @@ private fun ReactiveToolbarTextButton(
         when {
             active -> colors.onPrimary
             highlighted -> colors.onTertiaryContainer
-            else -> colors.onSecondaryContainer
+            else -> colors.onSurface
         },
         motion.defaultEffectsSpec(),
         label = "ToolbarTextContent"

@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
 
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -92,6 +93,35 @@ internal fun LibraryTextTabsHeader(
             modifier = Modifier
                 .weight(1f)
                 .onSizeChanged { viewportWidth = it.width }
+                // A soft fade where the row runs on under the menu button, instead of a hard cut through a word.
+                .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    val fade = 28.dp.toPx()
+                    if (scrollState.value < scrollState.maxValue) {
+                        drawRect(
+                            brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                listOf(androidx.compose.ui.graphics.Color.Black, androidx.compose.ui.graphics.Color.Transparent),
+                                startX = size.width - fade,
+                                endX = size.width
+                            ),
+                            topLeft = androidx.compose.ui.geometry.Offset(size.width - fade, 0f),
+                            size = androidx.compose.ui.geometry.Size(fade, size.height),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
+                        )
+                    }
+                    if (scrollState.value > 0) {
+                        drawRect(
+                            brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                listOf(androidx.compose.ui.graphics.Color.Transparent, androidx.compose.ui.graphics.Color.Black),
+                                startX = 0f,
+                                endX = fade
+                            ),
+                            size = androidx.compose.ui.geometry.Size(fade, size.height),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
+                        )
+                    }
+                }
                 .horizontalScroll(scrollState)
                 .padding(start = 16.dp, end = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
