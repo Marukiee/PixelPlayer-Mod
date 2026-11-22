@@ -331,7 +331,7 @@ fun OptionSelectionSheet(
         optionDescriptions: Map<String, String> = emptyMap(),
         disabledOptionKeys: Set<String> = emptySet()
 ) {
-    androidx.compose.material3.ModalBottomSheet(
+    com.lostf1sh.pixelplayeross.presentation.components.ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface

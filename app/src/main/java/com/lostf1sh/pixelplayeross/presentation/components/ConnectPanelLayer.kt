@@ -21,15 +21,6 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
  */
 val LocalOpenConnectPanel = staticCompositionLocalOf<(() -> Unit)?> { null }
 
-/**
- * A modal sheet closes with the theme's fast effects motion, which is made for small things
- * like fades: the whole sheet jumps away on the back gesture. This gives it time to slide.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-private object CastSheetMotionScheme : MotionScheme by MotionScheme.expressive() {
-    override fun <T> fastEffectsSpec(): FiniteAnimationSpec<T> = tween(380, easing = FastOutSlowInEasing)
-}
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun UnifiedPlayerCastLayer(
@@ -50,7 +41,7 @@ internal fun UnifiedPlayerCastLayer(
     ) {
         MaterialTheme(
             colorScheme = LocalMaterialTheme.current,
-            motionScheme = CastSheetMotionScheme,
+            motionScheme = PanelMotionScheme,
             typography = MaterialTheme.typography,
             shapes = MaterialTheme.shapes
         ) {
