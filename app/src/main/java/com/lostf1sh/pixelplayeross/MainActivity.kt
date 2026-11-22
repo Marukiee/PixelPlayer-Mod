@@ -416,11 +416,20 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val appPalettePreference by themePreferencesRepository.appPaletteFlow
+                .collectAsStateWithLifecycle(initialValue = com.lostf1sh.pixelplayeross.data.preferences.AppPalette.WALLPAPER)
+            // Mod, for reviewing the palettes on a test device: a file app_palette in the app's folder overrides the setting.
+            val appPalette = remember(appPalettePreference) {
+                runCatching {
+                    java.io.File(getExternalFilesDir(null), "app_palette").takeIf { it.exists() }?.readText()?.trim()
+                }.getOrNull()?.let(com.lostf1sh.pixelplayeross.data.preferences.AppPalette::sanitize) ?: appPalettePreference
+            }
             PixelPlayerTheme(
                 darkTheme = useDarkTheme,
                 colorSchemePairOverride = appWideNowPlayingScheme,
                 themePreset = themePreset,
-                interfaceAppearance = interfaceAppearance
+                interfaceAppearance = interfaceAppearance,
+                appPalette = appPalette
             ) {
                 var contentVisible by remember { mutableStateOf(false) }
                 val contentAlpha by animateFloatAsState(

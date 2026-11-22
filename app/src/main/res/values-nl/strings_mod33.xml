@@ -39,4 +39,11 @@
     <string name="library_filter_phone">Telefoon</string>
     <string name="library_filter_server">Server</string>
     <string name="settings_library_tabs_order_subtitle">De volgorde van de tabbladen in je bibliotheek</string>
+    <string name="settings_app_palette_title">Kleuren</string>
+    <string name="settings_app_palette_desc">Waar de app zijn kleuren vandaan haalt</string>
+    <string name="settings_app_palette_wallpaper">Achtergrond</string>
+    <string name="settings_app_palette_wallpaper_vibrant">Achtergrond, levendig</string>
+    <string name="settings_app_palette_mint">Mint</string>
+    <string name="settings_app_palette_blue">Blauw</string>
+    <string name="settings_app_palette_coral">Koraal</string>
 </resources>

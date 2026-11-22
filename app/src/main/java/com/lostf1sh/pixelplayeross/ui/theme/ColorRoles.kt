@@ -166,6 +166,18 @@ fun generateColorSchemeFromSeed(
     }
 }
 
+/**
+ * Mod: the app's own palette from a seed in the vibrant style, without the switch to grey that album art gets for a
+ * dull cover, so a muted wallpaper colour still gives a fresh palette.
+ */
+fun generateAppColorSchemeFromSeed(seedColor: Color): ColorSchemePair = runCatching {
+    val sourceHct = Hct.fromInt(seedColor.toArgb())
+    ColorSchemePair(
+        light = SchemeVibrant(sourceHct, false, 0.0).toComposeColorScheme(),
+        dark = SchemeVibrant(sourceHct, true, 0.0).toComposeColorScheme()
+    )
+}.getOrElse { ColorSchemePair(LightColorScheme, DarkColorScheme) }
+
 fun generateMonochromeColorSchemeFromSeed(seedColor: Color): ColorSchemePair {
     return runCatching {
         val sourceHct = Hct.fromInt(seedColor.toArgb())

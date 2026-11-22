@@ -64,4 +64,11 @@
     <string name="library_filter_phone">Phone</string>
     <string name="library_filter_server">Server</string>
     <string name="settings_library_tabs_order_subtitle">The order of the tabs in your library</string>
+    <string name="settings_app_palette_title">Colours</string>
+    <string name="settings_app_palette_desc">Where the app takes its colours from</string>
+    <string name="settings_app_palette_wallpaper">Wallpaper</string>
+    <string name="settings_app_palette_wallpaper_vibrant">Wallpaper, vivid</string>
+    <string name="settings_app_palette_mint">Mint</string>
+    <string name="settings_app_palette_blue">Blue</string>
+    <string name="settings_app_palette_coral">Coral</string>
 </resources>

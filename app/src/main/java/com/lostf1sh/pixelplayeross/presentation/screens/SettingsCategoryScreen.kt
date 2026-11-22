@@ -762,6 +762,22 @@ fun SettingsCategoryScreen(
                                     leadingIcon = { Icon(Icons.Outlined.Contrast, null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_appearance_theme_preset", highlightKey)
                                 )
+                                // Mod: the colours of the whole app, livelier than Android's calm wallpaper palette.
+                                val appPalette by settingsViewModel.appPalette.collectAsStateWithLifecycle()
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.settings_app_palette_title),
+                                    description = stringResource(R.string.settings_app_palette_desc),
+                                    options = linkedMapOf(
+                                        com.lostf1sh.pixelplayeross.data.preferences.AppPalette.WALLPAPER to stringResource(R.string.settings_app_palette_wallpaper),
+                                        com.lostf1sh.pixelplayeross.data.preferences.AppPalette.WALLPAPER_VIBRANT to stringResource(R.string.settings_app_palette_wallpaper_vibrant),
+                                        com.lostf1sh.pixelplayeross.data.preferences.AppPalette.MINT to stringResource(R.string.settings_app_palette_mint),
+                                        com.lostf1sh.pixelplayeross.data.preferences.AppPalette.BLUE to stringResource(R.string.settings_app_palette_blue),
+                                        com.lostf1sh.pixelplayeross.data.preferences.AppPalette.CORAL to stringResource(R.string.settings_app_palette_coral)
+                                    ),
+                                    selectedKey = appPalette,
+                                    onSelectionChanged = { settingsViewModel.setAppPalette(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Style, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_system_font_title),
                                     subtitle = stringResource(R.string.setcat_system_font_subtitle),

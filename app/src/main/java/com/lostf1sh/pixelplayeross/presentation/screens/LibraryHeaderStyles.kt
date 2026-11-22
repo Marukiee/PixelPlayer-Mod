@@ -115,7 +115,9 @@ internal fun LibraryTextTabsHeader(
                     }
                 }
                 .horizontalScroll(scrollState)
-                .padding(start = 16.dp, end = 8.dp),
+                // Room above and below inside the faded layer, which clips to its own bounds: the pill's shape and
+                // its press animation must never touch that edge.
+                .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

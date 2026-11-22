@@ -22,6 +22,7 @@ class ThemePreferencesRepository @Inject constructor(
         val APP_THEME_MODE = stringPreferencesKey("app_theme_mode")
         val GLOBAL_NOW_PLAYING_THEME_ENABLED = booleanPreferencesKey("global_now_playing_theme_enabled_v1")
         val THEME_PRESET = stringPreferencesKey("theme_preset")
+        val APP_PALETTE = stringPreferencesKey("app_palette")
         val USE_SYSTEM_FONT = booleanPreferencesKey("use_system_font")
         val INTERFACE_SCALE = intPreferencesKey("interface_scale_percent")
     }
@@ -41,6 +42,14 @@ class ThemePreferencesRepository @Inject constructor(
     val themePresetFlow: Flow<String> = dataStore.data.map { preferences ->
         ThemePreset.sanitize(preferences[Keys.THEME_PRESET])
     }
+
+    /** Mod: the colours of the whole app (see [AppPalette]). */
+    val appPaletteFlow: Flow<String> = dataStore.data.map { preferences ->
+        AppPalette.sanitize(preferences[Keys.APP_PALETTE])
+    }
+
+    suspend fun setAppPalette(palette: String) =
+        dataStore.edit { preferences -> preferences[Keys.APP_PALETTE] = AppPalette.sanitize(palette) }
 
     val interfaceAppearanceFlow: Flow<InterfaceAppearance> = dataStore.data.map { preferences ->
         InterfaceAppearance(
@@ -124,6 +133,30 @@ data class InterfaceAppearance(
 }
 
 /** App-wide surface palettes. Only [DEFAULT] and [AMOLED] exist; unknown stored values fall back to [DEFAULT]. */
+/**
+ * Mod: where the app takes its colours from. [WALLPAPER] is Android's own palette from the wallpaper (calm, the OSS
+ * default); the others are livelier: the wallpaper's colour in the vibrant style, or a fixed fresh colour.
+ */
+object AppPalette {
+    const val WALLPAPER = "wallpaper"
+    const val WALLPAPER_VIBRANT = "wallpaper_vibrant"
+    const val MINT = "mint"
+    const val BLUE = "blue"
+    const val CORAL = "coral"
+
+    val all = listOf(WALLPAPER, WALLPAPER_VIBRANT, MINT, BLUE, CORAL)
+
+    fun sanitize(value: String?): String = value?.takeIf { it in all } ?: WALLPAPER
+
+    /** The seed of a fixed palette, or null when the colour comes from the wallpaper. */
+    fun seedOf(palette: String): Long? = when (palette) {
+        MINT -> 0xFF00C2A0
+        BLUE -> 0xFF2F7BFF
+        CORAL -> 0xFFFF6B4A
+        else -> null
+    }
+}
+
 object ThemePreset {
     const val DEFAULT = "default"
     const val AMOLED = "amoled"

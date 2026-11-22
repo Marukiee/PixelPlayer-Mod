@@ -169,13 +169,29 @@ fun PixelPlayerTheme(
     colorSchemePairOverride: ColorSchemePair? = null,
     themePreset: String = ThemePreset.DEFAULT,
     interfaceAppearance: InterfaceAppearance = InterfaceAppearance(),
+    appPalette: String = com.lostf1sh.pixelplayeross.data.preferences.AppPalette.WALLPAPER,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val isAmoled = isAmoledThemePreset(themePreset)
+    // Mod: a livelier palette than Android's calm one from the wallpaper, when chosen in the settings.
+    val paletteScheme: ColorSchemePair? = remember(context, appPalette) {
+        val fixedSeed = com.lostf1sh.pixelplayeross.data.preferences.AppPalette.seedOf(appPalette)
+        when {
+            fixedSeed != null -> generateAppColorSchemeFromSeed(Color(fixedSeed))
+            appPalette == com.lostf1sh.pixelplayeross.data.preferences.AppPalette.WALLPAPER_VIBRANT &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> runCatching {
+                generateAppColorSchemeFromSeed(dynamicDarkColorScheme(context).primary)
+            }.getOrNull()
+            else -> null
+        }
+    }
     val finalColorScheme = when {
-        isAmoled -> remember(context, colorSchemePairOverride) {
-            getAmoledColorScheme(context, colorSchemePairOverride)
+        isAmoled -> remember(context, colorSchemePairOverride, paletteScheme) {
+            getAmoledColorScheme(context, colorSchemePairOverride ?: paletteScheme)
+        }
+        colorSchemePairOverride == null && paletteScheme != null -> {
+            if (darkTheme) paletteScheme.dark else paletteScheme.light
         }
         colorSchemePairOverride == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             try {
