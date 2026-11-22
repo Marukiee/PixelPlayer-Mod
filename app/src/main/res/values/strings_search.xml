@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_play">Play</string>
+    <string name="song_info_action_add_to_queue">Add to queue</string>
+    <string name="song_info_action_queue_next">Next</string>
+</resources>

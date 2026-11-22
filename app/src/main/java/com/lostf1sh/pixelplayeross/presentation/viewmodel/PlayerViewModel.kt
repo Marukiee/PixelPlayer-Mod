@@ -4282,6 +4282,50 @@ class PlayerViewModel @Inject constructor(
         searchStateHolder.performSearch(query)
     }
 
+    /** The songs tapped in Search, newest first, shown with the recent search terms. */
+    val recentSearchSongs get() = searchStateHolder.recentSearchSongs
+
+    fun addRecentSearchSong(song: Song, query: String? = null) = searchStateHolder.addRecentSearchSong(song, query)
+
+    fun removeRecentSearchSong(songId: String) = searchStateHolder.removeRecentSearchSong(songId)
+
+    /**
+     * Plays a song from the recent searches with the library's own copy of it, so a moved or retagged file still
+     * plays. A song that left the library goes from the list too.
+     */
+    fun playRecentSearchSong(song: Song, queueName: String) {
+        viewModelScope.launch {
+            val current = runCatching { musicRepository.getSong(song.id).first() }.getOrNull()
+            if (current == null) {
+                removeRecentSearchSong(song.id)
+                sendToast(context.getString(R.string.search_recent_song_gone))
+                return@launch
+            }
+            addRecentSearchSong(current)
+            showAndPlaySong(current, listOf(current), queueName)
+        }
+    }
+
+    /**
+     * Plays [song] right away and keeps the queue: it goes in after the current song and the player moves to it, so
+     * what was queued still follows. With nothing playing it simply starts.
+     */
+    fun playSongKeepingQueue(song: Song, queueName: String) {
+        val controller = mediaController
+        if (controller == null || controller.mediaItemCount == 0 || controller.currentMediaItemIndex == C.INDEX_UNSET) {
+            showAndPlaySong(song, listOf(song), queueName)
+            return
+        }
+        val start = controller.currentMediaItemIndex + 1
+        for (i in controller.mediaItemCount - 1 downTo start) {
+            if (controller.getMediaItemAt(i).mediaId == song.id) controller.removeMediaItem(i)
+        }
+        val insertionIndex = start.coerceAtMost(controller.mediaItemCount)
+        controller.addMediaItem(insertionIndex, buildPlaybackMediaItem(song))
+        controller.seekTo(insertionIndex, 0L)
+        controller.play()
+    }
+
     fun deleteSearchHistoryItem(query: String) {
         searchStateHolder.deleteSearchHistoryItem(query)
     }
