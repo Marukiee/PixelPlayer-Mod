@@ -8,8 +8,12 @@ import com.lostf1sh.pixelplayeross.data.model.Lyrics
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import com.lostf1sh.pixelplayeross.presentation.components.PlayerOutputGlyph
+import com.lostf1sh.pixelplayeross.presentation.components.PlayerOutputIcon
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -44,6 +48,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.mandatorySystemGestures
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -63,17 +68,17 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lostf1sh.pixelplayeross.presentation.components.LocalOpenConnectPanel
-import com.lostf1sh.pixelplayeross.presentation.components.PlayerOutputGlyph
-import com.lostf1sh.pixelplayeross.presentation.components.PlayerOutputIcon
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SonosViewModel
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.getValue
@@ -127,6 +132,8 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Speaker
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.AudioBookmarksViewModel
@@ -176,6 +183,9 @@ import com.lostf1sh.pixelplayeross.presentation.components.rememberModalSheetSta
 private const val SKIP_COMMAND_GUARD_MS = 96L
 
 private enum class SkipDirection { PREVIOUS, NEXT }
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private val playerMotion = MotionScheme.expressive()
 
 private suspend fun validateLyricsImport(
     context: Context,
@@ -245,6 +255,8 @@ fun FullPlayerContent(
     onSeek: (Long) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onSeekForward: ((Long) -> Unit)? = null,
+    onSeekBackward: ((Long) -> Unit)? = null,
     onCollapse: () -> Unit,
     onShowQueueClicked: () -> Unit,
     onQueueDragStart: () -> Unit,
@@ -283,10 +295,15 @@ fun FullPlayerContent(
     val immersiveLyricsTimeout = fullPlayerSlice.immersiveLyricsTimeout
     val isImmersiveTemporarilyDisabled = fullPlayerSlice.isImmersiveTemporarilyDisabled
     val isExternalOutputActive = false
+    val sonosViewModel: SonosViewModel = hiltViewModel()
+    val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
     val isBluetoothEnabled = fullPlayerSlice.isBluetoothEnabled
     val bluetoothName = fullPlayerSlice.bluetoothName
     val navigationBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val queueGestureBottomExclusion = maxOf(20.dp, navigationBarBottomInset + 8.dp)
+    val mandatoryGestureBottomInset =
+        WindowInsets.mandatorySystemGestures.asPaddingValues().calculateBottomPadding()
+    val queueGestureBottomExclusion =
+        maxOf(20.dp, navigationBarBottomInset, mandatoryGestureBottomInset) + 8.dp
     val queueGestureBottomExclusionPx = with(LocalDensity.current) {
         queueGestureBottomExclusion.toPx()
     }
@@ -473,6 +490,11 @@ fun FullPlayerContent(
         }
     }
 
+    // The title opens the song's album, as the artist line opens the artist and the cover the album.
+    val onSongMetadataTitleClick = {
+        playerViewModel.triggerAlbumNavigationFromPlayer(song.albumId)
+    }
+
     var pendingCarouselIndex by remember { mutableStateOf<Int?>(null) }
     val currentQueueIndex = remember(song.id, currentMediaItemIndex, currentPlaybackQueue) {
         resolveQueueIndex(
@@ -621,6 +643,8 @@ fun FullPlayerContent(
             onPrevious = onPreviousWithOptimisticCarousel,
             onPlayPause = onPlayPause,
             onNext = onNextWithOptimisticCarousel,
+            onSeekForward = onSeekForward,
+            onSeekBackward = onSeekBackward,
             transportPlayPauseColors = transportPlayPauseColors,
             transportSkipColors = transportSkipButtonColors,
             isShuffleEnabledProvider = isShuffleEnabledProvider,
@@ -676,6 +700,7 @@ fun FullPlayerContent(
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
+            onTitleClick = onSongMetadataTitleClick,
             isPlayingProvider = isPlayingProvider
         )
     }
@@ -761,7 +786,12 @@ fun FullPlayerContent(
                     ),
                     title = {
                         if (!isOutputConnecting) {
-                            AnimatedVisibility(visible = (!isExternalOutputActive)) {
+                            // Mod: the speaker pill says where the music plays, so it takes the title's room.
+                            AnimatedVisibility(
+                                visible = !isExternalOutputActive && sonosSession == null,
+                                enter = fadeIn(playerMotion.defaultEffectsSpec()),
+                                exit = fadeOut(playerMotion.fastEffectsSpec())
+                            ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         modifier = Modifier.padding(start = 18.dp),
@@ -1293,6 +1323,8 @@ private fun FullPlayerControlsSection(
     onPrevious: () -> Unit,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
+    onSeekForward: ((Long) -> Unit)? = null,
+    onSeekBackward: ((Long) -> Unit)? = null,
     transportPlayPauseColors: TransportButtonColors,
     transportSkipColors: TransportButtonColors,
     isShuffleEnabledProvider: () -> Boolean,
@@ -1408,6 +1440,12 @@ private fun FullPlayerProgressSection(
         song.sampleRate
     }
 
+    // Source of the currently playing song: streamed (Navidrome/remote URL) vs local file.
+    val isRemoteSource = song.navidromeId != null ||
+        song.contentUriString.startsWith("http", ignoreCase = true)
+    // The Sonos plays a Spotify song; the phone's own file info would describe its silent stand-in.
+    val isSpotifySource = com.lostf1sh.pixelplayeross.data.spotify.SpotifyIds.item(song.contentUriString) != null
+
     PlayerProgressBarSection(
         songId = song.id,
         currentPositionProvider = currentPositionProvider,
@@ -1416,6 +1454,12 @@ private fun FullPlayerProgressSection(
         audioMimeType = audioMimeType,
         audioBitrate = audioBitrate,
         audioSampleRate = audioSampleRate,
+        // On a song change the player first reports this song with empty file info, which the library tags fill in;
+        // on the phone those often lack the sample rate. Complete means the playing file reported all three itself.
+        audioInfoComplete = isMetadataForCurrentSong &&
+            playbackMetadataMimeType != null && playbackMetadataBitrate != null && playbackMetadataSampleRate != null,
+        isRemoteSource = isRemoteSource,
+        isSpotifySource = isSpotifySource,
         showAudioFileInfo = showPlayerFileInfo,
         onSeek = onSeek,
         expansionFractionProvider = expansionFractionProvider,
@@ -1497,6 +1541,7 @@ private fun FullPlayerSongMetadataSection(
     chipContentColor: Color,
     onQueueClick: () -> Unit,
     onArtistClick: () -> Unit,
+    onTitleClick: () -> Unit = {},
     isPlayingProvider: () -> Boolean = { true },
     isLyricsActive: Boolean = false
 ) {
@@ -1543,6 +1588,7 @@ private fun FullPlayerSongMetadataSection(
             showQueueButton = isLandscape,
             onClickQueue = onQueueClick,
             onClickArtist = onArtistClick,
+            onClickTitle = onTitleClick,
             isPlayingProvider = isPlayingProvider,
             isLyricsActive = isLyricsActive
         )
@@ -1778,6 +1824,7 @@ private fun SongMetadataDisplaySection(
     showQueueButton: Boolean,
     onClickQueue: () -> Unit,
     onClickArtist: () -> Unit,
+    onClickTitle: () -> Unit,
     modifier: Modifier = Modifier,
     isPlayingProvider: () -> Boolean = { true },
     isLyricsActive: Boolean = false
@@ -1801,6 +1848,7 @@ private fun SongMetadataDisplaySection(
                 gradientEdgeColor = gradientEdgeColor,
                 playerViewModel = playerViewModel,
                 onClickArtist = onClickArtist,
+                onClickTitle = onClickTitle.takeIf { currentSong.albumId != -1L },
                 modifier = Modifier
                     .weight(1f)
                     .align(Alignment.CenterVertically),
@@ -1951,6 +1999,9 @@ private fun PlayerProgressBarSection(
     audioMimeType: String?,
     audioBitrate: Int?,
     audioSampleRate: Int?,
+    audioInfoComplete: Boolean = true,
+    isRemoteSource: Boolean = false,
+    isSpotifySource: Boolean = false,
     showAudioFileInfo: Boolean,
     onSeek: (Long) -> Unit,
     expansionFractionProvider: () -> Float,
@@ -1986,8 +2037,10 @@ private fun PlayerProgressBarSection(
         kotlin.math.abs(reportedDuration - hintDuration) <= 1500L -> reportedDuration
         else -> minOf(reportedDuration, hintDuration)
     }
-    val audioMetaLabel = remember(showAudioFileInfo, audioMimeType, audioBitrate, audioSampleRate) {
-        if (showAudioFileInfo) {
+    val audioMetaLabel = remember(showAudioFileInfo, audioMimeType, audioBitrate, audioSampleRate, isSpotifySource) {
+        if (showAudioFileInfo && isSpotifySource) {
+            "Spotify"
+        } else if (showAudioFileInfo) {
             formatAudioMetaLabel(
                 mimeType = audioMimeType,
                 bitrate = audioBitrate,
@@ -1997,15 +2050,25 @@ private fun PlayerProgressBarSection(
             null
         }
     }
-    var displayAudioMetaLabel by remember(songId) { mutableStateOf<String?>(null) }
-    LaunchedEffect(songId, audioMetaLabel, showAudioFileInfo) {
+    // The chip keeps the last song's info until the new song's own file info is in, then changes once. Resetting it
+    // per song made it vanish for a few frames and come back from the library tags first, small, on every skip.
+    var displayAudioChip by remember { mutableStateOf<AudioChipInfo?>(null) }
+    val songShownAt = remember(songId) { android.os.SystemClock.uptimeMillis() }
+    LaunchedEffect(songId, audioMetaLabel, audioInfoComplete, showAudioFileInfo, isRemoteSource, isSpotifySource) {
         if (!showAudioFileInfo) {
-            displayAudioMetaLabel = null
-        } else if (!audioMetaLabel.isNullOrBlank()) {
-            displayAudioMetaLabel = audioMetaLabel
-        } else {
+            displayAudioChip = null
+            return@LaunchedEffect
+        }
+        val target = audioMetaLabel?.takeIf { it.isNotBlank() }?.let { AudioChipInfo(it, isRemoteSource, isSpotifySource) }
+        if (!audioInfoComplete && !isSpotifySource && displayAudioChip != null) {
+            val waited = android.os.SystemClock.uptimeMillis() - songShownAt
+            kotlinx.coroutines.delay((AUDIO_CHIP_WAIT_MS - waited).coerceAtLeast(0L))
+        }
+        if (target == null) {
             kotlinx.coroutines.delay(500)
-            displayAudioMetaLabel = null
+            displayAudioChip = null
+        } else {
+            displayAudioChip = target
         }
     }
     val durationForCalc = displayDurationValue.coerceAtLeast(1L)
@@ -2088,7 +2151,7 @@ private fun PlayerProgressBarSection(
                  ProgressPlaceholder(
                      color = placeholderColor,
                      onColor = placeholderOnColor,
-                     showAudioMetaChip = showAudioFileInfo && !displayAudioMetaLabel.isNullOrBlank()
+                     showAudioMetaChip = showAudioFileInfo && displayAudioChip != null
                  )
              }
         }
@@ -2130,7 +2193,7 @@ private fun PlayerProgressBarSection(
                 duration = displayDurationValue,
                 isVisible = isVisible,
                 textColor = timeTextColor,
-                audioMetaLabel = displayAudioMetaLabel,
+                audioChip = displayAudioChip,
                 horizontalTrackInset = progressSectionHorizontalInset
             )
         }
@@ -2189,7 +2252,7 @@ private fun EfficientTimeLabels(
     duration: Long,
     isVisible: Boolean,
     textColor: Color,
-    audioMetaLabel: String?,
+    audioChip: AudioChipInfo?,
     horizontalTrackInset: Dp
 ) {
     val coarsePositionMs by remember(isVisible, positionState) {
@@ -2234,27 +2297,75 @@ private fun EfficientTimeLabels(
             }
         }
 
-        if (!audioMetaLabel.isNullOrBlank()) {
+        // Keeps the last chip while it fades out, so the exit shows the text that was there.
+        val lastAudioChip = remember { arrayOfNulls<AudioChipInfo>(1) }
+        if (audioChip != null) lastAudioChip[0] = audioChip
+        AnimatedVisibility(
+            visible = audioChip != null,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 58.dp),
+            enter = fadeIn(tween(220)) + scaleIn(tween(260, easing = FastOutSlowInEasing), initialScale = 0.92f),
+            exit = fadeOut(tween(160)) + scaleOut(tween(200), targetScale = 0.92f)
+        ) {
             Surface(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 58.dp),
                 shape = RoundedCornerShape(999.dp),
                 color = textColor.copy(alpha = 0.14f),
                 contentColor = textColor.copy(alpha = 0.96f)
             ) {
-                Text(
-                    text = audioMetaLabel,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 11.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                )
+                AnimatedContent(
+                    targetState = audioChip ?: lastAudioChip[0],
+                    transitionSpec = {
+                        (fadeIn(tween(220, delayMillis = 90)) togetherWith fadeOut(tween(90)))
+                            .using(SizeTransform(clip = false) { _, _ -> tween(300, easing = FastOutSlowInEasing) })
+                    },
+                    contentAlignment = Alignment.Center,
+                    label = "audioChip"
+                ) { chip ->
+                    if (chip != null) AudioChipRow(chip)
+                }
             }
         }
+    }
+}
+
+/** What the chip under the progress bar shows: the file info and where the song plays from. */
+@Immutable
+private data class AudioChipInfo(val label: String, val isRemote: Boolean, val isSpotify: Boolean)
+
+/** How long a new song may take to report its own file info before the chip falls back to the library tags. */
+private const val AUDIO_CHIP_WAIT_MS = 700L
+
+@Composable
+private fun AudioChipRow(chip: AudioChipInfo) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+    ) {
+        // Source badge: Spotify, streamed (Navidrome/web) or a local file.
+        if (chip.isSpotify) {
+            Icon(
+                painter = painterResource(R.drawable.ic_spotify),
+                contentDescription = null,
+                modifier = Modifier.size(12.dp)
+            )
+        } else {
+            Icon(
+                imageVector = if (chip.isRemote) Icons.Rounded.Language else Icons.Rounded.Smartphone,
+                contentDescription = if (chip.isRemote) "Streaming source" else "Local source",
+                modifier = Modifier.size(12.dp)
+            )
+        }
+        Text(
+            text = chip.label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -2432,6 +2543,8 @@ private fun PlayerSongInfo(
     gradientEdgeColor: Color,
     playerViewModel: PlayerViewModel,
     onClickArtist: () -> Unit,
+    /** Opens the album; null when the song has none, then the title is not a link. */
+    onClickTitle: (() -> Unit)?,
     modifier: Modifier = Modifier,
     isPlayingProvider: () -> Boolean = { true }
 ) {
@@ -2467,7 +2580,19 @@ private fun PlayerSongInfo(
             style = titleStyle,
             gradientEdgeColor = gradientEdgeColor,
             expansionFractionProvider = expansionFractionProvider,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onClickTitle != null) {
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onClickTitle
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
             canScroll = isPlayingProvider()
         )
         Spacer(modifier = Modifier.height(2.dp))
