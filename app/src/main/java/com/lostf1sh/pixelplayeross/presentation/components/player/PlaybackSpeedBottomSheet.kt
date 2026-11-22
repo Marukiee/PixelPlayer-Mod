@@ -1,5 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.components.player
 
+import com.lostf1sh.pixelplayeross.presentation.components.closeOnShortPull
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +46,7 @@ fun PlaybackSpeedBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        modifier = Modifier.closeOnShortPull(sheetState, onDismiss),
         dragHandle = {
             BottomSheetDefaults.DragHandle(
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.4f)

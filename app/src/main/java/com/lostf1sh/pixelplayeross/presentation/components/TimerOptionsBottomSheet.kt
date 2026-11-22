@@ -119,7 +119,8 @@ fun TimerOptionsBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        modifier = Modifier.closeOnShortPull(sheetState, onDismiss)
     ) {
         Column(
             modifier = Modifier

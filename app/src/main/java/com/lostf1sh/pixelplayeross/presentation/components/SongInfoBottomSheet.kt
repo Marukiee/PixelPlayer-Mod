@@ -357,6 +357,7 @@ fun SongInfoBottomSheet(
             }
         },
         sheetState = sheetState,
+        modifier = Modifier.closeOnShortPull(sheetState) { if (!showEditSheet) onDismiss() },
     ) {
         CompositionLocalProvider(
             LocalOverscrollFactory provides null
