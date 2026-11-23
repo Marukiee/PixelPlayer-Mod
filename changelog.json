@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.8.0-mod.38",
+    "en": {
+      "new": [
+        "Panels stay in place when you switch tabs right after opening"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Panelen blijven goed staan als je vlak na het openen van tabblad wisselt"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.37",
     "en": {
       "new": [

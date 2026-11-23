@@ -852,6 +852,7 @@ fun SongInfoBottomSheet(
                         selectedIndex = pagerState.currentPage,
                         onClick = {
                             scope.launch {
+                                awaitSheetSettled(sheetState)
                                 pagerState.animateScrollToPage(0, animationSpec = SongInfoTabSwitchSpec)
                             }
                         },
@@ -878,6 +879,7 @@ fun SongInfoBottomSheet(
                         selectedIndex = pagerState.currentPage,
                         onClick = {
                             scope.launch {
+                                awaitSheetSettled(sheetState)
                                 pagerState.animateScrollToPage(1, animationSpec = SongInfoTabSwitchSpec)
                             }
                         },

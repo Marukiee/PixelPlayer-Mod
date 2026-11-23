@@ -1,3 +1,5 @@
+- Panelen volgen hun hoogte ook als je vlak na het openen van tabblad wisselt, bij het verbinden-paneel en bij een nummer
+
 - Bijwerken kan nu ook vanuit Instellingen: onder Controleren op updates staat de balk als er een nieuwe versie is
 - Nieuwere balkkleuren bij het bijwerken, met het percentage op de rand
 

@@ -8,6 +8,7 @@ import kotlin.math.abs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
@@ -117,5 +118,17 @@ fun Modifier.closeOnShortPull(sheetState: SheetState, onClosed: () -> Unit): Mod
                 }
             }
         }
+    }
+}
+
+/**
+ * Mod: waits, at most [maxMillis], until the sheet has stopped moving. While the sheet still opens it cannot follow
+ * its own height, so a tab switch started then would leave it standing still while its content changes.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+suspend fun awaitSheetSettled(sheetState: SheetState, maxMillis: Long = 300) {
+    if (!sheetState.isAnimationRunning) return
+    kotlinx.coroutines.withTimeoutOrNull(maxMillis) {
+        androidx.compose.runtime.snapshotFlow { sheetState.isAnimationRunning }.first { !it }
     }
 }

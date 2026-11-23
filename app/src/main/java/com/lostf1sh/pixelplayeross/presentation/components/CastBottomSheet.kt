@@ -521,6 +521,7 @@ fun CastBottomSheet(
                 } else {
                     val currentSonos = sonosSession
                     CastSheetContent(
+                        awaitSheetSettled = { awaitSheetSettled(sheetState) },
                         state = uiState,
                         onSelectDevice = { id ->
                             when {
@@ -904,6 +905,7 @@ private fun Modifier.closesOnPullDown(close: () -> Unit): Modifier = pointerInpu
 
 @Composable
 private fun CastSheetContent(
+    awaitSheetSettled: suspend () -> Unit = {},
     state: CastSheetUiState,
     onSelectDevice: (String) -> Unit,
     onDisconnect: () -> Unit,
@@ -1065,6 +1067,7 @@ private fun CastSheetContent(
                 selectedIndex = pagerState.currentPage,
                 onClick = {
                     scope.launch {
+                        awaitSheetSettled()
                         pagerState.animateScrollToPage(0, animationSpec = CastTabSwitchSpec)
                     }
                 },
@@ -1091,6 +1094,7 @@ private fun CastSheetContent(
                 selectedIndex = pagerState.currentPage,
                 onClick = {
                     scope.launch {
+                        awaitSheetSettled()
                         pagerState.animateScrollToPage(1, animationSpec = CastTabSwitchSpec)
                     }
                 },
