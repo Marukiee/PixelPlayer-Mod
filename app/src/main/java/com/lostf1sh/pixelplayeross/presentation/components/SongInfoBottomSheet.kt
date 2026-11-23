@@ -342,14 +342,6 @@ fun SongInfoBottomSheet(
             180.dp
         ).coerceAtLeast(280.dp)
 
-    // Defer the height animation past the first two frames so the sheet doesn't visibly
-    // animate its content height while it is still opening.
-    var heightAnimationEnabled by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        androidx.compose.runtime.withFrameNanos { }
-        androidx.compose.runtime.withFrameNanos { }
-        heightAnimationEnabled = true
-    }
 
     ModalBottomSheet(
         onDismissRequest = {
@@ -425,11 +417,6 @@ fun SongInfoBottomSheet(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val sizeAnimationSpec = if (heightAnimationEnabled) {
-                        tween<androidx.compose.ui.unit.IntSize>(durationMillis = 280)
-                    } else {
-                        androidx.compose.animation.core.snap()
-                    }
                     // Mod: like the connect panel, the height follows the swipe between Options and Info, so the
                     // page and the sheet move in one go instead of the page first and the height after.
                     val pageHeights = remember { androidx.compose.runtime.mutableStateListOf(0, 0) }
@@ -437,10 +424,8 @@ fun SongInfoBottomSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = maxPagerHeight)
-                            .animateContentSize(
-                                animationSpec = sizeAnimationSpec,
-                                alignment = Alignment.TopCenter
-                            )
+                            // Mod: no extra size animation here; it made the height trail the swipe. As in the
+                            // connect panel, the height follows the pager frame by frame.
                             .layout { measurable, constraints ->
                                 val placeable = measurable.measure(constraints)
                                 val swipe = (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f)

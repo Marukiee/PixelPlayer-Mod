@@ -58,6 +58,13 @@ import androidx.compose.material3.TextFieldDefaults
 import com.lostf1sh.pixelplayeross.data.model.StorageFilter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -144,6 +151,18 @@ fun SongPickerContent(
         }
     }
 
+    // Mod: Phone and Server are two pages that slide like the connect panel's Controls and Devices.
+    val storagePager = rememberPagerState(
+        initialPage = if (storageFilter == StorageFilter.ONLINE) 1 else 0,
+        pageCount = { if (showCloudFilter) 2 else 1 }
+    )
+    val pickerScope = rememberCoroutineScope()
+    LaunchedEffect(storagePager) {
+        snapshotFlow { storagePager.currentPage }.collect { page ->
+            playerViewModel.setPlaylistPickerStorageFilter(if (page == 1) StorageFilter.ONLINE else StorageFilter.OFFLINE)
+        }
+    }
+
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
@@ -175,7 +194,7 @@ fun SongPickerContent(
                         StorageFilter.OFFLINE to R.string.library_storage_filter_offline,
                         StorageFilter.ONLINE to R.string.library_storage_filter_online
                     )
-                    val selectedTabIndex = tabs.indexOfFirst { it.first == storageFilter }.coerceAtLeast(0)
+                    val selectedTabIndex = storagePager.currentPage
 
                     PrimaryTabRow(
                         selectedTabIndex = selectedTabIndex,
@@ -193,7 +212,11 @@ fun SongPickerContent(
                                 index = index,
                                 title = stringResource(labelRes),
                                 selectedIndex = selectedTabIndex,
-                                onClick = { playerViewModel.setPlaylistPickerStorageFilter(filter) },
+                                onClick = {
+                                    pickerScope.launch {
+                                        storagePager.animateScrollToPage(index, animationSpec = PickerTabSwitchSpec)
+                                    }
+                                },
                                 transformOrigin = if (index == 0) TransformOrigin(0f, 0.5f) else TransformOrigin(1f, 0.5f)
                             ) {
                                 Row(
@@ -274,6 +297,7 @@ fun SongPickerContent(
     ) { innerPadding ->
         SongPickerSelectionPane(
             selectedSongIds = selectedSongIds,
+            storagePager = storagePager,
             modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding()),
             contentPadding = PaddingValues(
                 bottom = if (showCloudFilter) 120.dp else 128.dp,
@@ -288,6 +312,7 @@ fun SongPickerContent(
 fun SongPickerSelectionPane(
     selectedSongIds: MutableMap<String, Boolean>,
     modifier: Modifier = Modifier,
+    storagePager: PagerState? = null,
     contentPadding: PaddingValues = PaddingValues(bottom = 100.dp, top = 20.dp),
     playerViewModel: PlayerViewModel = sharedPlayerViewModel()
 ) {
@@ -295,16 +320,20 @@ fun SongPickerSelectionPane(
     var favoritesOnly by remember { mutableStateOf(false) }
     val storageFilter by playerViewModel.playlistPickerStorageFilter.collectAsStateWithLifecycle()
     
-    val pagedSongs = playerViewModel.playlistPickerSongs.collectAsLazyPagingItems()
-    val pagedFavoriteSongs = playerViewModel.playlistPickerFavoriteSongs.collectAsLazyPagingItems()
+    // With pages, each page collects its own list.
+    val pagedSongs = if (storagePager == null) playerViewModel.playlistPickerSongs.collectAsLazyPagingItems() else null
+    val pagedFavoriteSongs =
+        if (storagePager == null) playerViewModel.playlistPickerFavoriteSongs.collectAsLazyPagingItems() else null
 
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val searchResultsInitialValue: List<Song>? = remember(searchQuery) {
         if (searchQuery.isBlank()) emptyList() else null
     }
-    val searchResults by remember(searchQuery, playerViewModel, storageFilter) {
+    val searchResults by remember(searchQuery, playerViewModel, storageFilter, storagePager) {
         playerViewModel.searchSongs(searchQuery)
             .map { songs ->
+                // With pages, each page filters for itself.
+                if (storagePager != null) return@map songs
                 when (storageFilter) {
                     StorageFilter.OFFLINE -> songs.filter { s ->
                         s.navidromeId == null && s.jellyfinId == null
@@ -389,7 +418,51 @@ fun SongPickerSelectionPane(
             )
         }
 
-        when {
+        if (storagePager != null) {
+            HorizontalPager(
+                state = storagePager,
+                modifier = Modifier.weight(1f),
+                beyondViewportPageCount = 1,
+                flingBehavior = PagerDefaults.flingBehavior(
+                    state = storagePager,
+                    snapAnimationSpec = PickerTabSwitchSpec
+                ),
+                verticalAlignment = Alignment.Top
+            ) { page ->
+                val pageFilter = if (page == 1) StorageFilter.ONLINE else StorageFilter.OFFLINE
+                if (searchQuery.isNotBlank()) {
+                    val displayed = remember(searchResults, favoritesOnly, favoriteIds, pageFilter) {
+                        val results = (searchResults ?: emptyList()).filter { s ->
+                            val onServer = s.navidromeId != null || s.jellyfinId != null
+                            if (pageFilter == StorageFilter.ONLINE) onServer else !onServer
+                        }
+                        (if (favoritesOnly) results.filter { it.id in favoriteIds } else results).toImmutableList()
+                    }
+                    SongPickerList(
+                        filteredSongs = displayed,
+                        isLoading = searchResults == null,
+                        selectedSongIds = selectedSongIds,
+                        albumShape = albumShape,
+                        searchQuery = searchQuery,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = contentPadding
+                    )
+                } else {
+                    val pageSongs = remember(pageFilter, favoritesOnly) {
+                        playerViewModel.playlistPickerSongsFor(pageFilter, favoritesOnly)
+                    }.collectAsLazyPagingItems()
+                    SongPickerPagingList(
+                        pagedSongs = pageSongs,
+                        selectedSongIds = selectedSongIds,
+                        albumShape = albumShape,
+                        tabId = if (favoritesOnly) LibraryTabId.LIKED else LibraryTabId.SONGS,
+                        storageFilter = pageFilter,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = contentPadding
+                    )
+                }
+            }
+        } else when {
             searchQuery.isNotBlank() -> {
                 val displayed = remember(searchResults, favoritesOnly, favoriteIds) {
                     val results = searchResults ?: emptyList()
@@ -407,7 +480,7 @@ fun SongPickerSelectionPane(
             }
             favoritesOnly -> {
                 SongPickerPagingList(
-                    pagedSongs = pagedFavoriteSongs,
+                    pagedSongs = pagedFavoriteSongs!!,
                     selectedSongIds = selectedSongIds,
                     albumShape = albumShape,
                     tabId = LibraryTabId.LIKED,
@@ -418,7 +491,7 @@ fun SongPickerSelectionPane(
             }
             else -> {
                 SongPickerPagingList(
-                    pagedSongs = pagedSongs,
+                    pagedSongs = pagedSongs!!,
                     selectedSongIds = selectedSongIds,
                     albumShape = albumShape,
                     tabId = LibraryTabId.SONGS,
@@ -883,3 +956,9 @@ fun SongPickerList(
         }
     }
 }
+
+/** Mod: the connect panel's tab switch, by tap or by swipe. */
+private val PickerTabSwitchSpec = androidx.compose.animation.core.tween<Float>(
+    durationMillis = 450,
+    easing = androidx.compose.animation.core.FastOutSlowInEasing
+)

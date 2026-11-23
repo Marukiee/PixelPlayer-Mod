@@ -376,6 +376,29 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private val playlistPickerPagingByFilter =
+        java.util.concurrent.ConcurrentHashMap<Pair<com.lostf1sh.pixelplayeross.data.model.StorageFilter, Boolean>, Flow<PagingData<Song>>>()
+
+    /**
+     * Mod: the picker's songs for one storage filter, so Phone and Server can sit side by side in a pager and slide
+     * like the connect panel's tabs. [favorites] gives the liked songs only.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun playlistPickerSongsFor(
+        filter: com.lostf1sh.pixelplayeross.data.model.StorageFilter,
+        favorites: Boolean
+    ): Flow<PagingData<Song>> = playlistPickerPagingByFilter.getOrPut(filter to favorites) {
+        libraryStateHolder.currentSongSortOption
+            .flatMapLatest { sortOption ->
+                if (favorites) {
+                    musicRepository.getPaginatedFavoriteSongs(sortOption = sortOption, storageFilter = filter)
+                } else {
+                    musicRepository.getPaginatedSongs(sortOption = sortOption, storageFilter = filter)
+                }
+            }
+            .cachedIn(viewModelScope)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val playlistPickerFavoriteSongs: Flow<PagingData<Song>> = combine(
         libraryStateHolder.currentSongSortOption,

@@ -75,4 +75,21 @@
     <string name="settings_queue_swipe_remove">Remove</string>
     <string name="settings_queue_swipe_right_description">Swipe a song in the queue to the right.</string>
     <string name="settings_queue_swipe_left_description">Swipe a song in the queue to the left.</string>
+    <string name="settings_sum_phone">Phone</string>
+    <string name="settings_sum_accounts">Navidrome and Jellyfin</string>
+    <string name="settings_sum_theme_light">light</string>
+    <string name="settings_sum_theme_dark">dark</string>
+    <string name="settings_sum_theme_system">follows the system</string>
+    <string name="settings_sum_crossfade_on">Crossfade %1$d s</string>
+    <string name="settings_sum_crossfade_off">Crossfade off</string>
+    <string name="settings_sum_on_with">On, %1$s</string>
+    <string name="settings_sum_lyrics">Size, blur and sources</string>
+    <string name="settings_sum_behavior">Swipes, haptics and buttons</string>
+    <string name="settings_sum_library">Folders and scanning</string>
+    <string name="settings_sum_downloads">Server songs kept on the phone</string>
+    <string name="settings_sum_backup_last">Last backup %1$s</string>
+    <string name="settings_sum_backup_none">No backup yet</string>
+    <string name="settings_sum_developer">Experiments and debugging</string>
+    <string name="settings_sum_device">What this phone can play</string>
+    <string name="settings_sum_version">Version %1$s</string>
 </resources>

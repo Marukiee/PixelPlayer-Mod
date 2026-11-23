@@ -122,24 +122,35 @@ internal sealed interface MainSettingsEntry {
 }
 
 /**
- * Every row of the main Settings list, in display order. Row shapes and the gaps between rows
- * are derived from this list, so adding a row here cannot leave the group outline out of step.
+ * Mod: the main Settings list in groups, like Tandem's settings: where the music comes from, how it looks and plays,
+ * what is kept on the phone, and the rest. Each group gets its own rounded block.
  */
-internal val mainSettingsEntries: List<MainSettingsEntry> = buildList {
-    SettingsCategory.entries
-        .filter {
-            it != SettingsCategory.DEVICE_CAPABILITIES && it != SettingsCategory.ABOUT &&
-                it !in SettingsCategory.sourcePagesOnly
-        }
-        .forEach { category ->
-            add(MainSettingsEntry.Category(category))
-            if (category == SettingsCategory.PLAYBACK) add(MainSettingsEntry.Destination.LYRICS)
-        }
-    add(MainSettingsEntry.Destination.DOWNLOADS)
-    add(MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES))
-    add(MainSettingsEntry.Destination.ACCOUNTS)
-    add(MainSettingsEntry.Category(SettingsCategory.ABOUT))
-}
+internal val mainSettingsGroups: List<List<MainSettingsEntry>> = listOf(
+    listOf(
+        MainSettingsEntry.Category(SettingsCategory.SOURCES),
+        MainSettingsEntry.Destination.ACCOUNTS,
+    ),
+    listOf(
+        MainSettingsEntry.Category(SettingsCategory.APPEARANCE),
+        MainSettingsEntry.Category(SettingsCategory.PLAYBACK),
+        MainSettingsEntry.Destination.LYRICS,
+        MainSettingsEntry.Category(SettingsCategory.EQUALIZER),
+        MainSettingsEntry.Category(SettingsCategory.BEHAVIOR),
+    ),
+    listOf(
+        MainSettingsEntry.Category(SettingsCategory.LIBRARY),
+        MainSettingsEntry.Destination.DOWNLOADS,
+        MainSettingsEntry.Category(SettingsCategory.BACKUP_RESTORE),
+    ),
+    listOf(
+        MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES),
+        MainSettingsEntry.Category(SettingsCategory.DEVELOPER),
+        MainSettingsEntry.Category(SettingsCategory.ABOUT),
+    ),
+)
+
+/** Every row of the main Settings list, in display order. */
+internal val mainSettingsEntries: List<MainSettingsEntry> = mainSettingsGroups.flatten()
 
 private val SingleGroupItemShape = RoundedCornerShape(24.dp)
 private val FirstGroupItemShape =

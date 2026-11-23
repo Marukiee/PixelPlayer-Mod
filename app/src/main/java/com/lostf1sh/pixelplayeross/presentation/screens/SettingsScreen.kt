@@ -7,6 +7,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.animateFloatAsState
+import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsUiState
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.rememberTransition
@@ -132,79 +136,12 @@ fun SettingsScreen(
                     transitionSpec = { tween(durationMillis = 400, easing = FastOutSlowInEasing) }
             ) { if (it) 0.dp else 40.dp }
 
-    val density = LocalDensity.current
-    val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
-
-    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val minTopBarHeight = 64.dp + statusBarHeight
-    val maxTopBarHeight = 180.dp 
-
-    val minTopBarHeightPx = with(density) { minTopBarHeight.toPx() }
-    val maxTopBarHeightPx = with(density) { maxTopBarHeight.toPx() }
-
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
-    val launchTab = uiState.launchTab
-    val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
-
-    var showCornerRadiusOverlay by remember { mutableStateOf(false) }
-
-    val topBarHeight = remember { Animatable(maxTopBarHeightPx) }
-    var collapseFraction by remember { mutableStateOf(0f) }
-
-    LaunchedEffect(topBarHeight.value) {
-        collapseFraction =
-                1f -
-                        ((topBarHeight.value - minTopBarHeightPx) /
-                                        (maxTopBarHeightPx - minTopBarHeightPx))
-                                .coerceIn(0f, 1f)
-    }
-
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val delta = available.y
-                val isScrollingDown = delta < 0
-
-                if (!isScrollingDown &&
-                                (lazyListState.firstVisibleItemIndex > 0 ||
-                                        lazyListState.firstVisibleItemScrollOffset > 0)
-                ) {
-                    return Offset.Zero
-                }
-
-                val previousHeight = topBarHeight.value
-                val newHeight =
-                        (previousHeight + delta).coerceIn(minTopBarHeightPx, maxTopBarHeightPx)
-                val consumed = newHeight - previousHeight
-
-                if (consumed.roundToInt() != 0) {
-                    coroutineScope.launch { topBarHeight.snapTo(newHeight) }
-                }
-
-                val canConsumeScroll = !(isScrollingDown && newHeight == minTopBarHeightPx)
-                return if (canConsumeScroll) Offset(0f, consumed) else Offset.Zero
-            }
-        }
-    }
-
-    LaunchedEffect(lazyListState.isScrollInProgress) {
-        if (!lazyListState.isScrollInProgress) {
-            val shouldExpand = topBarHeight.value > (minTopBarHeightPx + maxTopBarHeightPx) / 2
-            val canExpand =
-                    lazyListState.firstVisibleItemIndex == 0 &&
-                            lazyListState.firstVisibleItemScrollOffset == 0
-
-            val targetValue =
-                    if (shouldExpand && canExpand) maxTopBarHeightPx else minTopBarHeightPx
-
-            if (topBarHeight.value != targetValue) {
-                coroutineScope.launch {
-                    topBarHeight.animateTo(targetValue, spring(stiffness = Spring.StiffnessMedium))
-                }
-            }
-        }
-    }
+    val appPalette by settingsViewModel.appPalette.collectAsStateWithLifecycle()
+    val equalizerPreset by settingsViewModel.equalizerPresetWhenOn.collectAsStateWithLifecycle()
+    val sourcesViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.SourcesViewModel = hiltViewModel()
+    val sourcesStatus by sourcesViewModel.status.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     // Kept as a TextFieldValue so the caret survives navigating into a result and back;
@@ -243,94 +180,105 @@ fun SettingsScreen(
 
     Box(
             modifier =
-                    Modifier.nestedScroll(nestedScrollConnection).fillMaxSize().graphicsLayer {
+                    Modifier.fillMaxSize().graphicsLayer {
                         alpha = contentAlpha
                         translationY = contentOffset.toPx()
                     }
     ) {
-        val currentTopBarHeightDp = with(density) { topBarHeight.value.toDp() }
-        LazyColumn(
+        // Mod: the main Settings list as in Tandem. A title and the search field stand still at the top, under them
+        // the categories in groups, each row with its icon, its name, a line on how it is set now, and an arrow.
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            FilledIconButton(
+                modifier = Modifier.padding(start = 12.dp, top = 4.dp),
+                onClick = onNavigationIconClick,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = stringResource(R.string.auth_cd_back)
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_top_bar_title),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 12.dp)
+            )
+            Surface(
+                onClick = { isSearchActive = true },
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = stringResource(R.string.search),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = stringResource(R.string.settings_search_hint),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            val dark = MaterialTheme.colorScheme.isDarkScheme()
+            LazyColumn(
                 state = lazyListState,
                 contentPadding = PaddingValues(
-                    top = currentTopBarHeightDp + 8.dp,
+                    top = 4.dp,
                     start = 16.dp,
                     end = 16.dp,
-                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp
+                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
-        ) {
-            // Persistent docked search bar
-            item {
-                Surface(
-                    onClick = { isSearchActive = true },
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 20.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = stringResource(R.string.search),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = stringResource(R.string.settings_search_hint),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            item {
-                val dark = MaterialTheme.colorScheme.isDarkScheme()
-                ExpressiveSettingsGroup {
-                    mainSettingsEntries.forEachIndexed { index, entry ->
-                        val shape = settingsGroupItemShape(index, mainSettingsEntries.size)
-                        val colors = entry.iconColors(dark)
-
-                        when (entry) {
-                            is MainSettingsEntry.Category -> ExpressiveCategoryItem(
-                                category = entry.category,
-                                customColors = colors,
-                                onClick = { navController.navigateSafely(entry.route) },
-                                shape = shape
-                            )
-                            is MainSettingsEntry.Destination -> ExpressiveNavigationItem(
-                                title = stringResource(entry.titleRes),
-                                subtitle = stringResource(entry.subtitleRes),
-                                icon = entry.icon,
-                                colors = colors,
-                                onClick = { navController.navigateSafely(entry.route) },
-                                shape = shape
-                            )
-                        }
-                        if (index < mainSettingsEntries.lastIndex) {
-                            Spacer(modifier = Modifier.height(2.dp))
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            ) {
+                items(mainSettingsGroups.size) { groupIndex ->
+                    val group = mainSettingsGroups[groupIndex]
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        group.forEachIndexed { index, entry ->
+                            val shape = settingsGroupItemShape(index, group.size)
+                            val colors = entry.iconColors(dark)
+                            val summary = mainEntrySummary(entry, uiState, appPalette, equalizerPreset, sourcesStatus)
+                            when (entry) {
+                                is MainSettingsEntry.Category -> ExpressiveCategoryItem(
+                                    category = entry.category,
+                                    customColors = colors,
+                                    subtitle = summary,
+                                    onClick = { navController.navigateSafely(entry.route) },
+                                    shape = shape
+                                )
+                                is MainSettingsEntry.Destination -> ExpressiveNavigationItem(
+                                    title = stringResource(entry.titleRes),
+                                    subtitle = summary,
+                                    icon = entry.icon,
+                                    colors = colors,
+                                    onClick = { navController.navigateSafely(entry.route) },
+                                    shape = shape
+                                )
+                            }
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
-        CollapsibleCommonTopBar(
-                title = stringResource(R.string.settings_top_bar_title),
-                collapseFraction = collapseFraction,
-                headerHeight = currentTopBarHeightDp,
-                onBackClick = onNavigationIconClick
-        )
 
         // Fullscreen expanded search overlay with auto-focus
         AnimatedVisibility(
@@ -452,51 +400,8 @@ fun ExpressiveNavigationItem(
     onClick: () -> Unit,
     shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(24.dp)
 ) {
-    Surface(
-        onClick = onClick,
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().height(88.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(colors.first)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = colors.second,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
-                )
-                Text(
-                    text = subtitle,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                    maxLines = 2
-                )
-            }
-        }
+    SettingsMenuRow(title = title, summary = subtitle, colors = colors, onClick = onClick, shape = shape) {
+        Icon(imageVector = icon, contentDescription = null, tint = colors.second, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -506,66 +411,156 @@ fun ExpressiveCategoryItem(
     onClick: () -> Unit,
     shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(24.dp),
     customColors: Pair<Color, Color>? = null,
-    // Mod: the "Play from" page shows each source's state here instead of the category's subtitle.
+    // Mod: the line under the name; the "Play from" page and the main list say how a category is set now.
     subtitle: String? = null
 ) {
+    val colors = customColors ?: (MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer)
+    SettingsMenuRow(
+        title = stringResource(category.titleRes),
+        summary = subtitle ?: stringResource(category.subtitleRes),
+        colors = colors,
+        onClick = onClick,
+        shape = shape
+    ) {
+        if (category.icon != null) {
+            Icon(imageVector = category.icon, contentDescription = null, tint = colors.second, modifier = Modifier.size(20.dp))
+        } else if (category.iconRes != null) {
+            Icon(painter = painterResource(id = category.iconRes), contentDescription = null, tint = colors.second, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/**
+ * Mod: a row of a settings menu as in Tandem: the icon in its round, the name, one line on how it is set now, and
+ * an arrow. It dips a little while pressed.
+ */
+@Composable
+private fun SettingsMenuRow(
+    title: String,
+    summary: String,
+    colors: Pair<Color, Color>,
+    onClick: () -> Unit,
+    shape: androidx.compose.ui.graphics.Shape,
+    icon: @Composable () -> Unit
+) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "settingsRowPress"
+    )
     Surface(
         onClick = onClick,
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().height(88.dp) 
+        interactionSource = interaction,
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(customColors?.first ?: MaterialTheme.colorScheme.primaryContainer)
+                    .background(colors.first)
             ) {
-                if (category.icon != null) {
-                    Icon(
-                        imageVector = category.icon,
-                        contentDescription = null,
-                        tint = customColors?.second ?: MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else if (category.iconRes != null) {
-                    Icon(
-                        painter = painterResource(id = category.iconRes),
-                        contentDescription = null,
-                        tint = customColors?.second ?: MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                icon()
             }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = stringResource(category.titleRes),
-                    overflow = TextOverflow.Ellipsis,
+                    text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = subtitle ?: stringResource(category.subtitleRes),
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                    maxLines = 2
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
         }
+    }
+}
+
+/** Mod: the line under a row of the main list: how that part is set now, kept short like Tandem's. */
+@Composable
+private fun mainEntrySummary(
+    entry: MainSettingsEntry,
+    uiState: SettingsUiState,
+    appPalette: String,
+    equalizerPreset: String?,
+    sources: com.lostf1sh.pixelplayeross.presentation.viewmodel.SourcesViewModel.Status
+): String = when (entry) {
+    is MainSettingsEntry.Destination -> when (entry) {
+        MainSettingsEntry.Destination.LYRICS -> stringResource(R.string.settings_sum_lyrics)
+        MainSettingsEntry.Destination.DOWNLOADS -> stringResource(R.string.settings_sum_downloads)
+        MainSettingsEntry.Destination.ACCOUNTS -> stringResource(R.string.settings_sum_accounts)
+    }
+    is MainSettingsEntry.Category -> when (entry.category) {
+        SettingsCategory.SOURCES -> buildList {
+            add(stringResource(R.string.settings_sum_phone))
+            if (sources.navidromeUser != null) add("Navidrome")
+            if (sources.sonosOn) add("Sonos")
+            if (sources.spotifyLoggedIn) add("Spotify")
+        }.joinToString(", ")
+        SettingsCategory.APPEARANCE -> {
+            val palette = stringResource(
+                when (appPalette) {
+                    com.lostf1sh.pixelplayeross.data.preferences.AppPalette.WALLPAPER -> R.string.settings_app_palette_wallpaper
+                    com.lostf1sh.pixelplayeross.data.preferences.AppPalette.WALLPAPER_VIBRANT -> R.string.settings_app_palette_wallpaper_vibrant
+                    com.lostf1sh.pixelplayeross.data.preferences.AppPalette.MINT -> R.string.settings_app_palette_mint
+                    com.lostf1sh.pixelplayeross.data.preferences.AppPalette.CORAL -> R.string.settings_app_palette_coral
+                    else -> R.string.settings_app_palette_blue
+                }
+            )
+            val theme = stringResource(
+                when (uiState.appThemeMode) {
+                    AppThemeMode.LIGHT -> R.string.settings_sum_theme_light
+                    AppThemeMode.DARK -> R.string.settings_sum_theme_dark
+                    else -> R.string.settings_sum_theme_system
+                }
+            )
+            "$palette, $theme"
+        }
+        SettingsCategory.PLAYBACK -> if (uiState.isCrossfadeEnabled) {
+            stringResource(R.string.settings_sum_crossfade_on, (uiState.crossfadeDuration / 1000).coerceAtLeast(1))
+        } else {
+            stringResource(R.string.settings_sum_crossfade_off)
+        }
+        SettingsCategory.EQUALIZER -> equalizerPreset?.let { stringResource(R.string.settings_sum_on_with, it) }
+            ?: stringResource(R.string.sources_off)
+        SettingsCategory.BEHAVIOR -> stringResource(R.string.settings_sum_behavior)
+        SettingsCategory.LIBRARY -> stringResource(R.string.settings_sum_library)
+        SettingsCategory.BACKUP_RESTORE -> uiState.backupHistory.maxOfOrNull { it.createdAt }?.let { last ->
+            stringResource(
+                R.string.settings_sum_backup_last,
+                java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(last))
+            )
+        } ?: stringResource(R.string.settings_sum_backup_none)
+        SettingsCategory.DEVELOPER -> stringResource(R.string.settings_sum_developer)
+        SettingsCategory.DEVICE_CAPABILITIES -> stringResource(R.string.settings_sum_device)
+        SettingsCategory.ABOUT -> stringResource(R.string.settings_sum_version, com.lostf1sh.pixelplayeross.BuildConfig.VERSION_NAME)
+        else -> stringResource(entry.category.subtitleRes)
     }
 }
 

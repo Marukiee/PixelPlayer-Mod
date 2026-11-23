@@ -50,4 +50,21 @@
     <string name="settings_queue_swipe_remove">Verwijderen</string>
     <string name="settings_queue_swipe_right_description">Veeg een nummer in de wachtrij naar rechts.</string>
     <string name="settings_queue_swipe_left_description">Veeg een nummer in de wachtrij naar links.</string>
+    <string name="settings_sum_phone">Telefoon</string>
+    <string name="settings_sum_accounts">Navidrome en Jellyfin</string>
+    <string name="settings_sum_theme_light">licht</string>
+    <string name="settings_sum_theme_dark">donker</string>
+    <string name="settings_sum_theme_system">volgt het systeem</string>
+    <string name="settings_sum_crossfade_on">Overvloeien %1$d s</string>
+    <string name="settings_sum_crossfade_off">Overvloeien uit</string>
+    <string name="settings_sum_on_with">Aan, %1$s</string>
+    <string name="settings_sum_lyrics">Grootte, vervaging en bronnen</string>
+    <string name="settings_sum_behavior">Vegen, trillen en knoppen</string>
+    <string name="settings_sum_library">Mappen en scannen</string>
+    <string name="settings_sum_downloads">Servernummers op de telefoon</string>
+    <string name="settings_sum_backup_last">Laatste back-up %1$s</string>
+    <string name="settings_sum_backup_none">Nog geen back-up</string>
+    <string name="settings_sum_developer">Experimenten en debuggen</string>
+    <string name="settings_sum_device">Wat deze telefoon kan afspelen</string>
+    <string name="settings_sum_version">Versie %1$s</string>
 </resources>

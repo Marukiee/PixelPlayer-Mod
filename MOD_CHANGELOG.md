@@ -1,3 +1,7 @@
+- Instellingen opgebouwd zoals in Tandem: groepjes, per rij hoe het nu staat en een pijltje
+- Opties en Info bij een nummer wisselen in een vloeiende beweging, zoals het verbinden-paneel
+- Nummers toevoegen: Telefoon en Server schuiven als twee pagina's
+
 - Wachtrij: naar rechts vegen zet een nummer bij je eigen wachtrij; instellen onder Instellingen › Gedrag › Wachtrij
 - Nummers die je zelf toevoegt spelen eerst, krijgen een icoontje en blijven staan als je iets anders start
 - Tik boven een paneel om het te sluiten

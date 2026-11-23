@@ -211,7 +211,8 @@ class SettingsViewModel @Inject constructor(
     private val folderArtworkSettingsCoordinator: FolderArtworkSettingsCoordinator,
     @ApplicationContext private val context: Context,
     @AppScope private val appScope: CoroutineScope,
-    private val navidromeRepository: com.lostf1sh.pixelplayeross.data.navidrome.NavidromeRepository
+    private val navidromeRepository: com.lostf1sh.pixelplayeross.data.navidrome.NavidromeRepository,
+    private val equalizerPreferencesRepository: com.lostf1sh.pixelplayeross.data.preferences.EqualizerPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -651,6 +652,18 @@ class SettingsViewModel @Inject constructor(
             themePreferencesRepository.setGlobalNowPlayingThemeEnabled(enabled)
         }
     }
+
+    /** Mod: for the line under Equalizer in the main list; null when it is off, else the preset's name. */
+    val equalizerPresetWhenOn: StateFlow<String?> = combine(
+        equalizerPreferencesRepository.equalizerEnabledFlow,
+        equalizerPreferencesRepository.equalizerPresetFlow,
+        equalizerPreferencesRepository.customPresetsFlow
+    ) { enabled, presetName, customPresets ->
+        if (!enabled) null
+        else if (presetName == "custom") com.lostf1sh.pixelplayeross.data.equalizer.EqualizerPreset.custom(emptyList()).displayName
+        else (customPresets.find { it.name == presetName }
+            ?: com.lostf1sh.pixelplayeross.data.equalizer.EqualizerPreset.fromName(presetName)).displayName
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val appPalette: StateFlow<String> = themePreferencesRepository.appPaletteFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lostf1sh.pixelplayeross.data.preferences.AppPalette.DEFAULT)

@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.8.0-mod.36",
+    "en": {
+      "new": [
+        "Settings laid out like Tandem",
+        "Smoother switch between Options and Info"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Instellingen opgebouwd zoals in Tandem",
+        "Vloeiender wisselen tussen Opties en Info"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.35",
     "en": {
       "new": [
