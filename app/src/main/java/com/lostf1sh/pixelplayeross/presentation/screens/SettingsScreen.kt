@@ -48,6 +48,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -275,6 +276,40 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                    }
+                }
+                // Mod: checking for updates in Settings, as in Tandem's "Updates and backup". The bar under the row is
+                // the update card's bar from markupdate: it is only there when a newer version is out, and a tap updates.
+                item(key = "updates") {
+                    val updater = remember { nl.markmaaktmedia.markupdate.MarkUpdate.get() }
+                    val updateState by updater.state.collectAsStateWithLifecycle()
+                    val updateScope = rememberCoroutineScope()
+                    val version = com.lostf1sh.pixelplayeross.BuildConfig.VERSION_NAME
+                    Column {
+                        ExpressiveNavigationItem(
+                            title = stringResource(R.string.settings_updates_title),
+                            subtitle = when (updateState) {
+                                nl.markmaaktmedia.markupdate.UpdateState.Checking -> stringResource(R.string.settings_sum_update_checking)
+                                nl.markmaaktmedia.markupdate.UpdateState.UpToDate -> stringResource(R.string.settings_sum_update_up_to_date, version)
+                                else -> stringResource(R.string.settings_sum_version, version)
+                            },
+                            icon = Icons.Rounded.SystemUpdate,
+                            colors = if (dark) Color(0xFF00504A) to Color(0xFF9EF2E4) else Color(0xFFB8F5EA) to Color(0xFF00201C),
+                            onClick = { updateScope.launch { updater.check(manual = true) } },
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                        nl.markmaaktmedia.markupdate.ui.UpdateBar(
+                            modifier = Modifier.padding(top = 8.dp),
+                            style = nl.markmaaktmedia.markupdate.ui.UpdateCardStyle(
+                                // The same shape as the update card on Home.
+                                shape = racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape(
+                                    cornerRadiusTL = 28.dp, smoothnessAsPercentTL = 60,
+                                    cornerRadiusTR = 28.dp, smoothnessAsPercentTR = 60,
+                                    cornerRadiusBR = 28.dp, smoothnessAsPercentBR = 60,
+                                    cornerRadiusBL = 28.dp, smoothnessAsPercentBL = 60
+                                )
+                            )
+                        )
                     }
                 }
             }
@@ -559,7 +594,7 @@ private fun mainEntrySummary(
         } ?: stringResource(R.string.settings_sum_backup_none)
         SettingsCategory.DEVELOPER -> stringResource(R.string.settings_sum_developer)
         SettingsCategory.DEVICE_CAPABILITIES -> stringResource(R.string.settings_sum_device)
-        SettingsCategory.ABOUT -> stringResource(R.string.settings_sum_version, com.lostf1sh.pixelplayeross.BuildConfig.VERSION_NAME)
+        SettingsCategory.ABOUT -> stringResource(R.string.settings_sum_about)
         else -> stringResource(entry.category.subtitleRes)
     }
 }

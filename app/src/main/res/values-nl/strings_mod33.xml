@@ -67,4 +67,8 @@
     <string name="settings_sum_developer">Experimenten en debuggen</string>
     <string name="settings_sum_device">Wat deze telefoon kan afspelen</string>
     <string name="settings_sum_version">Versie %1$s</string>
+    <string name="settings_updates_title">Controleren op updates</string>
+    <string name="settings_sum_update_checking">Controleren…</string>
+    <string name="settings_sum_update_up_to_date">Versie %1$s, bijgewerkt</string>
+    <string name="settings_sum_about">Makers en licenties</string>
 </resources>

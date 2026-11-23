@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.8.0-mod.37",
+    "en": {
+      "new": [
+        "Update from Settings too"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Bijwerken kan ook vanuit Instellingen"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.36",
     "en": {
       "new": [

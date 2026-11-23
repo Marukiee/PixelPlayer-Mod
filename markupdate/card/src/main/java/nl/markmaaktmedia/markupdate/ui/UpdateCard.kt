@@ -69,6 +69,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -171,6 +178,87 @@ fun UpdateCard(
     }
 }
 
+/**
+ * De balk van de kaart, los, voor de instellingen van een app (onder "Controleren op updates"): staat er alleen als er een nieuwere versie
+ * is, en zegt dan "Bijwerken naar versie X". Een tik doet precies wat Bijwerken op de kaart doet: hij wordt een voortgangsbalk met het
+ * percentage, en is de download klaar, dan installeert hij meteen met "Installeren…" en de glans. Zelfde kleuren, veren en tijden als
+ * de kaart, zonder Later (in de instellingen kies je er zelf voor). Mislukt het, dan zegt hij "Opnieuw proberen".
+ *
+ * Kaart en balk lezen dezelfde updater: tik je op de een, dan loopt de ander mee.
+ */
+@Composable
+fun UpdateBar(
+    modifier: Modifier = Modifier,
+    style: UpdateCardStyle = UpdateCardStyle(),
+    updater: MarkUpdater = MarkUpdate.get(),
+) {
+    val state by updater.state.collectAsState()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        updater.resume()
+        updater.resumeConfirmation()
+    }
+    val release = releaseOf(state)
+    val failed = state as? UpdateState.Failed
+    val visible = release != null || failed != null
+    // Wat de balk toont, bewaard terwijl hij wegschuift (net als de kaart).
+    val shown = remember { Shown() }
+    if (visible) {
+        shown.release = release
+        shown.failure = failed
+        shown.phase = phaseOf(state)
+    }
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(style.motion.fade()) + expandVertically(style.motion.sizeSpring()),
+        exit = fadeOut(style.motion.fade()) + shrinkVertically(style.motion.sizeSpring()),
+        modifier = modifier,
+    ) {
+        val phase = shown.phase
+        val progress = when (phase) {
+            Phase.Rest -> 0f
+            Phase.Busy -> (state as? UpdateState.Downloading)?.progress ?: 0f
+            Phase.Installing -> 1f
+        }
+        val restLabel = when {
+            shown.failure != null -> stringResource(R.string.markupdate_retry)
+            state is UpdateState.NeedsPermission -> stringResource(R.string.markupdate_allow)
+            else -> stringResource(R.string.markupdate_update_to, shown.release?.versionName ?: "")
+        }
+        Actions(
+            phase = phase, progress = progress, style = style, restLabel = restLabel,
+            barEnabled = phase == Phase.Rest || state is UpdateState.AwaitingConfirmation,
+            onBar = {
+                when (val s = state) {
+                    is UpdateState.Available -> updater.startUpdate(s.release)
+                    is UpdateState.NeedsPermission -> updater.openInstallPermissionSettings()
+                    is UpdateState.AwaitingConfirmation -> updater.launchConfirmation()
+                    is UpdateState.Failed -> updater.startRetry()
+                    else -> Unit
+                }
+            },
+            onLater = {},
+            showLater = false,
+        )
+    }
+}
+
+/** De release waar de updater mee bezig is, of null als er niets nieuws is. */
+private fun releaseOf(state: UpdateState): ReleaseInfo? = when (state) {
+    is UpdateState.Available -> state.release
+    is UpdateState.Downloading -> state.release
+    is UpdateState.ReadyToInstall -> state.release
+    is UpdateState.NeedsPermission -> state.release
+    is UpdateState.Installing -> state.release
+    is UpdateState.AwaitingConfirmation -> state.release
+    else -> null
+}
+
+private fun phaseOf(state: UpdateState): Phase = when (state) {
+    is UpdateState.Downloading -> Phase.Busy
+    is UpdateState.ReadyToInstall, is UpdateState.Installing, is UpdateState.AwaitingConfirmation -> Phase.Installing
+    else -> Phase.Rest
+}
+
 @Composable
 private fun UpdateContent(
     release: ReleaseInfo, phase: Phase, state: UpdateState, currentVersion: String, style: UpdateCardStyle, onBar: () -> Unit, onLater: () -> Unit,
@@ -201,8 +289,7 @@ private fun UpdateContent(
                             Phase.Busy -> downloaded(release, progress)
                             Phase.Installing -> if (state is UpdateState.AwaitingConfirmation) stringResource(R.string.markupdate_confirm_hint) else style.installingSubtitle ?: stringResource(R.string.markupdate_installing_sub)
                         },
-                        // Gelijke cijferbreedte alleen bij de teller, zodat die niet heen en weer springt; in een versienummer maakt het de punten te wijd.
-                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = if (p == Phase.Busy) "tnum" else null),
+                        style = MaterialTheme.typography.bodySmall,
                         color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -269,23 +356,28 @@ private fun UpdateIcon(done: Boolean, style: UpdateCardStyle) {
  * de balk vol en zegt hij "Installeren…" met een zachte glans.
  */
 @Composable
-private fun Actions(phase: Phase, progress: Float, style: UpdateCardStyle, restLabel: String, barEnabled: Boolean, onBar: () -> Unit, onLater: () -> Unit) {
+private fun Actions(
+    phase: Phase, progress: Float, style: UpdateCardStyle, restLabel: String, barEnabled: Boolean, onBar: () -> Unit, onLater: () -> Unit,
+    showLater: Boolean = true,
+) {
     val colors = MaterialTheme.colorScheme
     val motion = style.motion
     // Later is een derde van de breedte en krimpt tot niets: de breedte zelf is de veer, geen gewicht (dat krimpt te snel).
-    val laterFraction by animateFloatAsState(if (phase == Phase.Rest) LaterFraction else 0f, motion.laterSpring(), label = "laterFraction")
+    val laterFraction by animateFloatAsState(if (phase == Phase.Rest && showLater) LaterFraction else 0f, motion.laterSpring(), label = "laterFraction")
     // Doorzichtigheid is een tween, geen veer: een veer laat het knopje flikkeren.
     val laterAlpha by animateFloatAsState(if (phase == Phase.Rest) 1f else 0f, tween(260), label = "laterAlpha")
     val barFill by animateColorAsState(
-        when (phase) { Phase.Rest -> colors.primary; Phase.Busy -> colors.surfaceContainerHighest; Phase.Installing -> colors.primaryContainer },
+        // Het spoor van de download is de lichte tint, de vulling het volle primair: dat leest als een balk. Is hij vol (installeren), dan is de hele
+        // balk de vulling, zodat er geen kleursprong is.
+        when (phase) { Phase.Rest -> colors.primary; Phase.Busy -> colors.primaryContainer; Phase.Installing -> colors.primary },
         motion.colour(), label = "barFill",
     )
-    val ink by animateColorAsState(if (phase == Phase.Rest) colors.onPrimary else colors.onPrimaryContainer, motion.colour(), label = "barInk")
+    val ink by animateColorAsState(if (phase == Phase.Busy) colors.onPrimaryContainer else colors.onPrimary, motion.colour(), label = "barInk")
     val shownProgress by animateFloatAsState(progress, motion.spatial(), label = "updateProgress")
     val fillAlpha by animateFloatAsState(if (phase == Phase.Busy) 1f else 0f, tween(400), label = "fillAlpha")
     val pill = RoundedCornerShape(percent = 50)
 
-    Row(Modifier.padding(top = 14.dp).fillMaxWidth().height(ButtonHeight)) {
+    Row(Modifier.padding(top = if (showLater) 14.dp else 0.dp).fillMaxWidth().height(ButtonHeight)) {
         if (laterFraction > 0.002f) {
             val fraction = laterFraction.coerceIn(0.001f, LaterFraction)
             Box(
@@ -305,24 +397,45 @@ private fun Actions(phase: Phase, progress: Float, style: UpdateCardStyle, restL
         ) {
             Box(
                 Modifier.fillMaxHeight().fillMaxWidth(shownProgress.coerceIn(0f, 1f)).graphicsLayer { alpha = fillAlpha }
-                    .clip(pill).background(colors.primaryContainer),
+                    .clip(pill).background(colors.primary),
             )
             if (phase == Phase.Installing) Sheen(Modifier.matchParentSize())
             AnimatedContent(
                 targetState = phase, transitionSpec = slideUp(3, style), modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center, label = "updateLabel",
             ) { p ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        when (p) {
-                            Phase.Rest -> restLabel
-                            Phase.Busy -> "${(progress * 100).toInt()}%"
-                            Phase.Installing -> stringResource(R.string.markupdate_installing)
-                        },
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"), color = ink, maxLines = 1,
-                    )
+                val label = when (p) {
+                    Phase.Rest -> restLabel
+                    Phase.Busy -> "${(progress * 100).toInt()}%"
+                    Phase.Installing -> stringResource(R.string.markupdate_installing)
+                }
+                val textStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                if (p == Phase.Busy) {
+                    ProgressLabel(label, textStyle, shownProgress.coerceIn(0f, 1f), colors.onPrimary, colors.onPrimaryContainer)
+                } else {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(label, style = textStyle, color = ink, maxLines = 1) }
                 }
             }
         }
+    }
+}
+
+/**
+ * Het percentage rijdt mee op de rand van de vulling en staat nooit half op de vulling en half op het spoor: is er plek, dan staat het in de vulling
+ * (wit op primair) tegen de rand aan, anders vlak achter de rand op het spoor (donker op de tint). Het springt bij die overgang met een veer over.
+ */
+@Composable
+private fun ProgressLabel(label: String, style: androidx.compose.ui.text.TextStyle, progress: Float, onFill: Color, onTrack: Color) {
+    val pad = with(LocalDensity.current) { 14.dp.toPx() }
+    var textWidth by remember { mutableIntStateOf(0) }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val fillEnd = constraints.maxWidth * progress
+        val inside = fillEnd >= textWidth + pad * 2
+        val shift by animateFloatAsState(if (inside) -(textWidth + pad) else pad, spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMediumLow), label = "labelShift")
+        val ink by animateColorAsState(if (inside) onFill else onTrack, tween(200), label = "labelInk")
+        Text(
+            label, style = style, color = ink, maxLines = 1, softWrap = false,
+            modifier = Modifier.align(Alignment.CenterStart).onSizeChanged { textWidth = it.width }.offset { IntOffset((fillEnd + shift).roundToInt(), 0) },
+        )
     }
 }
 

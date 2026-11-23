@@ -1,3 +1,6 @@
+- Bijwerken kan nu ook vanuit Instellingen: onder Controleren op updates staat de balk als er een nieuwe versie is
+- Nieuwere balkkleuren bij het bijwerken, met het percentage op de rand
+
 - Instellingen opgebouwd zoals in Tandem: groepjes, per rij hoe het nu staat en een pijltje
 - Opties en Info bij een nummer wisselen in een vloeiende beweging, zoals het verbinden-paneel
 - Nummers toevoegen: Telefoon en Server schuiven als twee pagina's
