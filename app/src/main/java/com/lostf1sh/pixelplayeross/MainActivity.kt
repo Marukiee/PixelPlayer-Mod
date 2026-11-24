@@ -211,6 +211,8 @@ class MainActivity : ComponentActivity() {
     lateinit var syncManager: SyncManager
     @Inject
     lateinit var sonosController: com.lostf1sh.pixelplayeross.data.sonos.SonosController
+    @Inject
+    lateinit var remotePlayerSettings: com.lostf1sh.pixelplayeross.data.remote.RemotePlayerSettings
     private var sonosVolumeKeys = true
 
     // Mod: while playing on Sonos the phone itself is muted, so the volume keys go to the speakers.
@@ -1317,6 +1319,10 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         LogUtils.d(this, "onStart")
         playerViewModel.onMainActivityStart()
+        // Mod: "Use as remote player" waits in the background; it can only be (re)started while the app is in front.
+        if (remotePlayerSettings.enabled.value) {
+            com.lostf1sh.pixelplayeross.data.remote.RemotePlayerService.sync(this, true)
+        }
 
         if (intent.getBooleanExtra("is_benchmark", false)) {
         }

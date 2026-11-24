@@ -476,6 +476,9 @@ fun SettingsCategoryScreen(
                         SettingsCategory.SPOTIFY -> {
                             SpotifySettingsBlock()
                         }
+                        SettingsCategory.REMOTE_PLAYER -> {
+                            RemotePlayerSettingsBlock()
+                        }
                         SettingsCategory.LIBRARY -> {
                             SettingsSubsection(title = stringResource(R.string.setcat_library_structure)) {
                                 SettingsItem(

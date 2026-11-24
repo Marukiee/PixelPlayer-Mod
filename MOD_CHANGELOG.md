@@ -1,3 +1,6 @@
+- Speler op afstand: bedien een andere telefoon met PixelPlayer via Bluetooth, ook zonder internet; die speelt zijn eigen muziekbestanden
+- Zet het aan op de telefoon die speelt (Instellingen › Afspelen via › Speler op afstand) en kies hem in Connect device onder Nearby devices
+
 - Panelen volgen hun hoogte ook als je vlak na het openen van tabblad wisselt, bij het verbinden-paneel en bij een nummer
 
 - Bijwerken kan nu ook vanuit Instellingen: onder Controleren op updates staat de balk als er een nieuwe versie is

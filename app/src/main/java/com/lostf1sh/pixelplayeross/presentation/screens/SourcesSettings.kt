@@ -99,6 +99,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BlurOff
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Speaker
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -895,6 +896,11 @@ private fun sourceStatus(
         status.sonosOn -> stringResource(R.string.sources_sonos_on)
         else -> stringResource(R.string.sources_off)
     }
+    SettingsCategory.REMOTE_PLAYER -> when {
+        !status.remotePlayerOn -> stringResource(R.string.sources_off)
+        status.remoteController != null -> stringResource(R.string.sources_remote_controlled, status.remoteController)
+        else -> stringResource(R.string.sources_remote_ready)
+    }
     SettingsCategory.SPOTIFY -> when {
         status.spotifyLoggedIn && status.spotifyName != null -> stringResource(R.string.sources_logged_in_as, status.spotifyName)
         status.spotifyLoggedIn -> stringResource(R.string.sources_connected)
@@ -1118,6 +1124,78 @@ private fun SonosMissingSongsSheet(sonosViewModel: SonosViewModel, onDismiss: ()
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Mod: "Use as remote player": another phone with PixelPlayer picks the songs and they play here, over Bluetooth. */
+@Composable
+internal fun RemotePlayerSettingsBlock() {
+    val context = LocalContext.current
+    val remoteViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.RemotePlayerViewModel = hiltViewModel()
+    val enabled by remoteViewModel.isEnabled.collectAsStateWithLifecycle()
+    val controllerName by remoteViewModel.controllerName.collectAsStateWithLifecycle()
+    val needsPermission = stringResource(R.string.settings_remote_needs_permission)
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        if (result[android.Manifest.permission.BLUETOOTH_CONNECT] == true) {
+            remoteViewModel.setEnabled(true)
+        } else {
+            Toast.makeText(context, needsPermission, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    SettingsSubsection(title = stringResource(R.string.settings_remote_section)) {
+        SwitchSettingItem(
+            title = stringResource(R.string.settings_remote_enabled_title),
+            subtitle = when {
+                enabled && controllerName != null -> stringResource(R.string.sources_remote_controlled, controllerName!!)
+                else -> stringResource(R.string.settings_remote_enabled_subtitle)
+            },
+            checked = enabled,
+            onCheckedChange = { on ->
+                if (!on) {
+                    remoteViewModel.setEnabled(false)
+                } else if (com.lostf1sh.pixelplayeross.data.remote.RemoteTransport.hasBluetoothPermission(context)) {
+                    remoteViewModel.setEnabled(true)
+                } else {
+                    permissionLauncher.launch(
+                        buildList {
+                            add(android.Manifest.permission.BLUETOOTH_CONNECT)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(android.Manifest.permission.POST_NOTIFICATIONS)
+                        }.toTypedArray()
+                    )
+                }
+            },
+            leadingIcon = { Icon(Icons.Rounded.PhoneAndroid, null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+    }
+
+    SettingsSubsection(title = stringResource(R.string.settings_remote_how_section)) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_remote_how_pair),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    SpotifyWhereToFind(path = stringResource(R.string.settings_remote_path_bluetooth).split(" › "))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_remote_how_pick),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    SpotifyWhereToFind(path = stringResource(R.string.settings_remote_path_pick).split(" › "))
                 }
             }
         }

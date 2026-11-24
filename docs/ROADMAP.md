@@ -74,6 +74,10 @@ Volgorde gekozen door Mark (2026-11-02):
    - [ ] Spotify-pagina ingelogd (grote knop boven Client ID, uitleg onder de Redirect URI) nog op de telefoon bekijken
 21. [ ] YouTube als bron (Mark, 2026-11-08, "misschien"): uitgezocht, zie "YouTube als bron". Keuze van Mark
 28. [ ] **Mac-app** (Mark, 2026-11-22): PixelPlayer ook op de Mac, met dezelfde functies, om vanaf de Mac muziek af te spelen. Muziek op de Mac zelf en Navidrome, likes en luistergegevens gelijk met de telefoon, Sonos (verbinden, groeperen, volume) en Spotify. Nog niets uitgezocht
+   - De speler op afstand (punt 29) spreekt een eenvoudig protocol (JSON per regel, `data/remote/RemoteProtocol.kt`) dat ook over TCP werkt (`remote_listen_port.txt`, `remote_hosts.txt`). Een Mac-app kan daarmee later de telefoon bedienen of door de telefoon bediend worden
+29. [ ] **Speler op afstand** (Mark, 2026-11-24): onderweg heeft de Oppo geen aux, dus de oude Xperia hangt aan de speaker en de Oppo bedient hem als een mp3-speler. Via Bluetooth (RFCOMM), zonder internet. Xperia: Instellingen › Play from › Remote player › "Use as remote player" (voorgronddienst, wacht met scherm uit). Oppo: de Xperia staat onder Nearby devices in Connect device; daarna bedienen speler, minispeler, wachtrij en volumeknoppen de Xperia, zoals bij Sonos (de Oppo speelt stil mee en volgt de Xperia). Beide hebben dezelfde Syncthing-map: de Xperia zoekt elk nummer op aan de laatste drie padstukken, anders aan titel, artiest en duur. Valt de verbinding weg, dan speelt de Xperia door en verbindt de Oppo vanzelf opnieuw
+   - [x] Op twee emulators met echte Bluetooth (netsim) getest: vinden, verbinden, skippen, pauze, spoelen, nummer kiezen, shuffle, Play next, volume, Bluetooth uit en aan, scherm uit, proces gedood aan beide kanten
+   - [ ] Op de echte telefoons: koppelen, volume boven de veilige grens op de Xperia met kabel (EU-waarschuwing), bereik
 
 ## Luistergegevens naar Navidrome
 

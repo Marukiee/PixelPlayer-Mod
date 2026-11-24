@@ -17,6 +17,10 @@ import java.nio.ByteBuffer
  * crossfade or ReplayGain cannot undo that, because they only reach [MutingAudioSink.setVolume].
  */
 object SonosAudioGate {
+    /** Who plays elsewhere: Sonos, or another phone as remote player. Each lets go only of its own claim. */
+    const val OWNER_SONOS = "sonos"
+    const val OWNER_REMOTE_PLAYER = "remote_player"
+
     private val _active = MutableStateFlow(false)
     val active: StateFlow<Boolean> = _active.asStateFlow()
 
@@ -24,9 +28,16 @@ object SonosAudioGate {
     var isMuted: Boolean = false
         private set
 
-    fun setActive(active: Boolean) {
-        isMuted = active
-        _active.value = active
+    private val owners = LinkedHashSet<String>()
+
+    /** True while anyone holds the gate, so Sonos letting go late cannot make a remote player's phone heard. */
+    @Synchronized
+    fun setActive(active: Boolean, owner: String = OWNER_SONOS): Boolean {
+        if (active) owners += owner else owners -= owner
+        val muted = owners.isNotEmpty()
+        isMuted = muted
+        _active.value = muted
+        return muted
     }
 }
 

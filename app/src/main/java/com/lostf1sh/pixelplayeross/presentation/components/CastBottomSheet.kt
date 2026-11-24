@@ -88,6 +88,7 @@ import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.material.icons.rounded.Tv
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.Button
@@ -268,6 +269,19 @@ fun CastBottomSheet(
     val sonosScanning by sonosViewModel.isScanning.collectAsStateWithLifecycle()
     val sonosOnHomeNetwork by sonosViewModel.onHomeNetwork.collectAsStateWithLifecycle()
     val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
+    // Mod: other phones running PixelPlayer as remote player, found over Bluetooth while the panel is open.
+    val remoteViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.RemotePlayerViewModel = hiltViewModel()
+    val remoteDevices by remoteViewModel.devices.collectAsStateWithLifecycle()
+    val remoteSession by remoteViewModel.session.collectAsStateWithLifecycle()
+    LaunchedEffect(missingPermissions.isEmpty()) {
+        if (missingPermissions.isEmpty()) {
+            delay(PanelSettleMs)
+            remoteViewModel.watch(true)
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { remoteViewModel.watch(false) }
+    }
     // Coordinator of the group whose Group sheet is open, or null.
     var sonosGroupSheetFor by remember { mutableStateOf<String?>(null) }
     val sheetScope = rememberCoroutineScope()
@@ -290,6 +304,29 @@ fun CastBottomSheet(
 
     val devices = buildList {
         if (isBluetoothEnabled) {
+            val playingOn = remoteSession
+            (remoteDevices + listOfNotNull(playingOn?.device)).distinctBy { it.key }.forEach { phone ->
+                val selected = playingOn?.device?.key == phone.key
+                add(
+                    CastDeviceUi(
+                        id = REMOTE_DEVICE_PREFIX + phone.key,
+                        name = phone.name,
+                        // Unknown to MediaRouter; the row draws a phone for isRemotePlayer.
+                        deviceType = 0,
+                        playbackType = MediaRouter.RouteInfo.PLAYBACK_TYPE_REMOTE,
+                        connectionState = when {
+                            !selected -> MediaRouter.RouteInfo.CONNECTION_STATE_DISCONNECTED
+                            playingOn.isConnecting || playingOn.isReconnecting -> MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTING
+                            else -> MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTED
+                        },
+                        volumeHandling = MediaRouter.RouteInfo.PLAYBACK_VOLUME_VARIABLE,
+                        volume = if (selected) playingOn.volume ?: 0 else 0,
+                        volumeMax = 100,
+                        isSelected = selected,
+                        isRemotePlayer = true
+                    )
+                )
+            }
             bluetoothDevices.forEach { bluetoothDevice ->
                 val isConnected = bluetoothDevice.name == activeBluetoothName
                 add(
@@ -483,11 +520,18 @@ fun CastBottomSheet(
                             Key.VolumeDown -> -2
                             else -> 0
                         }
-                        if (delta == 0 || !sonosVolumeKeys || sonosSession == null) {
-                            false
-                        } else {
-                            if (event.type == KeyEventType.KeyDown) sonosViewModel.adjustVolume(delta)
-                            true
+                        when {
+                            delta == 0 -> false
+                            // Mod: playing on another phone, the keys move its volume and the card's slider with it.
+                            remoteSession?.let { !it.isConnecting } == true -> {
+                                if (event.type == KeyEventType.KeyDown) remoteViewModel.adjustVolume(delta > 0)
+                                true
+                            }
+                            !sonosVolumeKeys || sonosSession == null -> false
+                            else -> {
+                                if (event.type == KeyEventType.KeyDown) sonosViewModel.adjustVolume(delta)
+                                true
+                            }
                         }
                     }
             ) {
@@ -520,11 +564,16 @@ fun CastBottomSheet(
                     )
                 } else {
                     val currentSonos = sonosSession
+                    val currentRemote = remoteSession
                     CastSheetContent(
                         awaitSheetSettled = { awaitSheetSettled(sheetState) },
                         state = uiState,
                         onSelectDevice = { id ->
                             when {
+                                id.startsWith(REMOTE_DEVICE_PREFIX) -> {
+                                    val key = id.removePrefix(REMOTE_DEVICE_PREFIX)
+                                    remoteDevices.firstOrNull { it.key == key }?.let(remoteViewModel::connect)
+                                }
                                 id.startsWith("bluetooth_") -> {
                                     val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -543,14 +592,23 @@ fun CastBottomSheet(
                                     onSpeakerVolume = sonosViewModel::setSpeakerVolume
                                 )
                             }
+                        } ?: currentRemote?.let { state ->
+                            {
+                                RemotePlayerActiveCard(
+                                    state = state,
+                                    onDisconnect = remoteViewModel::switchToPhone,
+                                    onVolume = remoteViewModel::setVolume
+                                )
+                            }
                         },
-                        extraDeviceCount = if (sonosEnabled) 1 + sonosGroups.size else 0,
+                        extraDeviceCount = if (sonosEnabled) 1 + sonosGroups.size else if (currentRemote != null) 1 else 0,
                         leadingDevices = {
-                            if (sonosEnabled) {
+                            if (sonosEnabled || currentRemote != null) {
                                 ThisPhoneRow(
-                                    selected = currentSonos == null,
+                                    selected = currentSonos == null && currentRemote == null,
                                     onSelect = {
                                         if (currentSonos != null) sonosViewModel.switchToPhone()
+                                        if (currentRemote != null) remoteViewModel.switchToPhone()
                                     }
                                 )
                             }
@@ -594,8 +652,9 @@ fun CastBottomSheet(
                         onRefresh = {
                             playerViewModel.refreshLocalConnectionInfo(refreshBluetoothDevices = true)
                             if (sonosEnabled) sonosViewModel.refresh()
+                            remoteViewModel.refresh()
                         },
-                        startWithControls = currentSonos != null
+                        startWithControls = currentSonos != null || currentRemote != null
                     )
                 }
                 }
@@ -657,6 +716,8 @@ fun CastBottomSheet(
 /** About as long as the panel takes to come up. */
 private const val PanelSettleMs = 450L
 
+private const val REMOTE_DEVICE_PREFIX = "remote_"
+
 private val CastPanelMiniGap = 8.dp
 private val CastPanelMiniMargin = 20.dp
 
@@ -693,7 +754,9 @@ private data class CastDeviceUi(
     val volumeMax: Int,
     val isSelected: Boolean,
     val batteryPercent: Int? = null,
-    val isBluetooth: Boolean = false
+    val isBluetooth: Boolean = false,
+    /** Another phone running PixelPlayer as remote player. */
+    val isRemotePlayer: Boolean = false
 )
 
 private data class ActiveDeviceUi(
@@ -1838,17 +1901,20 @@ private fun CastDeviceRow(
 ) {
     val (containerColor, onContainer) = when {
         device.isSelected -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-        device.isBluetooth -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        device.isBluetooth || device.isRemotePlayer -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurface
     }
 
     val isActiveDevice = device.isSelected && device.connectionState == MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTED
 
-    val deviceIcon = when (device.deviceType) {
+    val deviceIcon = when {
+        device.isRemotePlayer -> Icons.Rounded.PhoneAndroid
+        else -> when (device.deviceType) {
         MediaRouter.RouteInfo.DEVICE_TYPE_TV -> Icons.Rounded.Tv
         MediaRouter.RouteInfo.DEVICE_TYPE_REMOTE_SPEAKER, MediaRouter.RouteInfo.DEVICE_TYPE_BUILTIN_SPEAKER -> Icons.Rounded.Speaker
         MediaRouter.RouteInfo.DEVICE_TYPE_BLUETOOTH_A2DP -> Icons.Rounded.Bluetooth
         else -> Icons.Filled.Cast
+        }
     }
 
     Surface(
@@ -1859,6 +1925,8 @@ private fun CastDeviceRow(
                 enabled = true,
                 onClick = when {
                     device.isBluetooth -> onSelect
+                    // Already playing there: its card on Controls has the volume and the way back.
+                    device.isRemotePlayer && device.isSelected -> ({})
                     device.isSelected &&
                         device.connectionState == MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTED -> onDisconnect
                     device.isSelected &&
@@ -1918,7 +1986,7 @@ private fun CastDeviceRow(
                     else -> stringResource(R.string.cast_status_available)
                 }
 
-                val statusIcon = if (device.isBluetooth) R.drawable.rounded_bluetooth_24 else R.drawable.rounded_wifi_24
+                val statusIcon = if (device.isBluetooth || device.isRemotePlayer) R.drawable.rounded_bluetooth_24 else R.drawable.rounded_wifi_24
 
                 BadgeChip(
                     text = statusText,
@@ -1935,7 +2003,7 @@ private fun CastDeviceRow(
                         modifier = Modifier.padding(end = 4.dp)
                     )
                 }
-                device.volumeHandling == MediaRouter.RouteInfo.PLAYBACK_VOLUME_VARIABLE && device.isSelected -> {
+                device.volumeHandling == MediaRouter.RouteInfo.PLAYBACK_VOLUME_VARIABLE && device.isSelected && !device.isRemotePlayer -> {
                     Text(
                         text = stringResource(R.string.cast_volume_levels, device.volume, device.volumeMax),
                         style = MaterialTheme.typography.labelSmall,

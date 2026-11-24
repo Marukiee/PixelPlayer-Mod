@@ -813,11 +813,13 @@ class DualPlayerEngine @Inject constructor(
     }
 
     /**
-     * Playback moved to Sonos (true) or back to the phone (false). While on Sonos the local
+     * Playback moved to Sonos or another phone (true) or back to the phone (false). While elsewhere the local
      * players stay muted followers: no audio focus, no pause on unplugged headphones, no crossfade.
+     * Each [owner] only lets go of its own claim.
      */
-    fun setRemoteOutputActive(active: Boolean) {
-        SonosAudioGate.setActive(active)
+    fun setRemoteOutputActive(active: Boolean, owner: String = SonosAudioGate.OWNER_SONOS) {
+        @Suppress("NAME_SHADOWING")
+        val active = SonosAudioGate.setActive(active, owner)
         if (!::playerA.isInitialized) return
         playerA.setHandleAudioBecomingNoisy(!active)
         playerB?.setHandleAudioBecomingNoisy(!active)

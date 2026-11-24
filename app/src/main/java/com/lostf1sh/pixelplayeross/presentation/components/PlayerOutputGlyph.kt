@@ -13,13 +13,16 @@ internal enum class PlayerOutputIcon(@DrawableRes val drawable: Int) {
     Speaker(R.drawable.ic_output_speaker),
     SpeakerGroup(R.drawable.ic_output_speaker_group),
     Bluetooth(R.drawable.rounded_bluetooth_24),
+    /** Another phone that plays as remote player. */
+    RemotePhone(R.drawable.ic_output_phone),
     // A plain speaker, like Spotify; the colour and the label say when it is not the phone.
     Phone(R.drawable.ic_output_speaker);
 
     val isPhone: Boolean get() = this == Phone
 
     companion object {
-        fun of(sonosRooms: Int?, isBluetoothActive: Boolean): PlayerOutputIcon = when {
+        fun of(sonosRooms: Int?, isBluetoothActive: Boolean, onRemotePhone: Boolean = false): PlayerOutputIcon = when {
+            onRemotePhone -> RemotePhone
             sonosRooms != null && sonosRooms > 1 -> SpeakerGroup
             sonosRooms != null -> Speaker
             isBluetoothActive -> Bluetooth

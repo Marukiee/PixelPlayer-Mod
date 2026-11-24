@@ -5,18 +5,23 @@ import androidx.media3.common.DeviceInfo
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import com.lostf1sh.pixelplayeross.data.remote.RemotePlayerController
+import com.lostf1sh.pixelplayeross.data.remote.RemoteSessionState
 import java.util.concurrent.CopyOnWriteArraySet
+import kotlin.math.roundToInt
 
 /**
  * The player the media session shows to Android. While a Sonos group plays it reports a remote
  * device with the group volume, so the phone's volume keys, its volume bar and Drip's island
- * work on the speakers, also with the app in the background or the screen off.
+ * work on the speakers, also with the app in the background or the screen off. The same for another phone that plays
+ * as remote player, in its own volume steps.
  */
 @OptIn(UnstableApi::class)
 class SonosSessionPlayer(
     val wrapped: Player,
     private val sonos: SonosController,
-    private val output: SonosOutputRoute
+    private val output: SonosOutputRoute,
+    private val remotePlayer: RemotePlayerController
 ) : ForwardingPlayer(wrapped) {
 
     private val sessionListeners = CopyOnWriteArraySet<Player.Listener>()
@@ -33,10 +38,13 @@ class SonosSessionPlayer(
 
     private var announcedRemote = false
     private var announcedRoute: String? = null
+    private var announcedSteps: Int? = null
 
     /** Tells the session that the volume or mute changed, or that a Sonos session or its route began or ended. */
     fun onSonosVolumeChanged() {
-        if ((remote != null) != announcedRemote || output.controllerId.value != announcedRoute) announceDevice()
+        if (isElsewhere != announcedRemote || output.controllerId.value != announcedRoute || phone?.volumeSteps != announcedSteps) {
+            announceDevice()
+        }
         val volume = deviceVolume
         val muted = isDeviceMuted
         sessionListeners.forEach { it.onDeviceVolumeChanged(volume, muted) }
@@ -47,8 +55,9 @@ class SonosSessionPlayer(
      * while the session still shows what the old one told it. Without this it stays on the speakers after a disconnect.
      */
     fun announceDevice() {
-        announcedRemote = remote != null
+        announcedRemote = isElsewhere
         announcedRoute = output.controllerId.value
+        announcedSteps = phone?.volumeSteps
         val commands = availableCommands
         val info = deviceInfo
         sessionListeners.forEach {
@@ -59,8 +68,21 @@ class SonosSessionPlayer(
 
     private val remote: SonosSessionState? get() = sonos.remoteVolume.value
 
-    override fun getDeviceInfo(): DeviceInfo =
-        if (remote != null) {
+    /** Another phone playing as remote player, once it has said how loud it is. */
+    private val phone: RemoteSessionState? get() = remotePlayer.session.value?.takeIf { !it.isConnecting && it.volume != null }
+
+    private val isElsewhere: Boolean get() = remote != null || phone != null
+
+    private fun phoneSteps(state: RemoteSessionState) = state.volumeSteps.takeIf { it > 0 } ?: 15
+
+    override fun getDeviceInfo(): DeviceInfo {
+        phone?.let { state ->
+            return DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE)
+                .setMinVolume(0)
+                .setMaxVolume(phoneSteps(state))
+                .build()
+        }
+        return if (remote != null) {
             DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE)
                 .setMinVolume(0)
                 .setMaxVolume(100)
@@ -69,35 +91,56 @@ class SonosSessionPlayer(
         } else {
             super.getDeviceInfo()
         }
+    }
 
-    override fun getDeviceVolume(): Int = remote?.let { it.groupVolume ?: 0 } ?: super.getDeviceVolume()
+    override fun getDeviceVolume(): Int {
+        phone?.let { state -> return ((state.volume ?: 0) * phoneSteps(state) / 100f).roundToInt() }
+        return remote?.let { it.groupVolume ?: 0 } ?: super.getDeviceVolume()
+    }
 
-    override fun isDeviceMuted(): Boolean = remote?.isMuted ?: super.isDeviceMuted()
+    override fun isDeviceMuted(): Boolean = if (phone != null) false else remote?.isMuted ?: super.isDeviceMuted()
 
     override fun setDeviceVolume(volume: Int, flags: Int) {
-        if (remote != null) sonos.setGroupVolume(volume) else super.setDeviceVolume(volume, flags)
+        val state = phone
+        when {
+            state != null -> remotePlayer.setVolume((volume * 100f / phoneSteps(state)).roundToInt())
+            remote != null -> sonos.setGroupVolume(volume)
+            else -> super.setDeviceVolume(volume, flags)
+        }
     }
 
     override fun increaseDeviceVolume(flags: Int) {
-        if (remote != null) sonos.adjustGroupVolume(VOLUME_STEP) else super.increaseDeviceVolume(flags)
+        when {
+            phone != null -> remotePlayer.adjustVolume(up = true)
+            remote != null -> sonos.adjustGroupVolume(VOLUME_STEP)
+            else -> super.increaseDeviceVolume(flags)
+        }
     }
 
     override fun decreaseDeviceVolume(flags: Int) {
-        if (remote != null) sonos.adjustGroupVolume(-VOLUME_STEP) else super.decreaseDeviceVolume(flags)
+        when {
+            phone != null -> remotePlayer.adjustVolume(up = false)
+            remote != null -> sonos.adjustGroupVolume(-VOLUME_STEP)
+            else -> super.decreaseDeviceVolume(flags)
+        }
     }
 
     override fun setDeviceMuted(muted: Boolean, flags: Int) {
-        if (remote != null) sonos.setGroupMuted(muted) else super.setDeviceMuted(muted, flags)
+        when {
+            phone != null -> if (muted) remotePlayer.setVolume(0)
+            remote != null -> sonos.setGroupMuted(muted)
+            else -> super.setDeviceMuted(muted, flags)
+        }
     }
 
     override fun getAvailableCommands(): Player.Commands {
         val commands = super.getAvailableCommands()
-        if (remote == null) return commands
+        if (!isElsewhere) return commands
         return commands.buildUpon().addAll(*VOLUME_COMMANDS).build()
     }
 
     override fun isCommandAvailable(command: Int): Boolean =
-        (remote != null && command in VOLUME_COMMANDS) || super.isCommandAvailable(command)
+        (isElsewhere && command in VOLUME_COMMANDS) || super.isCommandAvailable(command)
 
     private companion object {
         const val VOLUME_STEP = 2

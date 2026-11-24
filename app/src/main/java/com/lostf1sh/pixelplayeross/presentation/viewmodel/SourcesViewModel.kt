@@ -19,7 +19,9 @@ class SourcesViewModel @Inject constructor(
     navidromeRepository: NavidromeRepository,
     userPreferencesRepository: UserPreferencesRepository,
     sonosController: SonosController,
-    spotifyAuth: SpotifyAuth
+    spotifyAuth: SpotifyAuth,
+    remotePlayerSettings: com.lostf1sh.pixelplayeross.data.remote.RemotePlayerSettings,
+    remotePlayerHost: com.lostf1sh.pixelplayeross.data.remote.RemotePlayerHost
 ) : ViewModel() {
 
     data class Status(
@@ -29,7 +31,10 @@ class SourcesViewModel @Inject constructor(
         val sonosRoom: String? = null,
         val spotifyLoggedIn: Boolean = false,
         val spotifyName: String? = null,
-        val spotifyHasClientId: Boolean = false
+        val spotifyHasClientId: Boolean = false,
+        val remotePlayerOn: Boolean = false,
+        /** The phone that controls this one now, when this phone is a remote player. */
+        val remoteController: String? = null
     )
 
     val status: StateFlow<Status> = combine(
@@ -49,5 +54,7 @@ class SourcesViewModel @Inject constructor(
             spotifyName = spotify.displayName,
             spotifyHasClientId = spotify.clientId.isNotBlank()
         )
+    }.combine(combine(remotePlayerSettings.enabled, remotePlayerHost.controllerName) { on, name -> on to name }) { status, (on, name) ->
+        status.copy(remotePlayerOn = on, remoteController = name)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Status())
 }

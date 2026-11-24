@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mod: another phone with PixelPlayer as remote player, over Bluetooth. -->
+    <string name="remote_section_title">Remote player</string>
+    <string name="remote_reconnecting">Reconnecting…</string>
+    <string name="remote_status_found">Remote player</string>
+
+    <string name="remote_msg_unreachable">Couldn\'t reach %1$s</string>
+    <string name="remote_msg_stopped">%1$s stopped being a remote player</string>
+    <string name="remote_msg_taken_over">%1$s is playing something else now</string>
+    <string name="remote_msg_none_found">None of these songs are on %1$s</string>
+    <string name="remote_msg_skipped">Not on %2$s, skipped: %1$s</string>
+    <string name="remote_msg_volume_held">%1$s won\'t go louder until you confirm the volume warning on it once</string>
+
+    <string name="remote_player_channel">Remote player</string>
+    <string name="remote_player_notification_title">Remote player</string>
+    <string name="remote_player_notification_ready">Ready for another phone over Bluetooth</string>
+    <string name="remote_player_notification_connected">Controlled by %1$s</string>
+    <string name="remote_player_notification_no_bluetooth">Turn on Bluetooth to be found</string>
+    <string name="remote_player_notification_turn_off">Turn off</string>
+
+    <string name="settings_category_remote_title">Remote player</string>
+    <string name="settings_category_remote_subtitle">Let another phone play its music here</string>
+    <string name="settings_remote_section">This phone</string>
+    <string name="settings_remote_enabled_title">Use as remote player</string>
+    <string name="settings_remote_enabled_subtitle">Another phone with PixelPlayer picks the songs and they play here, over Bluetooth</string>
+    <string name="settings_remote_how_section">How to connect</string>
+    <string name="settings_remote_how_pair">Pair both phones once</string>
+    <string name="settings_remote_how_pick">Then pick this phone on the other one</string>
+    <string name="settings_remote_path_bluetooth">Settings › Bluetooth</string>
+    <string name="settings_remote_path_pick">Connect device › Nearby devices</string>
+    <string name="settings_remote_needs_permission">Needs permission for nearby devices</string>
+    <string name="sources_remote_ready">On, waiting for another phone</string>
+    <string name="sources_remote_controlled">Controlled by %1$s</string>
+</resources>

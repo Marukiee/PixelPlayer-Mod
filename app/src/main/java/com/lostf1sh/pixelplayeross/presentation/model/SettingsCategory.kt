@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Speaker
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.lostf1sh.pixelplayeross.R
 
@@ -101,14 +102,20 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_spotify_title,
         subtitleRes = R.string.settings_category_spotify_subtitle,
         iconRes = R.drawable.ic_spotify
+    ),
+    REMOTE_PLAYER(
+        id = "remote_player",
+        titleRes = R.string.settings_category_remote_title,
+        subtitleRes = R.string.settings_category_remote_subtitle,
+        icon = Icons.Rounded.PhoneAndroid
     );
 
     companion object {
         /** The pages under "Play from". */
-        val sources = listOf(LIBRARY, NAVIDROME, SONOS, SPOTIFY)
+        val sources = listOf(LIBRARY, NAVIDROME, SONOS, SPOTIFY, REMOTE_PLAYER)
 
         /** Reached from the "Play from" page only. */
-        val sourcePagesOnly = setOf(NAVIDROME, SONOS, SPOTIFY)
+        val sourcePagesOnly = setOf(NAVIDROME, SONOS, SPOTIFY, REMOTE_PLAYER)
 
         fun fromId(id: String): SettingsCategory? = entries.find { it.id == id }
     }

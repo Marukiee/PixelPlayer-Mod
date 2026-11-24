@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="remote_section_title">Speler op afstand</string>
+    <string name="remote_reconnecting">Opnieuw verbinden…</string>
+    <string name="remote_status_found">Speler op afstand</string>
+
+    <string name="remote_msg_unreachable">%1$s is niet bereikbaar</string>
+    <string name="remote_msg_stopped">%1$s is gestopt als speler op afstand</string>
+    <string name="remote_msg_taken_over">%1$s speelt nu iets anders</string>
+    <string name="remote_msg_none_found">Geen van deze nummers staat op %1$s</string>
+    <string name="remote_msg_skipped">Niet op %2$s, overgeslagen: %1$s</string>
+    <string name="remote_msg_volume_held">%1$s gaat pas harder als je daar een keer de volumewaarschuwing bevestigt</string>
+
+    <string name="remote_player_channel">Speler op afstand</string>
+    <string name="remote_player_notification_title">Speler op afstand</string>
+    <string name="remote_player_notification_ready">Klaar voor een andere telefoon via Bluetooth</string>
+    <string name="remote_player_notification_connected">Bediend door %1$s</string>
+    <string name="remote_player_notification_no_bluetooth">Zet Bluetooth aan om gevonden te worden</string>
+    <string name="remote_player_notification_turn_off">Uitzetten</string>
+
+    <string name="settings_category_remote_title">Speler op afstand</string>
+    <string name="settings_category_remote_subtitle">Laat een andere telefoon hier zijn muziek afspelen</string>
+    <string name="settings_remote_section">Deze telefoon</string>
+    <string name="settings_remote_enabled_title">Gebruik als speler op afstand</string>
+    <string name="settings_remote_enabled_subtitle">Een andere telefoon met PixelPlayer kiest de nummers en ze spelen hier af, via Bluetooth</string>
+    <string name="settings_remote_how_section">Zo verbind je</string>
+    <string name="settings_remote_how_pair">Koppel de telefoons een keer</string>
+    <string name="settings_remote_how_pick">Kies daarna deze telefoon op de andere</string>
+    <string name="settings_remote_path_bluetooth">Instellingen › Bluetooth</string>
+    <string name="settings_remote_path_pick">Connect device › Nearby devices</string>
+    <string name="settings_remote_needs_permission">Heeft toestemming nodig voor apparaten in de buurt</string>
+    <string name="sources_remote_ready">Aan, wacht op een andere telefoon</string>
+    <string name="sources_remote_controlled">Bediend door %1$s</string>
+</resources>

@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.8.0-mod.39",
+    "en": {
+      "new": [
+        "Play on another phone with PixelPlayer over Bluetooth"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Speel af op een andere telefoon met PixelPlayer, via Bluetooth"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.38",
     "en": {
       "new": [

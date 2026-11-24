@@ -297,6 +297,10 @@ fun FullPlayerContent(
     val isExternalOutputActive = false
     val sonosViewModel: SonosViewModel = hiltViewModel()
     val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
+    // Mod: on another phone the pill with its name takes the title's room too, as with Sonos.
+    val remotePlayerViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.RemotePlayerViewModel = hiltViewModel()
+    val remotePlayerSession = remotePlayerViewModel.session.collectAsStateWithLifecycle()
+    val remoteTitleHidden = remember { derivedStateOf { remotePlayerSession.value != null } }
     val isBluetoothEnabled = fullPlayerSlice.isBluetoothEnabled
     val bluetoothName = fullPlayerSlice.bluetoothName
     val navigationBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -792,7 +796,7 @@ fun FullPlayerContent(
                         if (!isOutputConnecting) {
                             // Mod: the speaker pill says where the music plays, so it takes the title's room.
                             AnimatedVisibility(
-                                visible = !isExternalOutputActive && sonosSession == null,
+                                visible = !isExternalOutputActive && sonosSession == null && remoteTitleHidden.value.not(),
                                 enter = fadeIn(playerMotion.defaultEffectsSpec()),
                                 exit = fadeOut(playerMotion.fastEffectsSpec())
                             ) {
@@ -854,17 +858,25 @@ fun FullPlayerContent(
                             val sonosViewModel: SonosViewModel = hiltViewModel()
                             val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
                             val sonosGroup = sonosSession?.group
-                            val sonosConnecting = sonosSession?.isConnecting == true
+                            // Mod: or another phone that plays as remote player.
+                            val remoteViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.RemotePlayerViewModel = hiltViewModel()
+                            val remoteSession by remoteViewModel.session.collectAsStateWithLifecycle()
+                            val remotePhone = remoteSession?.takeIf { sonosGroup == null }
+                            val playsElsewhere = sonosGroup != null || remotePhone != null
+                            val sonosConnecting = sonosSession?.isConnecting == true ||
+                                remotePhone?.let { it.isConnecting || it.isReconnecting } == true
                             val outputIcon = PlayerOutputIcon.of(
                                 sonosRooms = sonosGroup?.members?.size,
-                                isBluetoothActive = bluetoothOutputName != null && sonosGroup == null
+                                isBluetoothActive = bluetoothOutputName != null && !playsElsewhere,
+                                onRemotePhone = remotePhone != null
                             )
                             val pillLabel = when {
                                 sonosConnecting -> stringResource(R.string.player_connecting)
                                 sonosGroup != null -> sonosGroup.coordinator.name
+                                remotePhone != null -> remotePhone.device.name
                                 else -> ""
                             }
-                            val extraRooms = if (sonosConnecting) 0 else (sonosGroup?.members?.size ?: 1) - 1
+                            val extraRooms = if (sonosConnecting || sonosGroup == null) 0 else sonosGroup.members.size - 1
                             val outputMotion = MaterialTheme.motionScheme
                             // Mod: one half of a segmented pair with the options button next to it, like the top bar in
                             // Android's own players.
@@ -879,7 +891,7 @@ fun FullPlayerContent(
                                     }
                                     // Outside the clip's content so the whole pill stretches and settles, not just what is in it.
                                     .animateContentSize(outputMotion.defaultSpatialSpec())
-                                    .widthIn(min = 50.dp, max = if (sonosGroup != null) 210.dp else 58.dp),
+                                    .widthIn(min = 50.dp, max = if (playsElsewhere) 210.dp else 58.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Row(
@@ -896,6 +908,7 @@ fun FullPlayerContent(
                                     ) { icon ->
                                         val description = when {
                                             sonosGroup != null -> stringResource(R.string.sonos_playing_on, sonosGroup.displayName)
+                                            remotePhone != null -> stringResource(R.string.sonos_playing_on, remotePhone.device.name)
                                             bluetoothOutputName != null -> bluetoothOutputName
                                             else -> stringResource(R.string.player_audio_output_title)
                                         }
@@ -908,7 +921,7 @@ fun FullPlayerContent(
                                     }
                                     // The pill's own size animation moves the width, so this only fades.
                                     AnimatedVisibility(
-                                        visible = sonosGroup != null,
+                                        visible = playsElsewhere,
                                         enter = fadeIn(outputMotion.defaultEffectsSpec()),
                                         exit = fadeOut(outputMotion.fastEffectsSpec())
                                     ) {

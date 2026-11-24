@@ -109,6 +109,9 @@ private fun MiniPlayerRow(
     val sonosViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.SonosViewModel =
         androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
     val sonosSession by sonosViewModel.session.collectAsStateWithLifecycle()
+    val remoteViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.RemotePlayerViewModel =
+        androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+    val remoteSession by remoteViewModel.session.collectAsStateWithLifecycle()
     val isBluetoothEnabled by playerViewModel.isBluetoothEnabled.collectAsStateWithLifecycle()
     val bluetoothName by playerViewModel.bluetoothName.collectAsStateWithLifecycle()
     val miniPlayerStyle by playerViewModel.miniPlayerStyle.collectAsStateWithLifecycle()
@@ -123,7 +126,8 @@ private fun MiniPlayerRow(
         isPreparingPlayback = isPreparingPlayback,
         output = PlayerOutputIcon.of(
             sonosRooms = sonosGroup?.members?.size,
-            isBluetoothActive = isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && sonosGroup == null
+            isBluetoothActive = isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && sonosGroup == null && remoteSession == null,
+            onRemotePhone = remoteSession != null && sonosGroup == null
         ),
         progressRing = miniPlayerStyle == com.lostf1sh.pixelplayeross.data.preferences.MiniPlayerStyle.RING,
         progress = {

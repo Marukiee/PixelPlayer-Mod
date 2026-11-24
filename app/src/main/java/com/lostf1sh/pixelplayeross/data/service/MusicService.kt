@@ -215,6 +215,8 @@ class MusicService : MediaSessionService() {
     @Inject
     lateinit var sonosOutputRoute: SonosOutputRoute
     @Inject
+    lateinit var remotePlayerController: com.lostf1sh.pixelplayeross.data.remote.RemotePlayerController
+    @Inject
     lateinit var dripIslandSignal: DripIslandSignal
     @Inject
     lateinit var sleepTimerSession: SleepTimerSession
@@ -365,7 +367,7 @@ class MusicService : MediaSessionService() {
             behaviorProvider = { previousButtonBehavior }
         )
         // Mod: outermost, so volume keys and the system output menu reach the Sonos while it plays there.
-        return SonosSessionPlayer(previousButtonPlayer, sonosController, sonosOutputRoute)
+        return SonosSessionPlayer(previousButtonPlayer, sonosController, sonosOutputRoute, remotePlayerController)
     }
 
     private fun Player.unwrapSessionPlayer(): Player =
@@ -776,6 +778,13 @@ class MusicService : MediaSessionService() {
             }.collect { (groups, enabled) -> sonosOutputRoute.updateRooms(groups, enabled) }
         }
         serviceScope.launch {
+            // Mod: another phone as remote player takes the volume keys the same way.
+            remotePlayerController.session
+                .map { it?.let { s -> Triple(s.isConnecting, s.volume, s.volumeSteps) } }
+                .distinctUntilChanged()
+                .collect { (mediaSession?.player as? SonosSessionPlayer)?.onSonosVolumeChanged() }
+        }
+        serviceScope.launch {
             sonosOutputRoute.controllerId.collect {
                 (mediaSession?.player as? SonosSessionPlayer)?.onSonosVolumeChanged()
             }
@@ -783,7 +792,10 @@ class MusicService : MediaSessionService() {
         serviceScope.launch {
             // Drip shows this name with the volume in its island, and moves away while our panel is open.
             combine(
-                sonosController.remoteVolume.map { it?.group?.displayName }.distinctUntilChanged(),
+                combine(
+                    sonosController.remoteVolume.map { it?.group?.displayName },
+                    remotePlayerController.session.map { it?.device?.name }
+                ) { sonosName, phoneName -> sonosName ?: phoneName }.distinctUntilChanged(),
                 dripIslandSignal.hidden
             ) { name, hidden ->
                 Bundle().apply {

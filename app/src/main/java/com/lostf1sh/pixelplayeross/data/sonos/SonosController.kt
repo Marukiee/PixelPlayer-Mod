@@ -110,7 +110,8 @@ class SonosController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val engine: DualPlayerEngine,
     private val resolver: SonosTrackResolver,
-    userPreferencesRepository: UserPreferencesRepository
+    userPreferencesRepository: UserPreferencesRepository,
+    private val remotePlayer: dagger.Lazy<com.lostf1sh.pixelplayeross.data.remote.RemotePlayerController>
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val soap = SonosSoapClient()
@@ -483,6 +484,8 @@ class SonosController @Inject constructor(
             val s = ActiveSession(group)
             active = s
             engine.setRemoteOutputActive(true)
+            // One place plays at a time: a phone playing as remote player pauses.
+            remotePlayer.get().switchToPhone()
             attachTo(engine.masterPlayer)
             val ok = withContext(NonCancellable) {
                 commandMutex.withLock {
