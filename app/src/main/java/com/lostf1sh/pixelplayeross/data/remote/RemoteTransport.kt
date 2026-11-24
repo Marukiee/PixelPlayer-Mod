@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -145,6 +146,11 @@ object RemoteTransport {
                     } finally {
                         watchdog.cancel()
                     }
+                }
+                // Given up on while connecting: the line would stay open with nobody on it.
+                if (!isActive) {
+                    runCatching { socket.close() }
+                    throw kotlinx.coroutines.CancellationException("Search stopped")
                 }
                 RemoteLink(socket.inputStream, socket.outputStream, socket, endpoint.name, endpoint.key)
             }

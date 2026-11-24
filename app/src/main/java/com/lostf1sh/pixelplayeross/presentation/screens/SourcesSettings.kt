@@ -100,6 +100,8 @@ import androidx.compose.material.icons.rounded.BlurOff
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.Bluetooth
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -1130,20 +1132,53 @@ private fun SonosMissingSongsSheet(sonosViewModel: SonosViewModel, onDismiss: ()
     }
 }
 
-/** Mod: "Use as remote player": another phone with PixelPlayer picks the songs and they play here, over Bluetooth. */
+/**
+ * Mod: both sides of the remote player. "Use this phone as remote player" is for the phone that plays (only that one);
+ * "Play on another phone" lists the phones nearby that have it on, to start playing there right from here.
+ */
 @Composable
 internal fun RemotePlayerSettingsBlock() {
     val context = LocalContext.current
     val remoteViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.RemotePlayerViewModel = hiltViewModel()
     val enabled by remoteViewModel.isEnabled.collectAsStateWithLifecycle()
     val controllerName by remoteViewModel.controllerName.collectAsStateWithLifecycle()
+    val bluetoothOn by remoteViewModel.bluetoothOn.collectAsStateWithLifecycle()
+    val devices by remoteViewModel.devices.collectAsStateWithLifecycle()
+    val searching by remoteViewModel.isSearching.collectAsStateWithLifecycle()
+    val session by remoteViewModel.session.collectAsStateWithLifecycle()
     val needsPermission = stringResource(R.string.settings_remote_needs_permission)
+    var hasPermission by remember {
+        mutableStateOf(com.lostf1sh.pixelplayeross.data.remote.RemoteTransport.hasBluetoothPermission(context))
+    }
+    var enableAfterPermission by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result[android.Manifest.permission.BLUETOOTH_CONNECT] == true) {
-            remoteViewModel.setEnabled(true)
-        } else {
+        hasPermission = result[android.Manifest.permission.BLUETOOTH_CONNECT] == true
+        if (!hasPermission) {
             Toast.makeText(context, needsPermission, Toast.LENGTH_SHORT).show()
+        } else if (enableAfterPermission) {
+            remoteViewModel.setEnabled(true)
         }
+        enableAfterPermission = false
+    }
+    fun askPermission(thenEnable: Boolean) {
+        enableAfterPermission = thenEnable
+        permissionLauncher.launch(
+            buildList {
+                add(android.Manifest.permission.BLUETOOTH_CONNECT)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }.toTypedArray()
+        )
+    }
+    val openBluetoothSettings = {
+        runCatching {
+            context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        Unit
+    }
+    // Looks for phones with the remote player on while this page is open, like the connect panel does.
+    androidx.compose.runtime.DisposableEffect(hasPermission) {
+        if (hasPermission) remoteViewModel.watch(true)
+        onDispose { if (hasPermission) remoteViewModel.watch(false) }
     }
 
     SettingsSubsection(title = stringResource(R.string.settings_remote_section)) {
@@ -1155,21 +1190,91 @@ internal fun RemotePlayerSettingsBlock() {
             },
             checked = enabled,
             onCheckedChange = { on ->
-                if (!on) {
-                    remoteViewModel.setEnabled(false)
-                } else if (com.lostf1sh.pixelplayeross.data.remote.RemoteTransport.hasBluetoothPermission(context)) {
-                    remoteViewModel.setEnabled(true)
-                } else {
-                    permissionLauncher.launch(
-                        buildList {
-                            add(android.Manifest.permission.BLUETOOTH_CONNECT)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(android.Manifest.permission.POST_NOTIFICATIONS)
-                        }.toTypedArray()
-                    )
+                when {
+                    !on -> remoteViewModel.setEnabled(false)
+                    hasPermission -> remoteViewModel.setEnabled(true)
+                    else -> askPermission(thenEnable = true)
                 }
             },
             leadingIcon = { Icon(Icons.Rounded.PhoneAndroid, null, tint = MaterialTheme.colorScheme.secondary) }
         )
+        SettingsItem(
+            title = stringResource(R.string.settings_remote_bluetooth_title),
+            subtitle = stringResource(if (bluetoothOn) R.string.settings_remote_bluetooth_on else R.string.settings_remote_bluetooth_off),
+            leadingIcon = { Icon(Icons.Rounded.Bluetooth, null, tint = MaterialTheme.colorScheme.secondary) },
+            trailingIcon = {
+                Icon(
+                    Icons.AutoMirrored.Rounded.OpenInNew,
+                    stringResource(R.string.cd_open),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            onClick = openBluetoothSettings
+        )
+    }
+
+    SettingsSubsection(title = stringResource(R.string.settings_remote_other_section)) {
+        val playingOn = session
+        val phones = (devices + listOfNotNull(playingOn?.device)).distinctBy { it.key }
+        when {
+            !hasPermission -> SettingsItem(
+                title = stringResource(R.string.settings_remote_allow_title),
+                subtitle = needsPermission,
+                leadingIcon = { Icon(Icons.Rounded.PhoneAndroid, null, tint = MaterialTheme.colorScheme.secondary) },
+                onClick = { askPermission(thenEnable = false) }
+            )
+            !bluetoothOn -> SettingsItem(
+                title = stringResource(R.string.settings_remote_none_title),
+                subtitle = stringResource(R.string.settings_remote_needs_bluetooth),
+                leadingIcon = { Icon(Icons.Rounded.PhoneAndroid, null, tint = MaterialTheme.colorScheme.secondary) },
+                onClick = openBluetoothSettings
+            )
+            phones.isEmpty() -> SettingsItem(
+                title = stringResource(if (searching) R.string.settings_remote_searching else R.string.settings_remote_none_title),
+                subtitle = stringResource(R.string.settings_remote_none_subtitle),
+                leadingIcon = {
+                    if (searching) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.secondary)
+                    } else {
+                        Icon(Icons.Rounded.Refresh, null, tint = MaterialTheme.colorScheme.secondary)
+                    }
+                },
+                onClick = remoteViewModel::refresh
+            )
+            else -> phones.forEach { phone ->
+                val here = playingOn != null && playingOn.device.key == phone.key
+                val busy = playingOn != null && here && (playingOn.isConnecting || playingOn.isReconnecting)
+                SettingsItem(
+                    title = phone.name,
+                    subtitle = stringResource(
+                        when {
+                            busy -> R.string.sonos_connecting
+                            here -> R.string.settings_remote_playing_there
+                            else -> R.string.settings_remote_tap_to_play
+                        }
+                    ),
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.PhoneAndroid,
+                            null,
+                            tint = if (here) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                        )
+                    },
+                    trailingIcon = {
+                        if (here && !busy) {
+                            Icon(Icons.Rounded.Check, null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    onClick = {
+                        when {
+                            busy -> Unit
+                            here -> remoteViewModel.switchToPhone()
+                            else -> remoteViewModel.connect(phone)
+                        }
+                    }
+                )
+            }
+        }
     }
 
     SettingsSubsection(title = stringResource(R.string.settings_remote_how_section)) {
@@ -1187,6 +1292,15 @@ internal fun RemotePlayerSettingsBlock() {
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
                     SpotifyWhereToFind(path = stringResource(R.string.settings_remote_path_bluetooth).split(" › "))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_remote_how_switch),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    SpotifyWhereToFind(path = listOf(stringResource(R.string.settings_remote_enabled_title)))
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(

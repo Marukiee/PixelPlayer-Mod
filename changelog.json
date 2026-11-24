@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.8.0-mod.40",
+    "en": {
+      "new": [
+        "Remote player page: Bluetooth shortcut and nearby phones to play on"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Speler op afstand: snelkoppeling naar Bluetooth en telefoons om op af te spelen"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.39",
     "en": {
       "new": [

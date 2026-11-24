@@ -1,3 +1,6 @@
+- Speler op afstand: de schakelaar heet "Gebruik deze telefoon als speler op afstand" en hoeft alleen aan op de telefoon die speelt
+- Op dezelfde pagina een snelkoppeling naar Bluetooth en de telefoons in de buurt om meteen op af te spelen
+
 - Speler op afstand: bedien een andere telefoon met PixelPlayer via Bluetooth, ook zonder internet; die speelt zijn eigen muziekbestanden
 - Zet het aan op de telefoon die speelt (Instellingen › Afspelen via › Speler op afstand) en kies hem in Connect device onder Nearby devices
 

@@ -82,6 +82,8 @@ class RemotePlayerController @Inject constructor(
     /** Lines opened while looking, kept so a tap connects at once. */
     private val standby = HashMap<String, Pair<RemoteLink, Job>>()
     private var watchJob: Job? = null
+    private var watchers = 0
+    private var searchGeneration = 0
     private var standbyCloseJob: Job? = null
     private var observedPlayer: Player? = null
     private var active: Active? = null
@@ -134,9 +136,13 @@ class RemotePlayerController @Inject constructor(
 
     // ─── Looking for remote players ───────────────────────────────────────
 
-    /** Looks for remote players while the connect panel is open. */
+    /**
+     * Looks for remote players while the connect panel or the remote player settings are open. Counted, so one of
+     * them closing does not stop the search the other still shows.
+     */
     fun watch(on: Boolean) {
-        if (on) {
+        watchers = (watchers + if (on) 1 else -1).coerceAtLeast(0)
+        if (watchers > 0) {
             standbyCloseJob?.cancel()
             if (watchJob?.isActive == true) return
             watchJob = scope.launch {
@@ -160,15 +166,20 @@ class RemotePlayerController @Inject constructor(
     fun refresh() {
         if (watchJob?.isActive == true) {
             watchJob?.cancel()
-            watchJob = null
-            watch(true)
+            watchJob = scope.launch {
+                while (isActive) {
+                    searchOnce()
+                    delay(SEARCH_INTERVAL_MS)
+                }
+            }
         } else {
             scope.launch { searchOnce() }
         }
     }
 
     private suspend fun searchOnce() {
-        if (_isSearching.value) return
+        // A search that is let go for a fresh one must not switch the indicator off under the new one.
+        val generation = ++searchGeneration
         _isSearching.value = true
         try {
             val last = settings.lastDeviceKey
@@ -189,7 +200,7 @@ class RemotePlayerController @Inject constructor(
             }
             _devices.value = found
         } finally {
-            _isSearching.value = false
+            if (generation == searchGeneration) _isSearching.value = false
         }
     }
 
