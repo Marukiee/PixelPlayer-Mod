@@ -56,10 +56,12 @@ fun PlayerNavigationRail(
     navItems: ImmutableList<BottomNavItem>,
     currentRoute: String?,
     modifier: Modifier = Modifier,
-    onSearchIconDoubleTap: () -> Unit = {}
+    onSearchIconDoubleTap: () -> Unit = {},
+    onSearchTabOpened: () -> Unit = {}
 ) {
     val latestCurrentRoute by rememberUpdatedState(currentRoute)
     val latestOnSearchIconDoubleTap by rememberUpdatedState(onSearchIconDoubleTap)
+    val latestOnSearchTabOpened by rememberUpdatedState(onSearchTabOpened)
     val latestNavigationEnabled by rememberUpdatedState(currentRoute != null)
     val scope = rememberCoroutineScope()
     var lastSearchTapTimestamp by remember { mutableLongStateOf(0L) }
@@ -113,6 +115,7 @@ fun PlayerNavigationRail(
                                     lastSearchTapTimestamp = 0L
                                     return@click
                                 }
+                                latestOnSearchTabOpened()
                             }
 
                             if (isDoubleTap) {

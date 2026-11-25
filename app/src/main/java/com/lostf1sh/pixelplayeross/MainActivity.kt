@@ -987,11 +987,15 @@ class MainActivity : ComponentActivity() {
                             val onSearchIconDoubleTap = remember(playerViewModel) {
                                 { playerViewModel.onSearchNavIconDoubleTapped() }
                             }
+                            val onSearchTabOpened = remember(playerViewModel) {
+                                { playerViewModel.onSearchTabOpened() }
+                            }
                             PlayerNavigationRail(
                                 navController = navController,
                                 navItems = MainNavItems,
                                 currentRoute = currentRoute,
-                                onSearchIconDoubleTap = onSearchIconDoubleTap
+                                onSearchIconDoubleTap = onSearchIconDoubleTap,
+                                onSearchTabOpened = onSearchTabOpened
                             )
                         }
                     }
@@ -1200,6 +1204,9 @@ class MainActivity : ComponentActivity() {
                             val onSearchIconDoubleTap = remember(playerViewModel) {
                                 { playerViewModel.onSearchNavIconDoubleTapped() }
                             }
+                            val onSearchTabOpened = remember(playerViewModel) {
+                                { playerViewModel.onSearchTabOpened() }
+                            }
 
                             Surface(
                                 modifier = Modifier
@@ -1250,6 +1257,7 @@ class MainActivity : ComponentActivity() {
                                     compactMode = navBarCompactMode,
                                     bottomBarPadding = bottomBarPadding,
                                     onSearchIconDoubleTap = onSearchIconDoubleTap,
+                                    onSearchTabOpened = onSearchTabOpened,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }

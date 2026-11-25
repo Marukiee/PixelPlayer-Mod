@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.8.0-mod.41",
+    "en": {
+      "new": [
+        "Back to Search selects your last search"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Terug naar Zoeken selecteert je oude zoekwoord"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.40",
     "en": {
       "new": [

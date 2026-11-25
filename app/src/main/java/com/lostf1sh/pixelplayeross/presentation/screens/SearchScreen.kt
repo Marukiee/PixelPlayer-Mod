@@ -126,7 +126,11 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -203,7 +207,10 @@ fun SearchScreen(
     cloudDownloadsViewModel: CloudDownloadsViewModel = hiltViewModel()
 ) {
     val searchScreenEnteredAt = remember { android.os.SystemClock.elapsedRealtime() }
-    var searchQuery by rememberSaveable { mutableStateOf(playerViewModel.searchQuery) }
+    // Mod: the field keeps its own text and selection, so coming back to Search can select the old query: one key
+    // press clears it, and typing replaces it.
+    val searchFieldState = rememberTextFieldState(playerViewModel.searchQuery)
+    val searchQuery by remember { derivedStateOf { searchFieldState.text.toString() } }
     val statusBarTopInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
@@ -344,6 +351,12 @@ fun SearchScreen(
     }
 
     LaunchedEffect(playerViewModel, keyboardController) {
+        if (playerViewModel.consumeSearchFieldFocusOnOpen()) {
+            searchFieldState.edit { selection = TextRange(0, length) }
+            withFrameNanos { }
+            searchInputFocusRequester.requestFocus()
+            keyboardController?.show()
+        }
         playerViewModel.searchNavDoubleTapEvents.collect {
             delay(40L)
             searchInputFocusRequester.requestFocus()
@@ -353,6 +366,7 @@ fun SearchScreen(
 
     // A filter change re-runs the query inside the search holder, so only the query restarts it.
     LaunchedEffect(searchQuery) {
+        playerViewModel.updateSearchQuery(searchQuery)
         playerViewModel.performSearch(searchQuery)
     }
     val searchResults = searchUiState.searchResults
@@ -429,15 +443,11 @@ fun SearchScreen(
                     DockedSearchBar(
                         inputField = {
                             SearchBarDefaults.InputField(
+                                state = searchFieldState,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(searchInputFocusRequester)
                                     .onFocusChanged { searchFieldFocused = it.isFocused },
-                                query = searchQuery,
-                                onQueryChange = {
-                                    searchQuery = it
-                                    playerViewModel.updateSearchQuery(it)
-                                },
                                 onSearch = { query ->
                                     if (query.isNotBlank()) {
                                         playerViewModel.onSearchQuerySubmitted(query)
@@ -464,10 +474,7 @@ fun SearchScreen(
                                 trailingIcon = {
                                     if (searchQuery.isNotBlank()) {
                                         IconButton(
-                                            onClick = {
-                                                searchQuery = ""
-                                                playerViewModel.updateSearchQuery("")
-                                            },
+                                            onClick = { searchFieldState.clearText() },
                                             modifier = Modifier
                                                 .size(48.dp)
                                                 .clip(CircleShape)
@@ -544,8 +551,7 @@ fun SearchScreen(
                             isPlaying = stablePlayerState.isPlaying,
                             currentSongId = stablePlayerState.currentSong?.id,
                             onQueryClick = { query ->
-                                searchQuery = query
-                                playerViewModel.updateSearchQuery(query)
+                                searchFieldState.setTextAndPlaceCursorAtEnd(query)
                                 keyboardController?.hide()
                             },
                             onSongClick = { song ->
@@ -824,7 +830,7 @@ fun SearchScreen(
         }.value ?: false
         val removeFromListTrigger = remember(currentSong) {
             {
-                searchQuery = "$searchQuery "
+                searchFieldState.setTextAndPlaceCursorAtEnd("$searchQuery ")
             }
         }
 

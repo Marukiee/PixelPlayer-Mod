@@ -1,3 +1,5 @@
+- Terug naar Zoeken: het toetsenbord gaat open en je oude zoekwoord is geselecteerd, zodat je met een keer wissen of meteen typen opnieuw begint
+
 - Speler op afstand: de schakelaar heet "Gebruik deze telefoon als speler op afstand" en hoeft alleen aan op de telefoon die speelt
 - Op dezelfde pagina een snelkoppeling naar Bluetooth en de telefoons in de buurt om meteen op af te spelen
 

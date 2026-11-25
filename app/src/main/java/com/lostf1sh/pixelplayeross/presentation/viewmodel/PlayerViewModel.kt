@@ -1100,6 +1100,15 @@ class PlayerViewModel @Inject constructor(
         _searchNavDoubleTapEvents.tryEmit(Unit)
     }
 
+    // Mod: coming back to Search while an earlier query is still in the field selects it with the keyboard open. A flag rather than an event, because the screen only starts listening after it has opened.
+    private var searchFieldFocusOnOpen = false
+
+    fun onSearchTabOpened() {
+        searchFieldFocusOnOpen = searchQuery.isNotBlank()
+    }
+
+    fun consumeSearchFieldFocusOnOpen(): Boolean = searchFieldFocusOnOpen.also { searchFieldFocusOnOpen = false }
+
 
     val lastLibraryTabIndexFlow: StateFlow<Int> =
         userPreferencesRepository.lastLibraryTabIndexFlow.stateIn(
