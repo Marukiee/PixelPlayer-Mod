@@ -212,7 +212,9 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     @AppScope private val appScope: CoroutineScope,
     private val navidromeRepository: com.lostf1sh.pixelplayeross.data.navidrome.NavidromeRepository,
-    private val equalizerPreferencesRepository: com.lostf1sh.pixelplayeross.data.preferences.EqualizerPreferencesRepository
+    private val equalizerPreferencesRepository: com.lostf1sh.pixelplayeross.data.preferences.EqualizerPreferencesRepository,
+    private val dailyMixStateHolder: DailyMixStateHolder,
+    private val navidromeMixSync: com.lostf1sh.pixelplayeross.data.navidrome.NavidromeMixSync
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -1101,6 +1103,8 @@ class SettingsViewModel @Inject constructor(
     fun resetSetupFlow() {
         viewModelScope.launch {
             userPreferencesRepository.setInitialSetupDone(false)
+            // Mod: the question about saving mixes to Navidrome comes again too.
+            userPreferencesRepository.clearNavidromeSaveMixes()
         }
     }
 
@@ -1402,6 +1406,25 @@ class SettingsViewModel @Inject constructor(
     fun setNavidromeShowInLibrary(show: Boolean) {
         viewModelScope.launch { userPreferencesRepository.setNavidromeShowInLibrary(show) }
     }
+
+    /** Mod: whether Daily Mix and Your Mix are saved as Navidrome playlists (not answered yet counts as off). */
+    val navidromeSaveMixes: kotlinx.coroutines.flow.StateFlow<Boolean> =
+        userPreferencesRepository.navidromeSaveMixesFlow
+            .map { it == true }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setNavidromeSaveMixes(save: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setNavidromeSaveMixes(save)
+            if (save) dailyMixStateHolder.syncMixesNow()
+        }
+    }
+
+    /** Mod: the last time the mixes were synced with Navidrome and how it went, for the developer page. */
+    val mixSyncLast: kotlinx.coroutines.flow.StateFlow<com.lostf1sh.pixelplayeross.data.navidrome.NavidromeMixSync.LastSync?> =
+        navidromeMixSync.lastSync
+
+    fun syncMixesNow() = dailyMixStateHolder.syncMixesNow()
 
     /** Non-null while the checker dialog is open: the "Title, Artist" list (may be empty). */
     private val _navidromeStarred = kotlinx.coroutines.flow.MutableStateFlow<List<String>?>(null)

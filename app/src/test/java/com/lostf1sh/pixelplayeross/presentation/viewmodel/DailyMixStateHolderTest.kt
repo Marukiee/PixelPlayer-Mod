@@ -52,7 +52,7 @@ class DailyMixStateHolderTest {
             val ids = firstArg<List<String>>()
             flowOf(library.filter { it.id in ids })
         }
-        return DailyMixStateHolder(dailyMixManager, preferences, musicRepository)
+        return DailyMixStateHolder(dailyMixManager, preferences, musicRepository, mockk(relaxed = true))
     }
 
     @Test

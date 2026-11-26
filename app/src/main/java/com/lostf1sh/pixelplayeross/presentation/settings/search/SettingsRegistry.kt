@@ -897,6 +897,26 @@ object SettingsRegistry {
                 keywordsStatic = listOf("daily mix", "regenerate", "playlist")
             ),
             SettingSpec(
+                id = "developer_mix_sync",
+                itemKey = "item_developer_mix_sync",
+                titleRes = R.string.mix_sync_dev_title,
+                subtitleRes = R.string.mix_sync_subtitle,
+                category = SettingsCategory.DEVELOPER,
+                subscreenRoute = Screen.SettingsCategory.createRoute("developer"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("navidrome", "mix", "daily mix", "your mix", "playlist", "sync")
+            ),
+            SettingSpec(
+                id = "navidrome_save_mixes",
+                itemKey = "item_navidrome_save_mixes",
+                titleRes = R.string.mix_sync_title,
+                subtitleRes = R.string.mix_sync_subtitle,
+                category = SettingsCategory.NAVIDROME,
+                subscreenRoute = Screen.SettingsCategory.createRoute("navidrome"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("navidrome", "mix", "daily mix", "your mix", "playlist", "sync", "save")
+            ),
+            SettingSpec(
                 id = "developer_stats_regen",
                 itemKey = "item_developer_stats_regen",
                 titleRes = R.string.setcat_force_stats_title,

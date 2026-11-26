@@ -1479,6 +1479,36 @@ fun SettingsCategoryScreen(
                                     onPrimaryAction = { showRegenerateDailyMixDialog = true },
                                     modifier = Modifier.settingHighlight("item_developer_daily_mix", highlightKey)
                                 )
+                                // Mod: when the mixes last went to or came from Navidrome, and a way to do it now.
+                                val mixSyncLast by settingsViewModel.mixSyncLast.collectAsStateWithLifecycle()
+                                val mixSyncContext = LocalContext.current
+                                ActionSettingsItem(
+                                    title = stringResource(R.string.mix_sync_dev_title),
+                                    subtitle = mixSyncLast?.let { last ->
+                                        stringResource(
+                                            R.string.mix_sync_dev_last,
+                                            android.text.format.DateUtils.formatDateTime(
+                                                mixSyncContext,
+                                                last.atMillis,
+                                                android.text.format.DateUtils.FORMAT_SHOW_DATE or
+                                                    android.text.format.DateUtils.FORMAT_SHOW_TIME or
+                                                    android.text.format.DateUtils.FORMAT_ABBREV_MONTH
+                                            ),
+                                            stringResource(mixSyncOutcomeLabel(last.outcome))
+                                        )
+                                    } ?: stringResource(R.string.mix_sync_dev_never),
+                                    icon = {
+                                        Icon(
+                                            painterResource(R.drawable.ic_navidrome_md3),
+                                            null,
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    },
+                                    primaryActionLabel = stringResource(R.string.mix_sync_dev_action),
+                                    onPrimaryAction = { settingsViewModel.syncMixesNow() },
+                                    modifier = Modifier.settingHighlight("item_developer_mix_sync", highlightKey)
+                                )
                                 ActionSettingsItem(
                                     title = stringResource(R.string.setcat_force_stats_title),
                                     subtitle = stringResource(R.string.setcat_force_stats_subtitle),
@@ -3166,3 +3196,13 @@ internal fun SettingsSubsection(
         Spacer(modifier = Modifier.height(10.dp))
     }
 }
+
+/** Mod: how the last mix sync with Navidrome went, for the developer page. */
+private fun mixSyncOutcomeLabel(outcome: com.lostf1sh.pixelplayeross.data.navidrome.NavidromeMixSync.Outcome): Int =
+    when (outcome) {
+        com.lostf1sh.pixelplayeross.data.navidrome.NavidromeMixSync.Outcome.WROTE -> R.string.mix_sync_outcome_wrote
+        com.lostf1sh.pixelplayeross.data.navidrome.NavidromeMixSync.Outcome.TOOK_OVER -> R.string.mix_sync_outcome_took_over
+        com.lostf1sh.pixelplayeross.data.navidrome.NavidromeMixSync.Outcome.UP_TO_DATE -> R.string.mix_sync_outcome_up_to_date
+        com.lostf1sh.pixelplayeross.data.navidrome.NavidromeMixSync.Outcome.NO_SERVER_SONGS -> R.string.mix_sync_outcome_no_server_songs
+        com.lostf1sh.pixelplayeross.data.navidrome.NavidromeMixSync.Outcome.FAILED -> R.string.mix_sync_outcome_failed
+    }

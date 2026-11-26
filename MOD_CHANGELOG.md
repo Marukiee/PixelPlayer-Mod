@@ -1,3 +1,7 @@
+- Mixen op Navidrome: Daily Mix en Your Mix staan als playlists op je server, zodat SpotCopy en PixelPlayer voor Mac dezelfde mix tonen
+- Aanzetten bij de vraag na het inloggen, of onder Instellingen › Afspelen via › Navidrome
+- De updatekaart is ook in donker goed leesbaar
+
 - Terug naar Zoeken: het toetsenbord gaat open en je oude zoekwoord is geselecteerd, zodat je met een keer wissen of meteen typen opnieuw begint
 
 - Speler op afstand: de schakelaar heet "Gebruik deze telefoon als speler op afstand" en hoeft alleen aan op de telefoon die speelt

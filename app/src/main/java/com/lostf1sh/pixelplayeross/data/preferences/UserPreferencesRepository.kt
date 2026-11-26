@@ -316,6 +316,8 @@ constructor(
         val NAVIDROME_FAVORITES_SYNC_INTERVAL_HOURS = intPreferencesKey("navidrome_favorites_sync_interval_hours")
         // Whether Navidrome songs appear in the local library. Off = Navidrome used only for streaming and Sonos.
         val NAVIDROME_SHOW_IN_LIBRARY = booleanPreferencesKey("navidrome_show_in_library")
+        // Mod: whether Daily Mix and Your Mix are saved as Navidrome playlists. Missing until the user answered.
+        val NAVIDROME_SAVE_MIXES = booleanPreferencesKey("navidrome_save_mixes")
         val SONOS_ENABLED = booleanPreferencesKey("sonos_enabled")
         val SONOS_SKIP_UNAVAILABLE = booleanPreferencesKey("sonos_skip_unavailable")
         val SONOS_VOLUME_KEYS = booleanPreferencesKey("sonos_volume_keys")
@@ -385,6 +387,19 @@ constructor(
 
     suspend fun setNavidromeShowInLibrary(show: Boolean) {
         dataStore.edit { it[PreferencesKeys.NAVIDROME_SHOW_IN_LIBRARY] = show }
+    }
+
+    /** Mod: whether the mixes are saved as Navidrome playlists; null until the user answered the question. */
+    val navidromeSaveMixesFlow: Flow<Boolean?> =
+        dataStore.data.map { it[PreferencesKeys.NAVIDROME_SAVE_MIXES] }
+
+    suspend fun setNavidromeSaveMixes(save: Boolean) {
+        dataStore.edit { it[PreferencesKeys.NAVIDROME_SAVE_MIXES] = save }
+    }
+
+    /** Mod: asks the question again, for "Show setup again" on the developer page. */
+    suspend fun clearNavidromeSaveMixes() {
+        dataStore.edit { it.remove(PreferencesKeys.NAVIDROME_SAVE_MIXES) }
     }
 
     val sonosEnabledFlow: Flow<Boolean> =

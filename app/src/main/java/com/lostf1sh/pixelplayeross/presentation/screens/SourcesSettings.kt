@@ -244,6 +244,20 @@ internal fun NavidromeSettingsBlock(settingsViewModel: SettingsViewModel, navCon
     }
     if (!loggedIn) return
 
+    // Mod: Daily Mix and Your Mix as playlists on the server, shared with the other apps.
+    SettingsSubsection(title = stringResource(R.string.mix_sync_section)) {
+        val saveMixes by settingsViewModel.navidromeSaveMixes.collectAsStateWithLifecycle()
+        SwitchSettingItem(
+            title = stringResource(R.string.mix_sync_title),
+            subtitle = stringResource(R.string.mix_sync_subtitle),
+            checked = saveMixes,
+            onCheckedChange = { settingsViewModel.setNavidromeSaveMixes(it) },
+            leadingIcon = {
+                Icon(painterResource(R.drawable.rounded_instant_mix_24), null, tint = MaterialTheme.colorScheme.secondary)
+            }
+        )
+    }
+
     SettingsSubsection(title = stringResource(R.string.settings_navidrome_favorites_section)) {
     val navShowInLibrary by settingsViewModel.navidromeShowInLibrary.collectAsStateWithLifecycle()
     SwitchSettingItem(

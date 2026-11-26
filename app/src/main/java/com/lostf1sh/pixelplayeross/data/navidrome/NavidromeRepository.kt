@@ -329,14 +329,18 @@ class NavidromeRepository @Inject constructor(
                 }
 
                 val jsonObjects = result.getOrThrow()
-                val playlists = NavidromeResponseParser.parsePlaylists(jsonObjects)
+                val allPlaylists = NavidromeResponseParser.parsePlaylists(jsonObjects)
 
-                if (playlists.isEmpty() && jsonObjects.isNotEmpty()) {
+                if (allPlaylists.isEmpty() && jsonObjects.isNotEmpty()) {
                     Timber.w("$TAG: Parser returned empty playlists but JSON response had items. Parsing error suspected. Aborting.")
                     return@withContext Result.failure(Exception("Playlist parsing error"))
                 }
 
-                if (playlists.isEmpty()) {
+                // Mod: the mixes the apps share (Daily Mix, Your Mix, and those of other apps) show as mixes, not as
+                // playlists. A copy made before this is removed below like any playlist gone from the server.
+                val playlists = allPlaylists.filterNot(NavidromeMixRules::isMix)
+
+                if (allPlaylists.isEmpty()) {
                     val localCount = dao.getPlaylistCount()
                     if (localCount > 0) {
                         Timber.w("$TAG: Server returned empty playlists but we have $localCount locally. Aborting sync to prevent data loss.")
@@ -361,7 +365,7 @@ class NavidromeRepository @Inject constructor(
                 val localPlaylists = dao.getAllPlaylistsList()
                 val remoteIds = entities.map { it.id }.toSet()
                 
-                val stalePlaylists = if (entities.isNotEmpty() || jsonObjects.isEmpty()) {
+                val stalePlaylists = if (allPlaylists.isNotEmpty() || jsonObjects.isEmpty()) {
                     localPlaylists.filter { it.id !in remoteIds }
                 } else {
                     emptyList()

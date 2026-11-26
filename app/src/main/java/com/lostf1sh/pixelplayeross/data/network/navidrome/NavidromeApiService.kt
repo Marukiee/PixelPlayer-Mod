@@ -103,7 +103,8 @@ class NavidromeApiService @Inject constructor(
     private fun buildApiUrl(
         endpoint: String,
         extraParams: Map<String, String> = emptyMap(),
-        method: NavidromeAuthMethod = authMethod
+        method: NavidromeAuthMethod = authMethod,
+        repeatedParams: List<Pair<String, String>> = emptyList()
     ): String {
         val cred = credentials ?: throw IllegalStateException("No credentials configured")
 
@@ -124,6 +125,10 @@ class NavidromeApiService @Inject constructor(
         extraParams.forEach { (key, value) ->
             urlBuilder.addQueryParameter(key, value)
         }
+        // Mod: a key that may come more than once, such as a songId per song of a playlist.
+        repeatedParams.forEach { (key, value) ->
+            urlBuilder.addQueryParameter(key, value)
+        }
 
         return urlBuilder.build().toString()
     }
@@ -138,11 +143,12 @@ class NavidromeApiService @Inject constructor(
     private suspend fun request(
         endpoint: String,
         params: Map<String, String> = emptyMap(),
-        method: NavidromeAuthMethod = authMethod
+        method: NavidromeAuthMethod = authMethod,
+        repeatedParams: List<Pair<String, String>> = emptyList()
     ): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
-                val url = buildApiUrl(endpoint, params, method)
+                val url = buildApiUrl(endpoint, params, method, repeatedParams)
                 Timber.d("$TAG: >>> GET $endpoint")
 
                 val request = Request.Builder()
@@ -205,16 +211,20 @@ class NavidromeApiService @Inject constructor(
      * token/salt parameters instead of checking them, so a single rejection switches
      * this client to password auth for the rest of the session and retries once.
      */
-    private suspend fun requestAndParse(endpoint: String, params: Map<String, String> = emptyMap()): Result<JSONObject> {
+    private suspend fun requestAndParse(
+        endpoint: String,
+        params: Map<String, String> = emptyMap(),
+        repeatedParams: List<Pair<String, String>> = emptyList()
+    ): Result<JSONObject> {
         val method = authMethod
-        val result = requestParsed(endpoint, params, method)
+        val result = requestParsed(endpoint, params, method, repeatedParams)
 
         val error = result.exceptionOrNull()
         if (error is SubsonicApiException && shouldFallBackToPasswordAuth(error, method)) {
             Timber.w("$TAG: Server rejected token auth (${error.message}), retrying with password auth")
             authMethod = NavidromeAuthMethod.PASSWORD
             onAuthMethodChanged?.invoke(NavidromeAuthMethod.PASSWORD)
-            return requestParsed(endpoint, params, NavidromeAuthMethod.PASSWORD)
+            return requestParsed(endpoint, params, NavidromeAuthMethod.PASSWORD, repeatedParams)
         }
 
         return result
@@ -223,9 +233,10 @@ class NavidromeApiService @Inject constructor(
     private suspend fun requestParsed(
         endpoint: String,
         params: Map<String, String>,
-        method: NavidromeAuthMethod
+        method: NavidromeAuthMethod,
+        repeatedParams: List<Pair<String, String>> = emptyList()
     ): Result<JSONObject> {
-        return request(endpoint, params, method).fold(
+        return request(endpoint, params, method, repeatedParams).fold(
             onSuccess = { parseResponse(it) },
             onFailure = { Result.failure(it) }
         )
@@ -369,6 +380,34 @@ class NavidromeApiService @Inject constructor(
             Pair(playlist, songList)
         }
     }
+
+    /**
+     * Mod: makes a playlist with [songIds], or with [playlistId] replaces all of its songs at once (the comment stays).
+     * Returns the playlist's id when the server sends the playlist back.
+     */
+    suspend fun createPlaylist(name: String?, playlistId: String?, songIds: List<String>): Result<String?> {
+        val params = buildMap {
+            name?.let { put("name", it) }
+            playlistId?.let { put("playlistId", it) }
+        }
+        return requestAndParse("createPlaylist", params, songIds.map { "songId" to it }).map { response ->
+            response.optJSONObject("playlist")?.optString("id")?.takeIf { it.isNotEmpty() } ?: playlistId
+        }
+    }
+
+    /** Mod: sets a playlist's comment and whether others can see it. */
+    suspend fun updatePlaylist(playlistId: String, comment: String? = null, public: Boolean? = null): Result<Unit> {
+        val params = buildMap {
+            put("playlistId", playlistId)
+            comment?.let { put("comment", it) }
+            public?.let { put("public", it.toString()) }
+        }
+        return requestAndParse("updatePlaylist", params).map { }
+    }
+
+    /** Mod: removes a playlist from the server. */
+    suspend fun deletePlaylist(id: String): Result<Unit> =
+        requestAndParse("deletePlaylist", mapOf("id" to id)).map { }
 
     /**
      * Search for songs, albums, and artists.

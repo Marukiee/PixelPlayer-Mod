@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.8.0-mod.42",
+    "en": {
+      "new": [
+        "Mixes saved as Navidrome playlists",
+        "Update card readable in dark mode"
+      ]
+    },
+    "nl": {
+      "new": [
+        "Mixen als playlists op Navidrome",
+        "Updatekaart leesbaar in donker"
+      ]
+    }
+  },
+  {
     "version": "0.8.0-mod.41",
     "en": {
       "new": [

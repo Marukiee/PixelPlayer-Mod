@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_sync_section">Mixen</string>
+    <string name="mix_sync_title">Mixen opslaan in Navidrome</string>
+    <string name="mix_sync_subtitle">Daily Mix en Your Mix als playlists, in al je apps dezelfde</string>
+
+    <string name="mix_question_title">Je mixen opslaan in Navidrome?</string>
+    <string name="mix_question_body">Daily Mix en Your Mix worden playlists op je server, zodat je andere apps dezelfde mix spelen.</string>
+    <string name="mix_question_where">Later te wijzigen in Instellingen › Afspelen via › Navidrome</string>
+    <string name="mix_question_yes">Opslaan</string>
+    <string name="mix_question_no">Niet nu</string>
+
+    <string name="mix_sync_dev_title">Mixen op Navidrome</string>
+    <string name="mix_sync_dev_never">Nog niet gesynchroniseerd</string>
+    <string name="mix_sync_dev_last">%1$s, %2$s</string>
+    <string name="mix_sync_dev_action">Nu synchroniseren</string>
+    <string name="mix_sync_outcome_wrote">opgeslagen in Navidrome</string>
+    <string name="mix_sync_outcome_took_over">overgenomen van een andere app</string>
+    <string name="mix_sync_outcome_up_to_date">bijgewerkt</string>
+    <string name="mix_sync_outcome_no_server_songs">geen nummers op de server</string>
+    <string name="mix_sync_outcome_failed">Navidrome niet bereikbaar</string>
+</resources>

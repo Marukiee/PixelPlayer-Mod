@@ -249,6 +249,7 @@ class SharedStateHolderHandoverTest {
                 dailyMixManager = mockk(relaxed = true),
                 userPreferencesRepository = preferences,
                 musicRepository = mockk(relaxed = true),
+                mixSync = mockk(relaxed = true),
             )
             val mainActivityOwner = ownerScope()
             val externalPlayerOwner = ownerScope()

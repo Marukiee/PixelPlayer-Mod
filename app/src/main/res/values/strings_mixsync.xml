@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mod: Daily Mix and Your Mix as Navidrome playlists, shared with the other apps. -->
+    <string name="mix_sync_section">Mixes</string>
+    <string name="mix_sync_title">Save mixes to Navidrome</string>
+    <string name="mix_sync_subtitle">Daily Mix and Your Mix as playlists, the same in all your apps</string>
+
+    <string name="mix_question_title">Save your mixes to Navidrome?</string>
+    <string name="mix_question_body">Daily Mix and Your Mix become playlists on your server, so your other apps play the same mix.</string>
+    <string name="mix_question_where">Change it later in Settings › Play from › Navidrome</string>
+    <string name="mix_question_yes">Save</string>
+    <string name="mix_question_no">Not now</string>
+
+    <string name="mix_sync_dev_title">Mixes on Navidrome</string>
+    <string name="mix_sync_dev_never">Not synced yet</string>
+    <string name="mix_sync_dev_last">%1$s, %2$s</string>
+    <string name="mix_sync_dev_action">Sync now</string>
+    <string name="mix_sync_outcome_wrote">saved to Navidrome</string>
+    <string name="mix_sync_outcome_took_over">taken from another app</string>
+    <string name="mix_sync_outcome_up_to_date">up to date</string>
+    <string name="mix_sync_outcome_no_server_songs">no songs on the server</string>
+    <string name="mix_sync_outcome_failed">couldn\'t reach Navidrome</string>
+</resources>

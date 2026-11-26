@@ -719,6 +719,9 @@ class MainActivity : ComponentActivity() {
 
             if (canShowLoadingIndicator) {
                 LoadingOverlay(syncProgress)
+            } else {
+                // Mod: once per account, whether the mixes are saved on Navidrome.
+                com.lostf1sh.pixelplayeross.presentation.components.NavidromeMixQuestion()
             }
         }
     }
